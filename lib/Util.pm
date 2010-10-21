@@ -10,19 +10,25 @@
 # implied. See the License for the specific language governing
 # rights and limitations under the License.
 #
-# The Original Code is the Bugzilla Bug Tracking System.
+# The Original Code is the Dashboard Bugzilla Extension.
 #
-# The Initial Developer of the Original Code is Everything Solved, Inc.
-# Portions created by Everything Solved, Inc. are Copyright (C) 2009 
-# Everything Solved, Inc. All Rights Reserved.
+# The Initial Developer of the Original Code is YOUR NAME
+# Portions created by the Initial Developer are Copyright (C) 2010 the
+# Initial Developer. All Rights Reserved.
 #
-# Contributor(s): Max Kanat-Alexander <mkanat@bugzilla.org>
+# Contributor(s):
+#   YOUR NAME <YOUR EMAIL ADDRESS>
 
-package Bugzilla::Extension::Example::Util;
+package Bugzilla::Extension::Dashboard::Util;
 use strict;
-use warnings;
+use base qw(Exporter);
+our @EXPORT = qw(
+    
+);
 
-# This file exists only to demonstrate how to use and name your
-# modules in an extension.
+# This file can be loaded by your extension via 
+# "use Bugzilla::Extension::Dashboard::Util". You can put functions
+# used by your extension in here. (Make sure you also list them in
+# @EXPORT.)
 
 1;

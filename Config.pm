@@ -10,33 +10,24 @@
 # implied. See the License for the specific language governing
 # rights and limitations under the License.
 #
-# The Original Code is the Bugzilla Bug Tracking System.
+# The Original Code is the Dashboard Bugzilla Extension.
 #
-# The Initial Developer of the Original Code is Everything Solved, Inc.
-# Portions created by the Initial Developers are Copyright (C) 2009 the
+# The Initial Developer of the Original Code is YOUR NAME
+# Portions created by the Initial Developer are Copyright (C) 2010 the
 # Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#   Max Kanat-Alexander <mkanat@bugzilla.org>
+#   Stephen Jayna <ext-stephen.jayna@nokia.com>
 
-package Bugzilla::Extension::Example;
+package Bugzilla::Extension::Dashboard;
 use strict;
-use constant NAME => 'Example';
+
+use constant NAME => 'Dashboard';
+
 use constant REQUIRED_MODULES => [
-    {
-        package => 'Data-Dumper',
-        module  => 'Data::Dumper',
-        version => 0,
-    },
 ];
 
 use constant OPTIONAL_MODULES => [
-    {
-        package => 'Acme',
-        module  => 'Acme',
-        version => 1.11,
-        feature => ['example_acme'],
-    },
 ];
 
 __PACKAGE__->NAME;
