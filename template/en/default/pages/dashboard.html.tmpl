@@ -16,17 +16,17 @@
   # Canonical Ltd. All Rights Reserved.
   #
   # Contributor(s): 
-  #   Max Kanat-Alexander <mkanat@bugzilla.org>
+  #   Stephen Jayna <ext-stephen.jayna@nokia.com>
   #%]
 
 [% PROCESS global/header.html.tmpl
-    title = "Example Page" 
+    title = "Bugzilla Dashboard" 
 %]
 
-<p>Here's what you passed me:</p>
-[% USE Dumper %]
-<pre>
-  [% Dumper.dump_html(cgi_variables) %]
-</pre>
+<h1>Bugzilla Dashboard</h1>
+
+<p>
+  Your code goes here.
+</p>
 
 [% PROCESS global/footer.html.tmpl %]
