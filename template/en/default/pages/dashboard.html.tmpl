@@ -17,16 +17,82 @@
   #
   # Contributor(s): 
   #   Stephen Jayna <ext-stephen.jayna@nokia.com>
+  #   Allan Savolainen <ext-jari.a.savolainen@nokia.com>
   #%]
 
 [% PROCESS global/header.html.tmpl
     title = "Bugzilla Dashboard" 
+    style_urls = ['extensions/dashboard/web/css/dashboard.css']
 %]
 
-<h1>Bugzilla Dashboard</h1>
+[% hooked %]
 
-<p>
-  Your code goes here.
-</p>
+<div id="dashboard">
+  <div id="columns">
+        
+        <ul id="column1" class="column">
+            <li class="widget color-green" id="intro">
+                <div class="widget-head">
+                    <h3>Introduction Widget</h3>
+                </div>
+                <div class="widget-content">
+                    <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aliquam magna sem, fringilla in, commodo a, rutrum ut, massa. Donec id nibh eu dui auctor tempor. Morbi laoreet eleifend dolor. Suspendisse pede odio, accumsan vitae, auctor non, suscipit at, ipsum. Cras varius sapien vel lectus.</p>
+                </div>
+            </li>
+            <li class="widget color-red">  
+                <div class="widget-head">
+                    <h3>Widget title</h3>
+                </div>
+                <div class="widget-content">
+                    <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aliquam magna sem, fringilla in, commodo a, rutrum ut, massa. Donec id nibh eu dui auctor tempor. Morbi laoreet eleifend dolor. Suspendisse pede odio, accumsan vitae, auctor non, suscipit at, ipsum. Cras varius sapien vel lectus.</p>
+                </div>
+            </li>
+        </ul>
 
-[% PROCESS global/footer.html.tmpl %]
+        <ul id="column2" class="column">
+            <li class="widget color-blue">  
+                <div class="widget-head">
+                    <h3>Widget title</h3>
+                </div>
+                <div class="widget-content">
+                    <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aliquam magna sem, fringilla in, commodo a, rutrum ut, massa. Donec id nibh eu dui auctor tempor. Morbi laoreet eleifend dolor. Suspendisse pede odio, accumsan vitae, auctor non, suscipit at, ipsum. Cras varius sapien vel lectus.</p>
+                </div>
+            </li>
+            <li class="widget color-yellow">  
+                <div class="widget-head">
+                    <h3>Widget title</h3>
+                </div>
+                <div class="widget-content">
+                    <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aliquam magna sem, fringilla in, commodo a, rutrum ut, massa. Donec id nibh eu dui auctor tempor. Morbi laoreet eleifend dolor. Suspendisse pede odio, accumsan vitae, auctor non, suscipit at, ipsum. Cras varius sapien vel lectus.</p>
+                </div>
+            </li>
+        </ul>
+        
+        <ul id="column3" class="column">
+            <li class="widget color-orange">  
+                <div class="widget-head">
+                    <h3>Widget title</h3>
+                </div>
+                <div class="widget-content">
+                    <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aliquam magna sem, fringilla in, commodo a, rutrum ut, massa. Donec id nibh eu dui auctor tempor. Morbi laoreet eleifend dolor. Suspendisse pede odio, accumsan vitae, auctor non, suscipit at, ipsum. Cras varius sapien vel lectus.</p>
+                </div>
+            </li>
+            <li class="widget color-white">  
+                <div class="widget-head">
+                    <h3>Widget title</h3>
+                </div>
+                <div class="widget-content">
+                    <p>Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aliquam magna sem, fringilla in, commodo a, rutrum ut, massa. Donec id nibh eu dui auctor tempor. Morbi laoreet eleifend dolor. Suspendisse pede odio, accumsan vitae, auctor non, suscipit at, ipsum. Cras varius sapien vel lectus.</p>
+                </div>
+            </li>
+            
+        </ul>
+        
+    </div>
+ </div>   
+    <script type="text/javascript" src="extensions/dashboard/web/js/jquery-ui-1.8.5.custom.min.js"></script>
+    <script type="text/javascript" src="extensions/dashboard/web/js/dashboard.js"></script>
+
+
+
+[% PROCESS pages/footer.html.tmpl %]

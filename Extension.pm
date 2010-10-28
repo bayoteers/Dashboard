@@ -32,7 +32,17 @@ our $VERSION = '0.01';
 # in the bugzilla directory) for a list of all available hooks.
 sub install_update_db {
     my ($self, $args) = @_;
+}
 
+# Hook for page.cgi and dashboard
+sub page_before_template {
+  my ($self, $args) = @_;
+  my ($vars, $page) = @$args{qw(vars page_id)};
+
+  if ($page =~ /^dashboard\.(html|js)/  ) {
+    $vars->{cgi_variables} = { Bugzilla->cgi->Vars };
+    $vars->{hooked} = 'dashboard';
+  }
 }
 
 __PACKAGE__->NAME;
