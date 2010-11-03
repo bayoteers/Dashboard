@@ -1,0 +1,116 @@
+/* JS-Enabled CSS */
+.widget-head a.remove  {
+	float: right;
+	width: 15px;
+	height: 15px;
+	line-height: 15px;
+	display: inline;
+	text-indent: -9999em;
+	margin: 2px 2px 2px 2px;
+	outline: none;
+	background: url(img/red.png) no-repeat;
+}
+.widget-head a.remove:hover  {
+	background: url(img/red_b.png) no-repeat;	
+}
+
+.widget-head a.maximize  {
+	float: right;
+	width: 15px;
+	height: 15px;
+	line-height: 15px;
+	display: inline;
+	text-indent: -9999em;
+	margin: 2px 2px 2px 2px;
+	outline: none;
+	background: url(img/green.png) no-repeat;
+}
+.widget-head a.maximize:hover  {
+	background: url(img/green_b.png) no-repeat;	
+}
+
+.widget-head a.edit  {
+	float: right;
+	width: 15px;
+	height: 15px;
+	line-height: 15px;
+	display: inline;
+	text-indent: -9999em;
+	margin: 2px 2px 2px 2px;
+	outline: none;
+	background: url(img/prefs.png) no-repeat;
+}
+
+.widget-head a.collapse  {
+	float: right;
+	width: 15px;
+	height: 15px;
+	line-height: 15px;
+	display: inline;
+	text-indent: -9999em;
+	margin: 2px 2px 2px 2px;
+	outline: none;
+	background: url(img/orange.png) no-repeat;	
+}
+.widget-head a.collapse:hover  {
+	background: url(img/orange_b.png) no-repeat;	
+}
+
+
+.widget-placeholder { border: 2px dashed #999;}
+
+#column1 .widget-placeholder { margin: 30px 35px 0 25px; }
+#column2 .widget-placeholder { margin: 30px 20px 0 20px; }
+#column3 .widget-placeholder { margin: 30px 25px 0 35px; }
+
+.edit-box {
+	overflow: hidden;
+	background: #fff;
+	margin-bottom: 2px;
+	padding: 10px 0;
+	color: #000;
+}
+
+.edit-box li.item {
+	padding: 10px 0;
+	overflow: hidden;
+	float: left;
+	width: 100%;
+	color: #000;
+	clear: both;
+}
+
+
+.edit-box label {
+	float: left;
+	width: 30%;
+	color: #000;
+	padding: 0 0 0 10px;
+}
+
+.edit-box ul.colors li {
+	width: 20px;
+	height: 20px;
+	border: 1px solid #EEE;
+	float: left;
+	display: inline;
+	margin: 0 5px 0 0;
+	cursor: pointer;
+}
+#maximized {
+	background-color: #333;
+	padding: 4px;
+	text-align: center;
+	color: #fff;
+}
+.widget-max {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 99%;
+	height: 98%;
+	margin: 0;
+	padding: 0;
+	z-index: 1000;
+	background: #fff;
+}
