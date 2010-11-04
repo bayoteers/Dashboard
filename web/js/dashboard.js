@@ -112,12 +112,15 @@ var Dashboard = {
         $('<a href="#" class="edit">EDIT</a>').mousedown(function (e) {
           e.stopPropagation();  
         }).toggle(function () {
-          $(this).css({"background-image": 'url('+Dashboard_folder+'css/img/save.png)'})
+        //.css({"background-image": 'url('+Dashboard_folder+'css/img/save.png)'})
+          
+          $(this).addClass('save').removeClass('edit')
             .parents(settings.widgetSelector)
               .find('.edit-box').show().find('input').focus();
           return false;
         },function () {
-          $(this).css({"background-image": 'url('+Dashboard_folder+'css/img/prefs.png)'})
+        //css({"background-image": 'url('+Dashboard_folder+'css/img/prefs.png)'})
+          $(this).addClass('edit').removeClass('save')
             .parents(settings.widgetSelector)
               .find('.edit-box').hide();
           Dashboard.savePreferences(id);

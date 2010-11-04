@@ -1,4 +1,42 @@
 /* JS-Enabled CSS */
+
+#columns #widget-buttons {
+        margin-top:5px;
+        margin-bottom:5px;
+        border-bottom: 1px dashed #666;
+}
+#columns #widget-buttons ul {
+        list-style-type: none;
+}
+#columns #widget-buttons li {
+        margin: 5px 20px 5px 5px;
+}
+#columns #widget-buttons li a {
+        display: block;
+        padding: 5px;
+        text-decoration: none;
+}
+#columns #widget-buttons li a:hover {
+        background: #ccc;
+}
+#columns #button-new-widget {
+        display:inline-block;
+        padding-left: 20px;
+        padding-bottom: 3px;
+        background: url(img/note_new.png) center left no-repeat;
+}
+#columns #button-save-widgets {
+        display:inline-block;
+        padding-left: 20px;
+        padding-bottom: 3px;
+        background: url(img/icon_package_get.png) center left no-repeat;
+}
+
+#columns .loader {
+        margin-top:32px;
+        margin-bottom:32px;
+}
+
 .widget-head a.remove  {
 	float: right;
 	width: 15px;
@@ -39,6 +77,23 @@
 	margin: 2px 2px 2px 2px;
 	outline: none;
 	background: url(img/prefs.png) no-repeat;
+}
+.widget-head a.edit:hover  {
+	background: url(img/prefs_b.png) no-repeat;	
+}
+.widget-head a.save  {
+	float: right;
+	width: 15px;
+	height: 15px;
+	line-height: 15px;
+	display: inline;
+	text-indent: -9999em;
+	margin: 2px 2px 2px 2px;
+	outline: none;
+	background: url(img/save.png) no-repeat;
+}
+.widget-head a.save:hover  {
+	background: url(img/save_b.png) no-repeat;	
 }
 
 .widget-head a.collapse  {
