@@ -36,6 +36,8 @@ use HTML::Scrubber;
 # For serialization
 use Storable;
 
+use File::Path;
+
 our $VERSION = '0.01';
 
 # See the documentation of Bugzilla::Hook ("perldoc Bugzilla::Hook" 
@@ -72,7 +74,16 @@ sub page_before_template {
       } else {
         ## new user, create prefs folder
         $vars->{debug_info} .= '| new user';
-        mkdir $datauserdir, 0755;
+        
+        mkpath( $datauserdir, { verbose => 0, mode => 0755, error => \my $err } );
+
+        if (@$err) {
+          for my $diag (@$err) {
+            my ( $file, $message ) = each %$diag;
+            print "Problem making $file: $message\n";
+          }                                          
+          die("Couldn't create $datauserdir");       
+        }
       }
       
       $vars->{cgi_variables} = { Bugzilla->cgi->Vars };
@@ -147,7 +158,7 @@ sub page_before_template {
           }
         }
       } else {
-        opendir(DIR, $datauserdir);
+        opendir(DIR, $datauserdir) or die($!);
         my (@files,$file);
         @files = grep(/\.widget$/,readdir(DIR));
         closedir(DIR);
