@@ -23,7 +23,8 @@ var Dashboard = {
       removable: true,
       collapsible: true,
       editable: true,
-      resizable: false,
+      resizable: true,
+      resized: false,
       maximizable: true,
       colorClasses : ['color-gray','color-yellow', 'color-red', 'color-blue', 'color-white', 'color-orange', 'color-green'],
       content: "<div align='center'><img class='loader' src='"+Dashboard_folder+"css/img/ajax-loader.gif'></div>"
@@ -43,8 +44,21 @@ var Dashboard = {
   // Load stylesheet for widgets and initalize them
   init : function () {
     this.attachStylesheet(Dashboard_folder+'css/dashboard.js.css');
-    this.addWidgetControls();
+    
     this.makeSortable();
+    this.addWidgetControls('main');
+    $(".loader").each(function (i) {
+      var id = $(this).parent().parent().parent().attr('id');
+      $.post("page.cgi?id=dashboard_ajax.html",
+        {
+          "action" : 'load',
+          "widget_id" : id.substring(6)
+        },
+        function(data){
+          $("#"+id+" "+Dashboard.settings.contentSelector).html(data);
+        }
+      );
+    });
   },
   
   getWidgetSettings : function (id) {
@@ -54,14 +68,16 @@ var Dashboard = {
   },
   
   // Populate widgets with control buttons
-  addWidgetControls : function () {
+  addWidgetControls : function (id) {
     var Dashboard = this,
       $ = this.jQuery,
       settings = this.settings;
       
-    $(settings.widgetSelector, $(settings.columns)).each(function () {
+    $(
+    //settings.widgetSelector, $(settings.columns)
+    "#"+id
+    ).each(function () {
       var thisWidgetSettings = Dashboard.getWidgetSettings(this.id);
-      
       
       if (thisWidgetSettings.removable) {
         $('<a href="#" class="remove">CLOSE</a>').mousedown(function (e) {
@@ -73,6 +89,7 @@ var Dashboard = {
             },function () {
               $(this).wrap('<div/>').parent().slideUp(function () {
                 $(this).remove();
+                DeleteWidget(id);
               });
             });
           }
@@ -83,7 +100,11 @@ var Dashboard = {
       if (thisWidgetSettings.resizable) {
         $(this).children(settings.contentSelector).resizable({
           handles: 's',
-          stop: function(event, ui) { $(this).css({width:''}); }
+          stop: function(event, ui) {
+            $(this).css({width:''});
+            thisWidgetSettings.resized=true;
+            Dashboard.savePreferences(id);
+          }
         });
       }
       
@@ -99,6 +120,7 @@ var Dashboard = {
           $(this).css({"background-image": 'url('+Dashboard_folder+'css/img/prefs.png)'})
             .parents(settings.widgetSelector)
               .find('.edit-box').hide();
+          Dashboard.savePreferences(id);
           return false;
         }).appendTo($(settings.handleSelector,this));
         $('<div class="edit-box" style="display:none;"/>')
@@ -119,9 +141,11 @@ var Dashboard = {
           e.stopPropagation();  
         }).toggle(function () {
           $(this).parents(settings.widgetSelector).find(settings.contentSelector).hide();
+          Dashboard.savePreferences(id);
           return false;
         },function () {
           $(this).parents(settings.widgetSelector).find(settings.contentSelector).show();
+          Dashboard.savePreferences(id);
           return false;
         }).prependTo($(settings.handleSelector,this));
       }
@@ -214,31 +238,37 @@ var Dashboard = {
       stop: function (e,ui) {
         $(ui.item).css({width:''}).removeClass('dragging');
         $(settings.columns).sortable('enable');
+        SaveWidgets();
       }
     });
   },
   
   // Create new widget
   addWidget : function (where, opt) {
-    $("li").removeClass("new");
-    var selectorOld = Dashboard.settings.widgetSelector;
-    Dashboard.settings.widgetSelector = '.new';
+    //$("li").removeClass("new");
+    //var selectorOld = Dashboard.settings.widgetSelector;
+    //Dashboard.settings.widgetSelector = '.new';
     $(where).append(Dashboard.initWidget(opt));
-    Dashboard.addWidgetControls();
-    Dashboard.settings.widgetSelector = selectorOld;
+    Dashboard.addWidgetControls(opt.id);
+    //Dashboard.settings.widgetSelector = selectorOld;
     Dashboard.makeSortable();
     Dashboard.loadWidget(opt.id);
-    Dashboard.savePreferences(opt.id,'grid');
+    //$("li").removeClass("new");
+    Dashboard.savePreferences(opt.id);
   },
   
   initWidget : function (opt) {
     if (!opt.content) opt.content=Dashboard.settings.widgetDefault.content;
-    return '<li id="'+opt.id+'" class="new widget '+opt.color+'"><div class="widget-head"><h3>'+opt.title+'</h3></div><div class="widget-content">'+opt.content+'</div></li>';
+    return '<li id="'+opt.id+'" class="widget '+opt.color+'"><div class="widget-head"><h3>'+opt.title+'</h3></div><div class="widget-content">'+opt.content+'</div></li>';
   },
   
   loadWidget : function(id) {
+//  alert('loadWidget');
     $.post("page.cgi?id=dashboard_ajax.html", {"widget":id},
     function(data){
+      $("#"+id+" "+Dashboard.settings.contentSelector+" img").remove();
+//      $("#"+id+" "+Dashboard.settings.contentSelector).html('loaded');
+    /*
       $("#"+id+" "+Dashboard.settings.contentSelector).html(data);
       $("#"+id+" "+Dashboard.settings.contentSelector).resizable({      
         handles: 's',
@@ -247,13 +277,39 @@ var Dashboard = {
           $(this).css({width:''});
           $(this).children().css({width:''});
         }
-      });
+      });*/
     });  
   },
   
   // Store preferences to Bugzilla via POST
-  savePreferences : function (id,type) {
-//    alert('save '+id+':'+type);
+  savePreferences : function (id) {
+    SaveWidget(id,$("#"+id).index(),$("#"+id).parent().attr('id').substring(6));
+  },
+  getSettings : function(id) {
+    var Dashboard = this,
+      $ = this.jQuery,
+      settings = this.settings;
+    
+    var widget = [];
+    
+    $(settings.widgetSelector, $(settings.columns)).each(function () {
+      if (id == this.id)
+      {
+        var thisWidgetSettings = Dashboard.getWidgetSettings(this.id);   
+        widget['movable']=thisWidgetSettings.movable;
+        widget['removable']=thisWidgetSettings.removable;
+        widget['collapsible']=thisWidgetSettings.collapsible;
+        widget['editable']=thisWidgetSettings.editable;
+        widget['resizable']=thisWidgetSettings.resizable;
+        widget['resized']=thisWidgetSettings.resized;
+        widget['maximizable']=thisWidgetSettings.maximizable;
+        widget['height']=$("#"+id+" "+settings.contentSelector).height();
+        widget['color']=$("#"+id).attr('class').match(/\bcolor-[\w]{1,}\b/);
+        widget['minimized']=$("#"+id+" "+settings.contentSelector).css('display') === 'none' ? 'true' : 'false';
+        widget['title'] = $("#"+id+" "+settings.handleSelector+" h3").html();
+      }
+    });
+    return widget;
   }
 };
 
@@ -262,30 +318,45 @@ function AddWidget() {
   while ($("#widget"+i).length>0) i++;
   Dashboard.addWidget("#column1", {
     id: "widget"+i,
-    color: "color-blue",
-    title: "widget "+i
-  })
+    color: "color-gray",
+    title: "Widget "+i
+  });
+}
+
+function DeleteWidget(id) {
+  $.post("page.cgi?id=dashboard_ajax.html",
+    {
+      'action' : 'delete',
+      'widget_id' : id.substring(6)
+    },
+    function(result) {
+    });
+}
+
+function SaveWidget(id,pos,col) {
+  var widget = Dashboard.getSettings(id);
+  var post = 'action=save';
+  post += '&widget_id='+id.substring(6);
+  post += '&widget_pos='+pos;
+  post += '&widget_col='+col;
+  for (var key in widget) {
+    post += '&widget_'+key+'='+encodeURIComponent(widget[key]);
+  }
+  $.post("page.cgi?id=dashboard_ajax.html",
+    post,
+    function(result) {
+      $(result).prependTo("#"+id+" .widget-content");
+    });
 }
 
 function SaveWidgets() {
   for (var col=1; col<4; col++)
   {
     $("#column"+col).children().each(
-      function( intIndex ){
+      function(pos){
         var id = $(this).attr('id');
         if (id !='main'){
-          $("#"+id).css({'border':'4px solid red'});
-          $.post("page.cgi?id=dashboard_ajax.html",
-          {
-            "action" : 'save',
-            "widget_id" : id.substring(6),
-            "widget_pos" : intIndex,
-            "widget_col" : col
-          }, function(result) {
-            $("#"+id).html(result);
-            //alert(result);
-          });
-          $("#"+id).css({'border':''});
+          SaveWidget(id,pos,col);
         }
       }
     );

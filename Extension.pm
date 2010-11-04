@@ -30,8 +30,10 @@ use Bugzilla::Util;
 # This code for this is in ./extensions/Dashboard/lib/Util.pm
 use Bugzilla::Extension::Dashboard::Util;
 
+# For input sanitization
+use HTML::Scrubber;
+
 # For serialization
-#use Tie::File;
 use Storable;
 
 our $VERSION = '0.01';
@@ -66,6 +68,7 @@ sub page_before_template {
       if (-d $datauserdir) {
         ## old user, load prefs folder
         $vars->{debug_info} .= '| old user';
+
       } else {
         ## new user, create prefs folder
         $vars->{debug_info} .= '| new user';
@@ -75,19 +78,73 @@ sub page_before_template {
       $vars->{cgi_variables} = { Bugzilla->cgi->Vars };
       if ($page eq "dashboard_ajax.html") {
         $vars->{debug_info} .= " | widget";
-        if (Bugzilla->cgi->param('action') eq 'save') {
+        if (Bugzilla->cgi->param('action') eq 'load') {
+          $vars->{debug_info} .= " | load";
+          
+          $vars->{debug_info} .= " | " . Bugzilla->cgi->param('widget_id');
+          my $widget_id = int($cgi->param('widget_id'));
+          if ($widget_id>0 && -e $datauserdir . "/" . $widget_id . ".widget") {
+            my $widget = retrieve( $datauserdir . "/" . $widget_id . ".widget" );
+            $vars->{widget}=$widget;
+          } else {
+            $vars->{debug_info} .= " | illegal widget id";
+          }
+        } elsif (Bugzilla->cgi->param('action') eq 'delete') {
+          $vars->{debug_info} .= " | delete";
+          
+          $vars->{debug_info} .= " | " . Bugzilla->cgi->param('widget_id');
+          my $widget_id = int($cgi->param('widget_id'));
+          
+          if ($widget_id>0 && -e $datauserdir . "/" . $widget_id . ".widget") {
+            my @files = glob $datauserdir . "/" . $widget_id .".*";
+            foreach my $dir_entry (@files) {
+              trick_taint($dir_entry);
+              unlink $dir_entry;
+              $vars->{debug_info} .= " | ".$dir_entry." deleted";
+            }
+          } else {
+            $vars->{debug_info} .= " | illegal widget id";
+          }
+        } elsif (Bugzilla->cgi->param('action') eq 'save') {
           $vars->{debug_info} .= " | save";
           
           $vars->{debug_info} .= " | " . Bugzilla->cgi->param('widget_id');
-          my $widget_id = $cgi->param('widget_id');
-          trick_taint($widget_id);
-          
-          my %widget = (
-            'widget_id' => int($cgi->param('widget_id')),
-            'widget_pos' => int($cgi->param('widget_pos')),
-            'widget_col' => int($cgi->param('widget_col'))
-          );
-          store \%widget, $datauserdir . "/" . $widget_id . ".widget";
+          my $widget_id = int($cgi->param('widget_id'));
+          if ($widget_id>0)
+          {
+            trick_taint($widget_id);
+            
+            my (%widget);
+            
+            #numerical fields
+            my @fields = qw(id pos col height);
+            foreach (@fields) {
+              %widget->{$_} = int($cgi->param("widget_".$_));
+            }
+            #true/false fields
+            my @fields = qw(movable removable collapsible editable resizable resized maximizable minimized);
+            foreach (@fields) {
+              %widget->{$_} = $cgi->param("widget_".$_) eq 'true' ? 1 : 0;
+            }
+            #text fields
+            my @fields = qw(title);
+            my $scrubber = HTML::Scrubber->new;
+            $scrubber->default(0);
+            foreach (@fields) {
+              %widget->{$_} = $scrubber->scrub($cgi->param("widget_".$_));
+            }
+            
+            #color
+            %widget->{'color'} = $cgi->param("widget_color") =~ /color-(gray|yellow|red|blue|white|orange|green)/ ? $1 : "gray";
+
+            foreach my $key (sort keys %widget) {
+              $vars->{debug_info} .= ", $key=".%widget->{$key};
+            }
+                   
+            store \%widget, $datauserdir . "/" . $widget_id . ".widget";
+          } else {
+            $vars->{debug_info} .= " | illegal widget id";
+          }
         }
       } else {
         opendir(DIR, $datauserdir);
@@ -97,12 +154,7 @@ sub page_before_template {
         foreach $file (@files) {
           $vars->{debug_info} .= " | " . $file;
           my $widget = retrieve($datauserdir . "/" . $file);
-          
-          $vars->{debug_info} .= "," . $widget->{widget_id};
-          $vars->{debug_info} .= "," . $widget->{widget_pos};
-          $vars->{debug_info} .= "," . $widget->{widget_col};
-          
-          $vars->{"column".$widget->{widget_col}}->[$widget->{widget_pos}] = $widget;
+          $vars->{"column".$widget->{col}}->[$widget->{pos}] = $widget;
         }
         $vars->{debug_info} .= " | default";
       }

@@ -22,3 +22,18 @@
   <p id="debug">[% debug_info %]</p>
 
   <hr>
+
+  [% IF widget %]
+    <script>
+      Dashboard.addWidgetControls('widget[% widget.id %]');
+      var thisWidgetSettings = Dashboard.getWidgetSettings("widget"+[% widget.id %]);
+      [% IF widget.minimized %]
+        $("#widget[% widget.id %] .widget-content").hide();
+      [% END %]
+      [% IF widget.resized %]
+        $("#widget[% widget.id %] .widget-content").height([% widget.height %]);
+        thisWidgetSettings.resized=true;
+      [% END %]
+    </script>
+    [% widget.minimized %]
+  [% END %]

@@ -44,42 +44,42 @@
           <p>Welcome to Dashboard!</p>
         </div>
       </li>
-      [% FOREACH i IN column1.nsort %]
-      	[% IF i.widget_id > 0 %]
-      	  <li class="widget color-gray" id="widget[% i.widget_id %]">
+      [% FOREACH widget IN column1.nsort %]
+      	[% IF widget.id > 0 %]
+      	  <li class="widget color-[% widget.color %]" id="widget[% widget.id %]">
       	    <div class="widget-head">
-      	      <h3>widget [% i.widget_id %]</h3>
+      	      <h3>[% widget.title %]</h3>
       	    </div>
       	    <div class="widget-content">
-      	      <p>Restored</p>
+      	      <div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>
       	    </div>
        	  </li>
       	[% END %]
       [% END %]
     </ul>
     <ul id="column2" class="column">
-      [% FOREACH i IN column2.nsort %]
-      	[% IF i.widget_id > 0 %]
-      	  <li class="widget color-gray" id="widget[% i.widget_id %]">
+      [% FOREACH widget IN column2.nsort %]
+      	[% IF widget.id > 0 %]
+      	  <li class="widget color-[% widget.color %]" id="widget[% widget.id %]">
       	    <div class="widget-head">
-      	      <h3>widget [% i.widget_id %]</h3>
+      	      <h3>[% widget.title %]</h3>
       	    </div>
       	    <div class="widget-content">
-      	      <p>Restored</p>
+      	      <div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>
       	    </div>
        	  </li>
       	[% END %]
       [% END %]
     </ul>
     <ul id="column3" class="column">
-      [% FOREACH i IN column3.nsort %]
-      	[% IF i.widget_id > 0 %]
-      	  <li class="widget color-gray" id="widget[% i.widget_id %]">
+      [% FOREACH widget IN column3.nsort %]
+      	[% IF widget.id > 0 %]
+      	  <li class="widget color-[% widget.color %]" id="widget[% widget.id %]">
       	    <div class="widget-head">
-      	      <h3>widget [% i.widget_id %]</h3>
+      	      <h3>[% widget.title %]</h3>
       	    </div>
       	    <div class="widget-content">
-      	      <p>Restored</p>
+      	      <div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>
       	    </div>
        	  </li>
       	[% END %]

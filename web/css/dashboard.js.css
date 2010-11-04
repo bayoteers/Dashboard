@@ -114,3 +114,7 @@
 	z-index: 1000;
 	background: #fff;
 }
+.ui-resizable-handle {
+	background: url(img/resize_handler.png) center top no-repeat;
+	height: 10px;
+}
