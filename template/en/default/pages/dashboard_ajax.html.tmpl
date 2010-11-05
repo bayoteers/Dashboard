@@ -19,10 +19,6 @@
   #   Allan Savolainen <ext-jari.a.savolainen@nokia.com>
   #%]
 
-  <p id="debug">[% debug_info %]</p>
-
-  <hr>
-
   [% IF widget %]
     <script>
       Dashboard.addWidgetControls('widget[% widget.id %]');
@@ -35,5 +31,4 @@
         thisWidgetSettings.resized=true;
       [% END %]
     </script>
-    [% widget.minimized %]
   [% END %]
