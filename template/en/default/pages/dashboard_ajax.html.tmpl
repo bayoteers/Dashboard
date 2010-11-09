@@ -18,10 +18,14 @@
   # Contributor(s): 
   #   Allan Savolainen <ext-jari.a.savolainen@nokia.com>
   #%]
+  <!-- [% debug_info %] /-->
 
   [% IF widget %]
+  <div class="widget_inner">
     <script>
-      Dashboard.addWidgetControls('widget[% widget.id %]');
+      [% IF widget.controls %]
+        Dashboard.addWidgetControls('widget[% widget.id %]');
+      [% END %]
       var thisWidgetSettings = Dashboard.getWidgetSettings("widget"+[% widget.id %]);
       [% IF widget.minimized %]
         $("#widget[% widget.id %] .widget-content").hide();
@@ -30,5 +34,35 @@
         $("#widget[% widget.id %] .widget-content").height([% widget.height %]);
         thisWidgetSettings.resized=true;
       [% END %]
+      function change_mode_[% widget.id %](mode){
+        if (mode=='url') {
+          var url = $('#widget_url[% widget.id %]').val();
+          $("#widget[% widget.id %] .widget-content .widget_inner").html('<iframe id="widget_iframe[% widget.id %]" class="widget_iframe" frameborder="0" scrolling="auto" src="'+url+'"></iframe>');
+          $(window).resize(function() {
+            var x = $("#widget[% widget.id %] .widget-content").width();
+            $("#widget_iframe[% widget.id %]").width(x);
+            if ($('#maximized').parent().parent().attr("id")=="widget[% widget.id %]")
+              var y = $(window).height()-15;
+            else
+              var y = $("#widget[% widget.id %] .widget-content").height()-5;
+            $("#widget_iframe[% widget.id %]").height(y);
+          });
+          $("#widget[% widget.id %] .widget-content").resize(function() {
+            var y = $("#widget[% widget.id %] .widget-content").height()-5;
+            $("#widget_iframe[% widget.id %]").height(y);
+          });
+          $(window).trigger("resize");
+        }
+        else alert('Unknown mode');
+        return false;
+      }
     </script>
+    [% SWITCH widget.mode %]
+    [%   CASE %]
+<input id="widget_url[% widget.id %]" type="text" name="koe" value="">
+<input type="button" value="Open URL" onclick="return change_mode_[% widget.id %]('url');">
+    [% END %]
+  </div>
+  [% ELSE %]
+
   [% END %]

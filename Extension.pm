@@ -93,7 +93,28 @@ sub page_before_template {
       if ( $page eq "dashboard_ajax.html" ) {
         $vars->{debug_info} .= " | widget";
 
-        if ( Bugzilla->cgi->param('action') eq 'load' ) {
+        if ( Bugzilla->cgi->param('action') eq 'new' ) {
+          $vars->{debug_info} .= " | new";
+
+          $vars->{debug_info} .= " | " . Bugzilla->cgi->param('widget_id');
+          my $widget_id = int( $cgi->param('widget_id') );
+
+          if ( $widget_id > 0 ) {
+
+            # numerical fields
+            my @fields = qw(id pos col height);
+
+            foreach (@fields) {
+              $vars->{widget}->{$_} = int( $cgi->param( "widget_" . $_ ) );
+              $vars->{debug_info} .= "," . $_ . "=" . $cgi->param( "widget_" . $_ );
+            }
+            $vars->{widget}->{resized} = 1;
+          }
+          else {
+            $vars->{debug_info} .= " | illegal widget id";
+          }
+        }
+        elsif ( Bugzilla->cgi->param('action') eq 'load' ) {
           $vars->{debug_info} .= " | load";
 
           $vars->{debug_info} .= " | " . Bugzilla->cgi->param('widget_id');
@@ -145,7 +166,7 @@ sub page_before_template {
             }
 
             # true/false fields
-            my @fields = qw(movable removable collapsible editable resizable resized maximizable minimized);
+            my @fields = qw(movable removable collapsible editable resizable resized maximizable minimized controls);
 
             foreach (@fields) {
               %widget->{$_} = $cgi->param( "widget_" . $_ ) eq 'true' ? 1 : 0;

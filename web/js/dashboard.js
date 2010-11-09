@@ -24,8 +24,11 @@ var Dashboard = {
       collapsible: true,
       editable: true,
       resizable: true,
-      resized: false,
+      resized: true,
       maximizable: true,
+      controls: true,
+      width: 0,
+      height: 256,
       colorClasses : ['color-gray','color-yellow', 'color-red', 'color-blue', 'color-white', 'color-orange', 'color-green'],
       content: "<div align='center'><img class='loader' src='"+Dashboard_folder+"css/img/ajax-loader.gif'></div>"
     },
@@ -36,7 +39,8 @@ var Dashboard = {
         collapsible: true,
         editable: false,
         maximizable: false,
-        resizable: false
+        resizable: false,
+        controls: true
       }
     }
   },
@@ -78,7 +82,6 @@ var Dashboard = {
     "#"+id
     ).each(function () {
       var thisWidgetSettings = Dashboard.getWidgetSettings(this.id);
-      
       if (thisWidgetSettings.removable) {
         $('<a href="#" class="remove">CLOSE</a>').mousedown(function (e) {
           e.stopPropagation();  
@@ -100,6 +103,7 @@ var Dashboard = {
       if (thisWidgetSettings.resizable) {
         $(this).children(settings.contentSelector).resizable({
           handles: 's',
+          grid: [50, 50],
           stop: function(event, ui) {
             $(this).css({width:''});
             thisWidgetSettings.resized=true;
@@ -155,19 +159,59 @@ var Dashboard = {
 
       if (thisWidgetSettings.maximizable) {
         $('<a href="#" class="maximize">MAXIMIZE</a>').mousedown(function (e) {
+          thisWidgetSettings.height = $(this).parents(settings.widgetSelector).children(settings.contentSelector).height();
+
+          $(this).parents(settings.widgetSelector).children(settings.contentSelector).resizable("destroy");
+          $(this).parents(settings.widgetSelector).children(settings.contentSelector).addClass('widget-max').prepend('<div id="maximized"><p>Press ESC or click here to return to the Dashboard</p></div>');
+          $(this).parents(settings.widgetSelector).children(settings.contentSelector).css({'position':''});
+          var widget = $(this).parent().parent().attr("id");
+          $(".widget").each(function() {
+            if ($(this).attr("id")!=widget) $(this).hide();
+          });  
+          
+          var window_y = $(window).height()-10;
+          //var widget_y = $(this).parents(settings.widgetSelector).children(settings.contentSelector).height();
+          //$('.ui-resizable-handle').hide();
+          $(this).parents(settings.widgetSelector).children(settings.contentSelector).height(window_y);
+          $(window).trigger("resize");
+          $('#maximized').click(function() {
+            $(settings.contentSelector).removeClass('widget-max');
+            $("#"+widget).children(settings.contentSelector).height(thisWidgetSettings.height);
+            $('#maximized').remove();
+            $("#"+widget).children(settings.contentSelector).resizable({
+              handles: 's',
+              grid: [50, 50],
+              stop: function(event, ui) {
+                $(this).css({width:''});
+                thisWidgetSettings.resized=true;
+                Dashboard.savePreferences(id);
+              }
+            });
+            $(".widget").each(function() {
+              $(this).show();
+              
+            });
+            $(window).trigger("resize");
+            //$('.ui-resizable-handle').show();
+          });
           e.stopPropagation();  
-        }).toggle(function () {
+        })
+        /*
+        .toggle(function () {
           $(this).parents(settings.widgetSelector).children(settings.contentSelector).addClass('widget-max').prepend('<div id="maximized"><p>Press ESC or click here to return to the Dashboard</p></div>');
           $(this).parents(settings.widgetSelector).children(settings.contentSelector).css({'position':''});
           $('#maximized').click(function() {
             $(settings.contentSelector).removeClass('widget-max');
             $('#maximized').remove();
           });
+          alert('a');
           return false;
         },function () {
           $(this).parents(settings.widgetSelector).find(settings.contentSelector).show();
+          alert('b');
           return false;
-        }).prependTo($(settings.handleSelector,this));
+        })
+        */.prependTo($(settings.handleSelector,this));
       }
     });
     
@@ -255,9 +299,12 @@ var Dashboard = {
     Dashboard.addWidgetControls(opt.id);
     //Dashboard.settings.widgetSelector = selectorOld;
     Dashboard.makeSortable();
-    Dashboard.loadWidget(opt.id);
+    
     //$("li").removeClass("new");
+    Dashboard.loadWidget(opt.id);
+    
     Dashboard.savePreferences(opt.id);
+    
   },
   
   initWidget : function (opt) {
@@ -267,9 +314,19 @@ var Dashboard = {
   
   loadWidget : function(id) {
 //  alert('loadWidget');
-    $.post("page.cgi?id=dashboard_ajax.html", {"widget":id},
+    $.post("page.cgi?id=dashboard_ajax.html", 
+      {
+        "widget_id":id.substring(6),
+        "action":'new',
+        "widget_col":1,
+        "widget_pos":99,
+        "widget_height":256
+      },
     function(data){
-      $("#"+id+" "+Dashboard.settings.contentSelector+" img").remove();
+      $("#"+id+" "+Dashboard.settings.contentSelector+" img").parent().replaceWith(data);
+//      $("#"+id+" "+Dashboard.settings.contentSelector).(data);
+//      alert(data);
+//      
 //      $("#"+id+" "+Dashboard.settings.contentSelector).html('loaded');
     /*
       $("#"+id+" "+Dashboard.settings.contentSelector).html(data);
@@ -306,6 +363,7 @@ var Dashboard = {
         widget['resizable']=thisWidgetSettings.resizable;
         widget['resized']=thisWidgetSettings.resized;
         widget['maximizable']=thisWidgetSettings.maximizable;
+        widget['controls']=thisWidgetSettings.controls;
         widget['height']=$("#"+id+" "+settings.contentSelector).height();
         widget['color']=$("#"+id).attr('class').match(/\bcolor-[\w]{1,}\b/);
         widget['minimized']=$("#"+id+" "+settings.contentSelector).css('display') === 'none' ? 'true' : 'false';
@@ -368,10 +426,36 @@ function SaveWidgets() {
 
 Dashboard.init();
 
+$(window).trigger("resize");
+
 $(document).keyup(function(e) {
   // clear possible maximized widgets when esc is pressed
   if (e.keyCode == 27) {
-    $('.widget-content').removeClass('widget-max');
-    $('#maximized').remove();
+
+    //var y=$('#maximized').parent().height();
+    //alert(y);
+    //$('.widget-content').removeClass('widget-max');
+    $('#maximized').each(function(index) {
+      var id = $(this).parent().parent().attr("id");
+      var thisWidgetSettings = Dashboard.getWidgetSettings(id);
+            $('.widget-content').removeClass('widget-max');
+            $("#"+id).children('.widget-content').height(thisWidgetSettings.height);
+            $('#maximized').remove();
+            $("#"+id).children('.widget-content').resizable({
+              handles: 's',
+              grid: [50, 50],
+              stop: function(event, ui) {
+                $(this).css({width:''});
+                thisWidgetSettings.resized=true;
+                Dashboard.savePreferences(id);
+              }
+            });
+            $(".widget").each(function() {
+              $(this).show();
+            });
+            $(window).trigger("resize");
+    });
+    //$('.ui-resizable-handle').show();
   }
 });
+

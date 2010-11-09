@@ -166,10 +166,17 @@
 	height: 98%;
 	margin: 0;
 	padding: 0;
-	z-index: 1000;
+	z-index: 9999;
 	background: #fff;
 }
 .ui-resizable-handle {
 	background: url(img/resize_handler.png) center top no-repeat;
 	height: 10px;
+}
+.widget_iframe {
+	border: 0;
+	margin: 0;
+	padding: 0;
+	width: 100%;
+	amin-height: 256px;
 }
