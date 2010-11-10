@@ -77,10 +77,7 @@ var Dashboard = {
       $ = this.jQuery,
       settings = this.settings;
       
-    $(
-    //settings.widgetSelector, $(settings.columns)
-    "#"+id
-    ).each(function () {
+    $("#"+id).each(function () {
       var thisWidgetSettings = Dashboard.getWidgetSettings(this.id);
       if (thisWidgetSettings.removable) {
         $('<a href="#" class="remove">CLOSE</a>').mousedown(function (e) {
@@ -116,22 +113,20 @@ var Dashboard = {
         $('<a href="#" class="edit">EDIT</a>').mousedown(function (e) {
           e.stopPropagation();  
         }).toggle(function () {
-        //.css({"background-image": 'url('+Dashboard_folder+'css/img/save.png)'})
-          
           $(this).addClass('save').removeClass('edit')
             .parents(settings.widgetSelector)
-              .find('.edit-box').show().find('input').focus();
+              .find('.edit-box').show().find('#'+id+'_title').focus();
           return false;
         },function () {
-        //css({"background-image": 'url('+Dashboard_folder+'css/img/prefs.png)'})
           $(this).addClass('edit').removeClass('save')
             .parents(settings.widgetSelector)
               .find('.edit-box').hide();
           Dashboard.savePreferences(id);
           return false;
         }).appendTo($(settings.handleSelector,this));
+        
         $('<div class="edit-box" style="display:none;"/>')
-          .append('<ul><li class="item"><label>Change the title?</label><input value="' + $('h3',this).text() + '"/></li>')
+          .append('<ul><li class="item"><label>Change the title?</label><input id="'+id+'_title" value="' + $('h3',this).text() + '"/></li>')
           .append((function(){
             var colorList = '<li class="item"><label>Available colors:</label><ul class="colors">';
             $(thisWidgetSettings.colorClasses).each(function () {
@@ -139,6 +134,7 @@ var Dashboard = {
             });
             return colorList + '</ul>';
           })())
+          .append('<li class="item"><label>URL:</label><input id="'+id+'_url" value=""></li>')
           .append('</ul>')
           .insertAfter($(settings.handleSelector,this));
       }
@@ -216,7 +212,12 @@ var Dashboard = {
     });
     
     $('.edit-box').each(function () {
-      $('input',this).keyup(function () {
+      $('#'+id+'_url',this).keyup(function (e) {
+        if(e.keyCode == 13) {
+          eval(id+"_change_mode('url');");
+        }
+      });
+      $('#'+id+'_title',this).keyup(function () {
         $(this).parents(settings.widgetSelector).find('h3').text( $(this).val().length>20 ? $(this).val().substr(0,20)+'...' : $(this).val() );
       });
       $('ul.colors li',this).click(function () {
@@ -368,6 +369,7 @@ var Dashboard = {
         widget['color']=$("#"+id).attr('class').match(/\bcolor-[\w]{1,}\b/);
         widget['minimized']=$("#"+id+" "+settings.contentSelector).css('display') === 'none' ? 'true' : 'false';
         widget['title'] = $("#"+id+" "+settings.handleSelector+" h3").html();
+        widget['widget_URL'] = $('#'+id+'_url').val();
       }
     });
     return widget;

@@ -173,7 +173,7 @@ sub page_before_template {
             }
 
             # text fields
-            my @fields   = qw(title);
+            my @fields   = qw(title widget_URL);
             my $scrubber = HTML::Scrubber->new;
             $scrubber->default(0);
 
