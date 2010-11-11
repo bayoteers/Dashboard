@@ -28,7 +28,15 @@
       [% END %]
       var thisWidgetSettings = Dashboard.getWidgetSettings("widget"+[% widget.id %]);
       
-      
+      [% IF widget.refreshable %]
+	function widget[% widget.id %]_refresh(){
+	  $('#widget[% widget.id %]_iframe').attr("src",$("#widget[% widget.id %]_iframe").attr("src"));
+	}
+        [% IF widget.widget_refresh>0 %]
+	  $('#widget[% widget.id %]_refresh').val([% widget.widget_refresh %])
+	  $('#widget[% widget.id %]_refresh').trigger("change");
+	[% END %]
+      [% END %]
       [% IF widget.minimized %]
         $("#widget[% widget.id %] .widget-content").hide();
       [% END %]

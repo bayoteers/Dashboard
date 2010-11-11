@@ -26,9 +26,11 @@ var Dashboard = {
       resizable: true,
       resized: true,
       maximizable: true,
+      refreshable: true,
       controls: true,
       width: 0,
       height: 256,
+      refresh_id: 0,
       colorClasses : ['color-gray','color-yellow', 'color-red', 'color-blue', 'color-white', 'color-orange', 'color-green'],
       content: "<div align='center'><img class='loader' src='"+Dashboard_folder+"css/img/ajax-loader.gif'></div>"
     },
@@ -40,6 +42,7 @@ var Dashboard = {
         editable: false,
         maximizable: false,
         resizable: false,
+        refreshable: false,
         controls: true
       }
     }
@@ -79,6 +82,9 @@ var Dashboard = {
       
     $("#"+id).each(function () {
       var thisWidgetSettings = Dashboard.getWidgetSettings(this.id);
+      
+      
+      
       if (thisWidgetSettings.removable) {
         $('<a href="#" class="remove">CLOSE</a>').mousedown(function (e) {
           e.stopPropagation();  
@@ -96,7 +102,14 @@ var Dashboard = {
           return false;
         }).appendTo($(settings.handleSelector, this));
       }
-      
+      if (thisWidgetSettings.refreshable) {
+        $('<a href="#" class="refresh">REFRESH</a>').mousedown(function (e) {
+          e.stopPropagation();  
+        }).click(function () {
+          //if (window.frames[id+"_iframe"].location) window.frames[id+"_iframe"].location.reload();
+          $('#'+id+'_iframe').attr("src",$("#"+id+"_iframe").attr("src"));
+        }).appendTo($(settings.handleSelector, this));
+      }
       if (thisWidgetSettings.resizable) {
         $(this).children(settings.contentSelector).resizable({
           handles: 's',
@@ -135,6 +148,7 @@ var Dashboard = {
             return colorList + '</ul>';
           })())
           .append('<li class="item"><label>URL:</label><input id="'+id+'_url" value=""></li>')
+          .append('<li class="item"><label>Reload:</label><select id="'+id+'_refresh"><option value="0">no refresh</option><option value="15">every 15 seconds</option><option value="60">every minute</option><option value="300">every 5 minutes</option><option value="900">every 15 minutes</option><option value="1800">every 30 minutes</option></select>')
           .append('</ul>')
           .insertAfter($(settings.handleSelector,this));
       }
@@ -212,6 +226,7 @@ var Dashboard = {
     });
     
     $('.edit-box').each(function () {
+      var thisWidgetSettings = Dashboard.getWidgetSettings(this.id);
       $('#'+id+'_url',this).keyup(function (e) {
         if(e.keyCode == 13) {
           eval(id+"_change_mode('url');");
@@ -220,6 +235,23 @@ var Dashboard = {
       $('#'+id+'_title',this).keyup(function () {
         $(this).parents(settings.widgetSelector).find('h3').text( $(this).val().length>20 ? $(this).val().substr(0,20)+'...' : $(this).val() );
       });
+      
+      $('#'+id+'_refresh',this).change(function () {
+        $("select option:selected").each(function () {
+//          alert( thisWidgetSettings.refresh_id );
+          if (thisWidgetSettings.refresh_id!=0) clearInterval(thisWidgetSettings.refresh_id);
+          var refresh_timer = $('#'+id+'_refresh').val();
+          if (refresh_timer>0)
+          {
+//          $('#'+id+'_iframe').attr("src",$("#"+id+"_iframe").attr("src"));
+//          alert(id+'_refresh();');
+            thisWidgetSettings.refresh_id = setInterval(id+'_refresh();',refresh_timer*1000);
+          }
+          else thisWidgetSettings.refresh_id = 0;
+        });
+      })
+      .trigger('change');
+      
       $('ul.colors li',this).click(function () {
         var colorStylePattern = /\bcolor-[\w]{1,}\b/,
           thisWidgetColorClass = $(this).parents(settings.widgetSelector).attr('class').match(colorStylePattern)
@@ -365,11 +397,13 @@ var Dashboard = {
         widget['resized']=thisWidgetSettings.resized;
         widget['maximizable']=thisWidgetSettings.maximizable;
         widget['controls']=thisWidgetSettings.controls;
+        widget['refreshable']=thisWidgetSettings.refreshable;
         widget['height']=$("#"+id+" "+settings.contentSelector).height();
         widget['color']=$("#"+id).attr('class').match(/\bcolor-[\w]{1,}\b/);
         widget['minimized']=$("#"+id+" "+settings.contentSelector).css('display') === 'none' ? 'true' : 'false';
         widget['title'] = $("#"+id+" "+settings.handleSelector+" h3").html();
         widget['widget_URL'] = $('#'+id+'_url').val();
+        widget['widget_refresh']=$('#'+id+'_refresh').val();
       }
     });
     return widget;

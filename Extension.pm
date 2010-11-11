@@ -159,14 +159,14 @@ sub page_before_template {
             my (%widget);
 
             # numerical fields
-            my @fields = qw(id pos col height);
+            my @fields = qw(id pos col height widget_refresh);
 
             foreach (@fields) {
               %widget->{$_} = int( $cgi->param( "widget_" . $_ ) );
             }
 
             # true/false fields
-            my @fields = qw(movable removable collapsible editable resizable resized maximizable minimized controls);
+            my @fields = qw(movable removable collapsible editable resizable resized maximizable minimized controls refreshable);
 
             foreach (@fields) {
               %widget->{$_} = $cgi->param( "widget_" . $_ ) eq 'true' ? 1 : 0;

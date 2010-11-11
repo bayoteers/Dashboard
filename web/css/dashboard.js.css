@@ -81,6 +81,23 @@
 .widget-head a.edit:hover  {
 	background: url(img/prefs_b.png) no-repeat;	
 }
+
+.widget-head a.refresh  {
+	float: right;
+	width: 15px;
+	height: 15px;
+	line-height: 15px;
+	display: inline;
+	text-indent: -9999em;
+	margin: 2px 2px 2px 2px;
+	outline: none;
+	background: url(img/reload.png) no-repeat;
+}
+.widget-head a.refresh:hover  {
+	background: url(img/reload_b.png) no-repeat;	
+}
+
+
 .widget-head a.save  {
 	float: right;
 	width: 15px;
