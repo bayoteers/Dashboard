@@ -18,75 +18,54 @@
   # Contributor(s): 
   #   Allan Savolainen <ext-jari.a.savolainen@nokia.com>
   #%]
-  <!-- [% debug_info %] //-->
+
+  [% IF widget_ajax %]
+    <script>
+      [% widget_ajax %]
+    </script>
+  [% END %]
 
   [% IF widget %]
-  <div class="widget_inner">
-    <script>
-      [% IF widget.controls %]
-        Dashboard.addWidgetControls('widget[% widget.id %]');
-      [% END %]
-      var thisWidgetSettings = Dashboard.getWidgetSettings("widget"+[% widget.id %]);
+    <div class="widget_inner">
+      <script>
       
-      [% IF widget.refreshable %]
-	function widget[% widget.id %]_refresh(){
-	  $('#widget[% widget.id %]_iframe').attr("src",$("#widget[% widget.id %]_iframe").attr("src"));
-	}
-        [% IF widget.widget_refresh>0 %]
-	  $('#widget[% widget.id %]_refresh').val([% widget.widget_refresh %])
-	  $('#widget[% widget.id %]_refresh').trigger("change");
-	[% END %]
-      [% END %]
-      [% IF widget.minimized %]
-        $("#widget[% widget.id %] .widget-content").hide();
-      [% END %]
-      [% IF widget.resized %]
-        $("#widget[% widget.id %] .widget-content").height([% widget.height %]);
-        thisWidgetSettings.resized=true;
-      [% END %]
-      function widget[% widget.id %]_change_mode(mode,param){
-        if (mode=='url') {
-          if (param) {
-          	var url = param;
-          }
-          else var url = $('#widget[% widget.id %]_url').val();
-          $("#widget[% widget.id %] .widget-content .widget_inner").html('<iframe id="widget[% widget.id %]_iframe" class="widget_iframe" frameborder="0" scrolling="auto" src="'+url+'"></iframe>');
-          
-          $(window).unbind("resize.widget[% widget.id %]");
-          $(window).bind("resize.widget[% widget.id %]",function() {
-            var x = $("#widget[% widget.id %] .widget-content").width();
-            $("#widget[% widget.id %]_iframe").width(x);
-            if ($('#maximized').parent().parent().attr("id")=="widget[% widget.id %]")
-              var y = $(window).height()-15;
-            else
-              var y = $("#widget[% widget.id %] .widget-content").height()-5;
-            $("#widget[% widget.id %]_iframe").height(y);
-          });
-          $("#widget[% widget.id %] .widget-content").unbind("resize.widget[% widget.id %]");
-          $("#widget[% widget.id %] .widget-content").bind("resize.widget[% widget.id %]",function() {
-            var y = $("#widget[% widget.id %] .widget-content").height()-5;
-            $("#widget[% widget.id %]_iframe").height(y);
-          });
-          $(window).trigger("resize");
-          $("#widget[% widget.id %] .widget-content").trigger("resize");
-        }
-        else alert('Unknown mode');
-        return false;
-      }
-      [% IF widget.widget_URL %]
-      	widget[% widget.id %]_change_mode('url','[% widget.widget_URL %]');
-	$('#widget[% widget.id %]_url').val('[% widget.widget_URL %]');
-      [% END %]
-    </script>
+	var widget = [];
+	Widgets['widget[% widget.id %]'] = widget;
+      	[% IF widget.controls %]
+  	  Dashboard.addWidgetControls('widget[% widget.id %]');
+        [% END %]
 
-    [% SWITCH widget.mode %]
-    [%   CASE %]
-<!--
-<input id="widget_url[% widget.id %]" type="text" name="koe" value="">
-<input type="button" value="Open URL" onclick="return change_mode_[% widget.id %]('url');">
-//-->
-    [% END %]
-  </div>
+        var thisWidgetSettings = Dashboard.getWidgetSettings("widget"+[% widget.id %]);
+        
+        [% IF widget.minimized %]
+          $("#widget[% widget.id %] .widget-content").hide();
+        [% END %]
+
+        [% IF widget.resized %]
+          $("#widget[% widget.id %] .widget-content").height([% widget.height %]);
+          thisWidgetSettings.resized=true;
+        [% END %]
+
+        [% SWITCH widget.type %]
+        [%   CASE 'url' %]
+        [%     INCLUDE "pages/widget_url.html.tmpl" %]
+        [%   CASE 'rss' %]
+        [%     INCLUDE "pages/widget_rss.html.tmpl" %]
+        [%   CASE 'mybugs' %]
+        [%     INCLUDE "pages/widget_mybugs.html.tmpl" %]
+        [%   CASE 'xeyes' %]
+        [%     INCLUDE "pages/widget_xeyes.html.tmpl" %]
+        [% END %]
+        
+        Widgets['widget[% widget.id %]'] = widget;
+      </script>
+    </div>
   [% ELSE %]
 
+  [% END %]
+ 
+  [% IF widget_error %]
+    <script>
+      alert("[% widget_error | replace('\"','\\"') %]");
+    </script>
   [% END %]
