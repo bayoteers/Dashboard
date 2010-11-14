@@ -1,0 +1,108 @@
+[% USE Bugzilla %]
+
+[% IF widget.refreshable %]
+  $('<li class="item"><label>Reload:</label><select id="widget[% widget.id %]_refresh"><option value="0">no refresh</option><option value="15">every 15 seconds</option><option value="60">every minute</option><option value="300">every 5 minutes</option><option value="900">every 15 minutes</option><option value="1800">every 30 minutes</option></select></li>').appendTo('#widget[% widget.id %] .edit-box');
+  function widget[% widget.id %]_refresh(){
+    $('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html("<div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>");
+    widget[% widget.id %]_load_rss();
+  }
+  [% IF widget.refresh>0 %]
+    $('#widget[% widget.id %]_refresh').val([% widget.refresh %])
+    $('#widget[% widget.id %]_refresh').trigger("change");
+  [% END %]
+  widget['refresh'] = '[% widget.refresh %]';
+[% END %]
+
+$('#widget[% widget.id %]').find('.maximize').remove();
+
+
+
+$('#widget[% widget.id %] .widget-head .refresh').mousedown(function(e) {
+  e.stopPropagation();
+}).click(function() {
+  $('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html("<div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>");
+  widget[% widget.id %]_load_rss();
+})
+
+</script>
+<div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>
+<script>
+
+var y = $("#widget[% widget.id %] .widget-content").height();
+if (y==1) {
+  $("#widget[% widget.id %] .widget-content").height(70);
+}
+
+$("#widget[% widget.id %] .widget-content").unbind("resize.widget[% widget.id %]");
+$("#widget[% widget.id %] .widget-content").bind("resize.widget[% widget.id %]", function() {
+  var y = $("#widget[% widget.id %] .widget-content").height() - 3;
+  //$("#widget[% widget.id %]_iframe").height(y);
+  $('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').children('.rss').height(y);
+});
+
+function widget[% widget.id %]_load_rss() {
+
+
+jQuery.getFeed({
+  url:'buglist.cgi?bug_status=NEW&bug_status=ASSIGNED&bug_status=NEED_INFO&bug_status=REOPENED&bug_status=WAITING&bug_status=RESOLVED&bug_status=RELEASED&email1=[% user.login FILTER url_quote %]&emailassigned_to1=1&emailreporter1=1&emailtype1=exact&field0-0-0=bug_status&field0-0-1=reporter&query_format=advanced&type0-0-0=notequals&type0-0-1=equals&value0-0-0=UNCONFIRMED&value0-0-1=[% user.login FILTER url_quote %]&title=Bug%20List&ctype=atom', //'xml/rss-20.xml',
+  success: function(feed) {
+  
+    var html = '<h2>'
+      + '<a href="'
+      + feed.link
+      + '">'
+      + feed.title
+      + '</a>'
+      + '</h2>';
+     
+    for(var i = 0; i < feed.items.length && i < 5; i++) {
+      var item = feed.items[i];
+       
+      html += '<h3>'
+        + '<a href="'
+        + item.link
+        + '">'
+        + item.title
+        + '</a>'
+        + '</h3>';
+         
+      html += '<div class="updated">'
+        + item.updated
+        + '</div>';
+       
+      html += '<div>'
+        + item.description
+        + '</div>';
+    }
+    
+    
+    $('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html('<div class="rss">'+html+'</div>');
+    $('.rss').children().children('a').colorbox({width:"80%", height:"80%", iframe:true});
+    $("#widget[% widget.id %] .widget-content").trigger("resize");
+  }
+});
+}
+
+$('#widget[% widget.id %]_refresh').change(function() {
+  $("select option:selected").each(function() {
+    if (Widgets['widget[% widget.id %]']['refresh_id'] != 0) clearInterval(Widgets['widget[% widget.id %]']['refresh_id']);
+    var refresh_timer = $('#widget[% widget.id %]_refresh').val();
+    Widgets['widget[% widget.id %]']['refresh'] = refresh_timer;
+    if (refresh_timer > 0) {
+      Widgets['widget[% widget.id %]']['refresh_id'] = setInterval('widget[% widget.id %]_refresh();', refresh_timer * 1000);
+    }
+    else Widgets['widget[% widget.id %]']['refresh_id'] = 0;
+  });
+}).trigger('change');
+
+widget[% widget.id %]_load_rss();
+
+if (y==1) {
+  thisWidgetSettings.resized=true;
+  y=Math.min(Math.max($('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').children('.rss').height(),358),128);
+}
+$("#widget[% widget.id %] .widget-content").height(y);
+$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').children('.rss').height(y);
+$("#widget[% widget.id %] .widget-content").trigger("resize");
+    
+

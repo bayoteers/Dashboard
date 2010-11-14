@@ -34,10 +34,14 @@
 /* Columns section */
 #columns .column {
 	float: left;
-	width: 33.3%;
+	awidth: 25%;
 	min-height: 400px;
 	height: auto !important;
 	height: 400px;
+}
+#columns #column0 {
+	width: 350px;
+	min-width: 350px;
 }
 #columns .widget {
 	margin: 30px 20px 0 20px;
@@ -79,5 +83,5 @@
 	border-bottom-right-radius: 2px;
 	overflow: hidden;
 }
-/* End Columns section */
 
+/* End Columns section */
