@@ -31,6 +31,15 @@
         padding-bottom: 3px;
 	padding-top: 2px;
 }
+#widget-buttons a {
+	text-decoration: none;
+}
+#columns #button-overlay a {
+        background: url(img/icon_overlay.png) center left no-repeat;
+}
+#columns #button-overlay a:hover {
+        background: url(img/icon_overlay_b.png) center left no-repeat;
+}
 #columns #button-new-widget a {
         background: url(img/icon_new_widget.png) center left no-repeat;
 }
@@ -231,7 +240,6 @@
 	margin: 0;
 	padding: 0;
 	width: 100%;
-	amin-height: 256px;
 }
 
 .widget .rss {
@@ -256,5 +264,14 @@
 	border-bottom: 1px solid #ccc;
 	display:block;
 	padding: 5px;
+}
+.overlay_box {
+	border:1px dotted #999999;
+	margin: 5px;
+	padding: 10px;
+}
+
+.overlay_field {
+	width:192px;
 }
 

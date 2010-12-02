@@ -38,7 +38,10 @@ use HTML::Scrubber;
 # For serialization
 use Storable;
 
+# Core modules
 use File::Path;
+use File::Basename;
+use File::Copy;
 
 our $VERSION = '0.01';
 
@@ -48,12 +51,213 @@ sub install_update_db {
   my ( $self, $args ) = @_;
 }
 
+# widget subs
+
+# delete all widget_id related files and return ajax to fade/slide/close the widget
+sub delete_widget {
+  my ( $widget_id, $datauserdir, $vars ) = @_;
+  if ( $widget_id > 0 && -e $datauserdir . "/" . $widget_id . ".widget" ) {
+    my @files = glob $datauserdir . "/" . $widget_id . ".*";
+
+    foreach my $dir_entry (@files) {
+      trick_taint($dir_entry);
+      unlink $dir_entry;
+    }
+
+    # on success jquery hides widget element, slides it to 0 height and removes it from the page
+    $vars->{widget_ajax} =
+"\$('#widget$widget_id').animate({ opacity: 0 }, function() {\$('#widget$widget_id').wrap('<div/>').parent().slideUp(function() {\$('#widget$widget_id').remove();});});";
+
+  }
+  else {
+    if ( $widget_id > 0 ) {
+      $vars->{widget_error} = "Cannot delete widget, preferences not found!";
+    }
+    else {
+      $vars->{widget_error} = "Cannot delete widget, illegal widget id!";
+    }
+
+  }
+}
+
+# load widget specific preferences
+sub load_widget {
+  my ( $widget_id, $datauserdir, $vars ) = @_;
+  if ( $widget_id > 0 && -e $datauserdir . "/" . $widget_id . ".widget" ) {
+    my $widget = retrieve( $datauserdir . "/" . $widget_id . ".widget" );
+    $vars->{widget} = $widget;
+  }
+  else {
+    if ( $widget_id > 0 ) {
+      $vars->{widget_error} = "Cannot load widget, preferences not found!";
+    }
+    else {
+      $vars->{widget_error} = "Cannot load widget, illegal widget id!";
+    }
+  }
+
+}
+
+# create new widget and store all required preferences
+sub new_widget {
+  my ( $widget_id, $datauserdir, $vars ) = @_;
+
+  if ( $widget_id > 0 ) {
+
+    opendir( DIR, $datauserdir ) or die($!);
+    my ( @files, $file );
+    @files = grep( /\.widget$/, readdir(DIR) );
+    closedir(DIR);
+
+    # if widget can be created, get required prefences, store them and tell jquery to save any extra preferences the widget has
+    if ( scalar @files < WIDGETS_MAX ) {
+
+      my $cgi = Bugzilla->cgi;
+      my @fields;
+
+      trick_taint($widget_id);
+
+      # numerical fields
+      # each widget MUST have unique id, position (vertical), column it is and height of the widget
+      @fields = qw(id pos col height);
+
+      foreach (@fields) {
+        $vars->{widget}->{$_} = int( $cgi->param( "widget_" . $_ ) );
+      }
+
+      # ascii only fields
+      # todo: add type verification based on installed widget types
+      @fields = qw(type);
+      foreach (@fields) {
+        $vars->{widget}->{$_} = clean_text( $cgi->param( "widget_" . $_ ) );
+      }
+
+      # force the widget to be resized on load
+      $vars->{widget}->{resized} = 1;
+      store $vars->{widget}, $datauserdir . "/" . $widget_id . ".widget";
+      $vars->{widget_ajax} = "Dashboard.savePreferences('widget$widget_id');";
+    }
+    else {
+
+      # in case of too many widgets, delete widget prefs and tell jquery to remove the widget stub from the UI
+      my @files = glob $datauserdir . "/" . $widget_id . ".*";
+
+      foreach my $dir_entry (@files) {
+        trick_taint($dir_entry);
+        unlink $dir_entry;
+      }
+      $vars->{widget_ajax}  = "\$('#widget$widget_id').remove();";
+      $vars->{widget_error} = 'Cannot create new widget, maximum number reached!';
+    }
+  }
+  else {
+    $vars->{widget_error} = "Cannot create widget, illegal widget id!";
+  }
+}
+
+# get and store all extended widget preferences
+sub save_widget {
+  my ( $widget_id, $datauserdir, $vars ) = @_;
+
+  if ( $widget_id > 0 && -e $datauserdir . "/" . $widget_id . ".widget" ) {
+    trick_taint($widget_id);
+    my $cgi = Bugzilla->cgi;
+    my @fields;
+    my $widget = retrieve( $datauserdir . "/" . $widget_id . ".widget" );
+
+    # numerical fields
+    @fields = qw(id pos col height refresh);
+
+    foreach (@fields) {
+
+      $widget->{$_} = int( $cgi->param( "widget_" . $_ ) ? $cgi->param( "widget_" . $_ ) : 0 );
+    }
+
+    # true/false fields
+    @fields = qw(movable removable collapsible editable resizable resized maximizable minimized controls refreshable);
+
+    foreach (@fields) {
+      $widget->{$_} = $cgi->param( "widget_" . $_ ) eq 'true' ? 1 : 0;
+    }
+
+    # text fields
+    @fields = qw(title URL);
+    my $scrubber = HTML::Scrubber->new;
+    $scrubber->default(0);
+
+    foreach (@fields) {
+      $widget->{$_} = $cgi->param( "widget_" . $_ ) ? $scrubber->scrub( $cgi->param( "widget_" . $_ ) ) : " ";
+    }
+
+    # color
+    $widget->{'color'} = $cgi->param("widget_color") =~ /color-(gray|yellow|red|blue|white|orange|green)/ ? $1 : "gray";
+
+    store $widget, $datauserdir . "/" . $widget_id . ".widget";
+  }
+  else {
+
+    $vars->{widget_error} = "Cannot save widget, illegal widget id!";
+
+  }
+
+}
+
+# delete last column if it is empty and re-init the Sortable UI on success
+sub delete_column {
+  my ( $datauserdir, $vars ) = @_;
+
+  # load all widgets and find out the last column used
+  opendir( DIR, $datauserdir ) or die($!);
+  my ( @files, $file );
+  my $last_col = 1;
+  @files = grep( /\.widget$/, readdir(DIR) );
+  closedir(DIR);
+
+  foreach $file (@files) {
+    my $widget = retrieve( $datauserdir . "/" . $file );
+    if ( $widget->{col} > $last_col ) { $last_col = $widget->{col}; }
+  }
+
+# if column can be deleted, decrease and save the column setting and tell jquery to remove the last column, resize widgets and call makeSortable() to re-init the Sortable UI elements
+  if ( $last_col < $vars->{preferences}->{columns} ) {
+    $last_col = $vars->{preferences}->{columns};
+    $vars->{widget_ajax} = "\$('#column$last_col').remove();\$(window).trigger(\"resize\");Dashboard.makeSortable();";
+    $vars->{preferences}->{columns}--;
+    store $vars->{preferences}, $datauserdir . "/preferences";
+  }
+  elsif ( $last_col > 1 ) {
+    $vars->{widget_error} = 'You must remove widgets from the last column before deleting it!';
+  }
+  else {
+    $vars->{widget_error} = 'You cannot delete the last column!';
+  }
+}
+
+# add new column and re-init the Sortable UI on success
+sub add_column {
+  my ( $datauserdir, $vars ) = @_;
+
+  my $last_col = $vars->{preferences}->{columns};
+  $last_col++;
+
+  # if new column can be added, tell jquery to create new UL element for the column and call makeSortable() to re-init the Sortable UI elements
+  if ( $last_col < COLUMNS_MAX ) {
+    $vars->{preferences}->{columns} = $last_col;
+    $vars->{widget_ajax} = "\$('#columns').append('<ul id=\"column$last_col\" class=\"column\"></ul>');\$(window).trigger(\"resize\");Dashboard.makeSortable();";
+    store $vars->{preferences}, $datauserdir . "/preferences";
+  }
+  else {
+    $vars->{widget_error} = 'Cannot create new column, maximum reached!';
+  }
+
+}
+
 # Hook for page.cgi and dashboard
 sub page_before_template {
   my ( $self, $args ) = @_;
   my ( $vars, $page ) = @$args{qw(vars page_id)};
 
-  if ( $page =~ /^dashboard(_ajax)?\.(html|js)/ ) {
+  if ( $page =~ /^dashboard(_ajax|_overlay)?\.html$/ ) {
 
     my $user_id = Bugzilla->user->id;
 
@@ -63,11 +267,10 @@ sub page_before_template {
 
     if ( $user_id > 0 ) {
       my $cgi = Bugzilla->cgi;
-      
-      # Get users preferences or create defaults if the user is new
-      if ( -d $datauserdir && -e $datauserdir . "/preferences" ) {
-        $vars->{preferences} = retrieve( $datauserdir . "/preferences" );
 
+      # Get users preferences or create defaults if the user is new
+      if ( -d $datauserdir && -f $datauserdir . "/preferences" ) {
+        $vars->{preferences} = retrieve( $datauserdir . "/preferences" );
       }
       else {
 
@@ -85,53 +288,24 @@ sub page_before_template {
         }
 
         # create default preferences
-        my %preferences->{columns} = COLUMNS_DEFAULT;
-        store \%preferences, $datauserdir . "/preferences";
-        $vars->{preferences} = \%preferences;
+        my $preferences->{columns} = COLUMNS_DEFAULT;
+        store $preferences, $datauserdir . "/preferences";
+        $vars->{preferences} = $preferences;
       }
 
       $vars->{cgi_variables} = { Bugzilla->cgi->Vars };
 
+      # ajax calls, extension can return javascript with 'widget_ajax' and error messages with 'widget_error'
       if ( $page eq "dashboard_ajax.html" ) {
 
-        if ( Bugzilla->cgi->param('action') eq 'column_add' ) {
-          my $last_col = $vars->{preferences}->{columns};
-          $last_col++;
-          if ( $last_col < COLUMNS_MAX ) {
-            $vars->{preferences}->{columns} = $last_col;
-            $vars->{widget_ajax} = "\$('#columns').append('<ul id=\"column$last_col\" class=\"column\"></ul>');\$(window).trigger(\"resize\");Dashboard.makeSortable();";
-            store $vars->{preferences}, $datauserdir . "/preferences";
-          }
-          else {
-            $vars->{widget_error} = 'Cannot create new column, maximum reached!';
-          }
+        my @fields;
 
+        if ( Bugzilla->cgi->param('action') eq 'column_add' ) {
+          add_column( $datauserdir, $vars );
         }
         elsif ( Bugzilla->cgi->param('action') eq 'column_del' ) {
 
-          opendir( DIR, $datauserdir ) or die($!);
-          my ( @files, $file );
-          my $last_col = 1;
-          @files = grep( /\.widget$/, readdir(DIR) );
-          closedir(DIR);
-
-          foreach $file (@files) {
-            my $widget = retrieve( $datauserdir . "/" . $file );
-            if ( $widget->{col} > $last_col ) { $last_col = $widget->{col}; }
-          }
-
-          if ( $last_col < $vars->{preferences}->{columns} ) {
-            $last_col = $vars->{preferences}->{columns};
-            $vars->{widget_ajax} = "\$('#column$last_col').remove();\$(window).trigger(\"resize\");Dashboard.makeSortable();";
-            $vars->{preferences}->{columns}--;
-            store $vars->{preferences}, $datauserdir . "/preferences";
-          }
-          elsif ( $last_col > 1 ) {
-            $vars->{widget_error} = 'You must remove widgets from the last column before deleting it!';
-          }
-          else {
-            $vars->{widget_error} = 'You cannot delete the last column!';
-          }
+          delete_column( $datauserdir, $vars );
 
         }
 
@@ -139,136 +313,186 @@ sub page_before_template {
 
           my $widget_id = int( $cgi->param('widget_id') );
 
-          if ( $widget_id > 0 ) {
-
-            opendir( DIR, $datauserdir ) or die($!);
-            my ( @files, $file );
-            @files = grep( /\.widget$/, readdir(DIR) );
-            closedir(DIR);
-
-            if ( scalar @files < WIDGETS_MAX ) {
-
-              trick_taint($widget_id);
-
-              # numerical fields
-              my @fields = qw(id pos col height);
-
-              foreach (@fields) {
-                $vars->{widget}->{$_} = int( $cgi->param( "widget_" . $_ ) );
-              }
-
-              # ascii only fields
-              my @fields = qw(type);
-              foreach (@fields) {
-                $vars->{widget}->{$_} = clean_text( $cgi->param( "widget_" . $_ ) );
-              }
-              $vars->{widget}->{resized} = 1;
-              store $vars->{widget}, $datauserdir . "/" . $widget_id . ".widget";
-              $vars->{widget_ajax} = "Dashboard.savePreferences('widget$widget_id');";
-            }
-            else {
-              my @files = glob $datauserdir . "/" . $widget_id . ".*";
-
-              foreach my $dir_entry (@files) {
-                trick_taint($dir_entry);
-                unlink $dir_entry;
-              }
-              $vars->{widget_ajax}  = "\$('#widget$widget_id').remove();";
-              $vars->{widget_error} = 'Cannot create new widget, maximum number reached!';
-            }
-          }
-          else {
-            $vars->{widget_error} = "Cannot create widget, illegal widget id!";
-          }
+          new_widget( $widget_id, $datauserdir, $vars );
         }
         elsif ( Bugzilla->cgi->param('action') eq 'load' ) {
 
           my $widget_id = int( $cgi->param('widget_id') );
 
-          if ( $widget_id > 0 && -e $datauserdir . "/" . $widget_id . ".widget" ) {
-            my $widget = retrieve( $datauserdir . "/" . $widget_id . ".widget" );
-            $vars->{widget} = $widget;
-          }
-          else {
-            if ( $widget_id > 0 ) {
-              $vars->{widget_error} = "Cannot load widget, preferences not found!";
-            }
-            else {
-              $vars->{widget_error} = "Cannot load widget, illegal widget id!";
-            }
-          }
+          load_widget( $widget_id, $datauserdir, $vars );
         }
         elsif ( Bugzilla->cgi->param('action') eq 'delete' ) {
 
           my $widget_id = int( $cgi->param('widget_id') );
 
-          if ( $widget_id > 0 && -e $datauserdir . "/" . $widget_id . ".widget" ) {
-            my @files = glob $datauserdir . "/" . $widget_id . ".*";
+          delete_widget( $widget_id, $datauserdir, $vars );
 
-            foreach my $dir_entry (@files) {
-              trick_taint($dir_entry);
-              unlink $dir_entry;
-            }
-          }
-          else {
-            if ( $widget_id > 0 ) {
-              $vars->{widget_error} = "Cannot delete widget, preferences not found!";
-            }
-            else {
-              $vars->{widget_error} = "Cannot delete widget, illegal widget id!";
-            }
-
-          }
         }
         elsif ( Bugzilla->cgi->param('action') eq 'save' ) {
 
           my $widget_id = int( $cgi->param('widget_id') );
 
-          if ( $widget_id > 0 && -e $datauserdir . "/" . $widget_id . ".widget" ) {
-            trick_taint($widget_id);
+          save_widget( $widget_id, $datauserdir, $vars );
+        }
+        elsif ( Bugzilla->cgi->param('action') eq 'delete_overlay' ) {
 
-            #my (%widget);
-            my $widget = retrieve( $datauserdir . "/" . $widget_id . ".widget" );
+          my $overlay_user_id = int( $cgi->param("overlay_user_id") );
+          my $overlay_id      = int( $cgi->param("overlay_id") );
 
-            # numerical fields
-            my @fields = qw(id pos col height refresh);
+          if ( ( ( $overlay_user_id == 0 && Bugzilla->user->in_group('admin') ) || $overlay_user_id == $user_id )
+            && -d $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id )
+          {
 
-            foreach (@fields) {
-              $widget->{$_} = int( $cgi->param( "widget_" . $_ ) );
+            my @files = glob $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id . "/*";
+
+            foreach my $dir_entry (@files) {
+              if ( -f $dir_entry ) {
+                trick_taint($dir_entry);
+                unlink $dir_entry;
+              }
             }
+            rmdir trick_taint( $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id );
 
-            # true/false fields
-            my @fields = qw(movable removable collapsible editable resizable resized maximizable minimized controls refreshable);
-
-            foreach (@fields) {
-              $widget->{$_} = $cgi->param( "widget_" . $_ ) eq 'true' ? 1 : 0;
-            }
-
-            # text fields
-            my @fields   = qw(title URL);
-            my $scrubber = HTML::Scrubber->new;
-            $scrubber->default(0);
-
-            foreach (@fields) {
-              $widget->{$_} = $scrubber->scrub( $cgi->param( "widget_" . $_ ) );
-            }
-
-            # color
-            $widget->{'color'} = $cgi->param("widget_color") =~ /color-(gray|yellow|red|blue|white|orange|green)/ ? $1 : "gray";
-
-            store $widget, $datauserdir . "/" . $widget_id . ".widget";
+            $vars->{"overlay_ajax"} = '<h2>Overlay deleted!</h2><script>$.colorbox.close();</script>';
           }
           else {
+            $vars->{"overlay_error"} = "Illegal user or overlay id!";
+          }
 
-            $vars->{widget_error} = "Cannot save widget, illegal widget id!";
+        }
+        elsif ( Bugzilla->cgi->param('action') eq 'load_overlay' ) {
+
+          my $overlay_user_id = int( $cgi->param("overlay_user_id") );
+          my $overlay_id      = int( $cgi->param("overlay_id") );
+
+          if ( ( $overlay_user_id == 0 || $overlay_user_id == $user_id ) && -d $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id ) {
+
+            my @files = glob $datauserdir . "/*";
+
+            foreach my $dir_entry (@files) {
+              trick_taint($dir_entry);
+              if ( -f $dir_entry ) {
+                unlink $dir_entry;
+              }
+            }
+
+            @files = glob $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id . "/*";
+
+            foreach my $dir_entry (@files) {
+              if ( -f $dir_entry ) {
+                trick_taint($dir_entry);
+                my $filename = basename($dir_entry);
+                copy( $dir_entry, "$datauserdir/$filename" ) or die "Copy failed: $!";
+              }
+            }
+
+            $vars->{"overlay_ajax"} = "<h2>Overlay loaded!</h2>";
+          }
+          else {
+            $vars->{"overlay_error"} = "Illegal user or overlay id!";
+          }
+
+        }
+        elsif ( Bugzilla->cgi->param('action') eq 'save_overlay' ) {
+
+          my $overlay;
+          my @fields;
+          my $datatargetdir = $datauserdir;
+
+          # true/false fields
+          if ( Bugzilla->user->in_group('admin') ) {
+            @fields = qw(shared);
+            foreach (@fields) {
+              $overlay->{$_} = $cgi->param( "overlay_" . $_ ) eq 'true' ? 1 : 0;
+            }
+            if ( $overlay->{"shared"} ) {
+              $datatargetdir = $dataextdir . '/0';
+            }
+          }
+          else {
+            $overlay->{"shared"} = 0;
+          }
+
+          # text fields
+          @fields = qw(name description);
+          my $scrubber = HTML::Scrubber->new;
+          $scrubber->default(0);
+          foreach (@fields) {
+            $overlay->{$_} = $cgi->param( "overlay_" . $_ ) ? $scrubber->scrub( $cgi->param( "overlay_" . $_ ) ) : " ";
+          }
+
+          # creator of overlay
+          $overlay->{"owner"}   = $user_id;
+          $overlay->{"created"} = time;
+          my $i = 1;
+
+          while ( -d $datatargetdir . "/overlay/" . $i ) {
+            $i++;
+          }
+          my $overlaydir = $datatargetdir . "/overlay/" . $i;
+
+          mkpath( $overlaydir, { verbose => 0, mode => 0755, error => \my $err } );
+
+          if (@$err) {
+            for my $diag (@$err) {
+              my ( $file, $message ) = each %$diag;
+              print "Problem making $file: $message\n";
+            }
+            die("Couldn't create $overlaydir");
 
           }
+
+          my @files = glob $datauserdir . "/*";
+
+          foreach my $dir_entry (@files) {
+            if ( -f $dir_entry ) {
+              trick_taint($dir_entry);
+              copy( $dir_entry, "$overlaydir/" ) or die "Copy failed: $!";
+            }
+          }
+          store $overlay, $overlaydir . "/overlay";
+
+          $vars->{"overlay_ajax"} = "<h2>Overlay saved!</h2>";
         }
       }
-      else {
-        for ( my $i = 0 ; $i <= $vars->{preferences}->{columns} ; $i++ ) {
+      elsif ( $page eq "dashboard_overlay.html" ) {
+        if ( Bugzilla->user->in_group('admin') ) {
+          $vars->{"is_admin"} = 1;
+        }
+        else {
+          $vars->{"is_admin"} = 0;
+        }
 
-          $vars->{"columns"}->[$i][0];
+        my $overlaydir;
+        my @users = ( $user_id, 0 );
+        my $i = 0;
+        foreach (@users) {
+          $overlaydir = $dataextdir . '/' . $_ . '/overlay';
+          if ( -d $overlaydir ) {
+            my @folders = glob $overlaydir . "/*";
+            foreach my $dir_entry (@folders) {
+              if ( -f $dir_entry . '/overlay' ) {
+                trick_taint($dir_entry);
+                my $overlay = retrieve( $dir_entry . '/overlay' );
+                my $folder  = basename($dir_entry);
+                $overlay->{"user_id"}    = $_;
+                $overlay->{"overlay_id"} = $folder;
+                my $key = $overlay->{"name"} . "\t" . $folder;
+                $vars->{"overlays"}->{"$i"}->{"$key"} = $overlay;
+              }
+            }
+          }
+          $i++;
+        }
+        $vars->{"user_id"} = $user_id;
+      }
+      else {
+
+        # request was for dashboard.html so generate column->widgets structure and populate it with widget preferences
+
+        for ( my $i = 0 ; $i <= $vars->{preferences}->{columns} ; $i++ ) {
+          my $widget->{'id'} = 0;
+          $vars->{"columns"}->[$i]->[0] = $widget;
         }
 
         opendir( DIR, $datauserdir ) or die($!);
@@ -278,6 +502,7 @@ sub page_before_template {
         foreach $file (@files) {
           my $widget = retrieve( $datauserdir . "/" . $file );
           $vars->{"columns"}->[ $widget->{col} ]->[ $widget->{pos} ] = $widget;
+
         }
 
       }

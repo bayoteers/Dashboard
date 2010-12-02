@@ -80,21 +80,12 @@ var Dashboard = {
         $("#" + id).each(function() {
             var thisWidgetSettings = Dashboard.getWidgetSettings(this.id);
 
-
-
             if (thisWidgetSettings.removable) {
                 $('<a href="#" class="remove">CLOSE</a>').mousedown(function(e) {
                     e.stopPropagation();
                 }).click(function() {
                     if (confirm('This widget will be removed, ok?')) {
-                        $(this).parents(settings.widgetSelector).animate({
-                            opacity: 0
-                        }, function() {
-                            $(this).wrap('<div/>').parent().slideUp(function() {
-                                $(this).remove();
-                                DeleteWidget(id);
-                            });
-                        });
+                    	  DeleteWidget(id);
                     }
                     return false;
                 }).appendTo($(settings.handleSelector, this));
@@ -116,7 +107,6 @@ var Dashboard = {
                     }
                 });
             }
-
             if (thisWidgetSettings.editable) {
                 $('<a href="#" class="edit">EDIT</a>').mousedown(function(e) {
                     e.stopPropagation();
@@ -128,7 +118,6 @@ var Dashboard = {
                     Dashboard.savePreferences(id);
                     return false;
                 }).appendTo($(settings.handleSelector, this));
-
                 $('<div class="edit-box" style="display:none;"/>')
                   .append('<li class="item"><label>Change the title?</label><input id="' + id + '_title" value="' + $('h3', this).text() + '"/></li>').append((function() {
                     var colorList = '<li class="item"><label>Available colors:</label><ul class="colors">';
@@ -138,9 +127,7 @@ var Dashboard = {
                     return colorList + '</ul>';
                 })())
                 .insertAfter($(settings.handleSelector, this));
-                
             }
-
             if (thisWidgetSettings.collapsible) {
                 $('<a href="#" class="collapse">COLLAPSE</a>').mousedown(function(e) {
                     e.stopPropagation();
@@ -154,11 +141,9 @@ var Dashboard = {
                     return false;
                 }).prependTo($(settings.handleSelector, this));
             }
-
             if (thisWidgetSettings.maximizable) {
                 $('<a href="#" class="maximize">MAXIMIZE</a>').mousedown(function(e) {
                     thisWidgetSettings.height = $(this).parents(settings.widgetSelector).children(settings.contentSelector).height();
-
                     $(this).parents(settings.widgetSelector).children(settings.contentSelector).resizable("destroy");
                     $(this).parents(settings.widgetSelector).children(settings.contentSelector).addClass('widget-max').prepend('<div id="maximized"><p>Press ESC or click here to return to the Dashboard</p></div>');
                     $(this).parents(settings.widgetSelector).children(settings.contentSelector).css({
@@ -168,7 +153,6 @@ var Dashboard = {
                     $(".widget").each(function() {
                         if ($(this).attr("id") != widget) $(this).hide();
                     });
-
                     var window_y = $(window).height() - 10;
                     $(this).parents(settings.widgetSelector).children(settings.contentSelector).height(window_y);
                     $(window).trigger("resize");
@@ -197,13 +181,11 @@ var Dashboard = {
                 }).prependTo($(settings.handleSelector, this));
             }
         });
-
         $('.edit-box').each(function() {
             var thisWidgetSettings = Dashboard.getWidgetSettings(this.id);
             $('#' + id + '_title', this).keyup(function() {
                 $(this).parents(settings.widgetSelector).find('h3').text($(this).val().length > 20 ? $(this).val().substr(0, 20) + '...' : $(this).val());
             });
-
             $('ul.colors li', this).click(function() {
                 var colorStylePattern = /\bcolor-[\w]{1,}\b/,
                     thisWidgetColorClass = $(this).parents(settings.widgetSelector).attr('class').match(colorStylePattern)
@@ -214,12 +196,12 @@ var Dashboard = {
             });
         });
     },
-
+    // load advanced stylesheet for widgets
     attachStylesheet: function(href) {
         var $ = this.jQuery;
         return $('<link href="' + href + '" rel="stylesheet" type="text/css" />').appendTo('head');
     },
-
+    // make the columns Sortable
     makeSortable: function() {
         var Dashboard = this,
             $ = this.jQuery,
@@ -287,17 +269,14 @@ var Dashboard = {
         $(where).append(Dashboard.initWidget(opt));
         Dashboard.addWidgetControls(opt.id);
         Dashboard.makeSortable();
-
         Dashboard.newWidget(opt.id, opt.type);
-
-
     },
-
+    // minimal widget stub html-code
     initWidget: function(opt) {
         if (!opt.content) opt.content = Dashboard.settings.widgetDefault.content;
         return '<li id="' + opt.id + '" class="widget ' + opt.color + '"><div class="widget-head"><h3>' + opt.title + '</h3></div><div class="widget-content">' + opt.content + '</div></li>';
     },
-
+    // ajax call to extension to create new preference file for the new widget and store required fields
     newWidget: function(id, type) {
         $.post("page.cgi?id=dashboard_ajax.html", {
             "widget_id": id.substring(6),
@@ -339,6 +318,7 @@ var Dashboard = {
                 widget['color'] = $("#" + id).attr('class').match(/\bcolor-[\w]{1,}\b/);
                 widget['minimized'] = $("#" + id + " " + settings.contentSelector).css('display') === 'none' ? 'true' : 'false';
                 widget['title'] = $("#" + id + " " + settings.handleSelector + " h3").html();
+                // get extra preferences from the global Widgets array which is populated by widgets
                 for(var i in Widgets[id]) {
                   widget[i] = Widgets[id][i];
                 }
@@ -371,6 +351,7 @@ function DelColumn() {
 }
 
 function AddWidget(type) {
+		// find first available widget id
     var i = 1;
     while ($("#widget" + i).length > 0) i++;
     Dashboard.addWidget("#column1", {
@@ -383,16 +364,20 @@ function AddWidget(type) {
 }
 
 function DeleteWidget(id) {
+		// calls extension which returns commands to delete the widget on success
     $(document).unbind('mousemove.'+id);
     clearInterval(Widgets[id]['refresh_id']);
     $.post("page.cgi?id=dashboard_ajax.html", {
         'action': 'delete',
         'widget_id': id.substring(6)
-    }, function(result) {});
+    }, function(data) {
+        $('#ajax_message').html(data);
+    });
     return false;
 }
 
 function SaveWidget(id, pos, col) {
+		// store widget preferences to the server
     var widget = Dashboard.getSettings(id);
     var post = 'action=save';
     post += '&widget_id=' + id.substring(6);
@@ -408,6 +393,7 @@ function SaveWidget(id, pos, col) {
 }
 
 function SaveWidgets() {
+		// store prefs from all widgets
     for (var col = 0; col < $("#columns").children().size(); col++) {
         $("#column" + col).children().each(
 
@@ -421,15 +407,20 @@ function SaveWidgets() {
     return false;
 }
 
+// contains possible extra fields from widgets, is populated by dashboard_ajax.html
 Widgets = [];
 
 Dashboard.init();
 
+$(".overlay-open").colorbox();
+
+// bind columns to resize event to dynamically resize them in case of browser resize or change in number of columns
 $(window).bind("resize.columns", function() {
     var x = ($("#columns").width() - $("#column0").width() - 15) / ($("#columns").children().size() - 1);
     $("#columns").children().not('#column0').width(x);
 });
 
+// everything is rendered so call resize manually to fix possible errors is elements' dimensions
 $(window).trigger("resize");
 
 $(document).keyup(function(e) {

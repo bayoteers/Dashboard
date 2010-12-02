@@ -40,9 +40,10 @@
         </div>
         <div class="widget-content">
           <ul id="widget-buttons">
+            <li id="button-overlay"><a class="overlay-open" href="page.cgi?id=dashboard_overlay.html">Open overlay</a></li>
             <li id="button-add-column"><a onclick="return AddColumn();">Add column</a></li>
+            <li id="button-save-widgets"><a onclick="return SaveWidgets();">Save prefs</a></li>
             <li id="button-del-column"><a onclick="return DelColumn();">Delete column</a></li>
-            <li id="button-save-widgets"><a onclick="return SaveWidgets();">Save widgets</a></li>
           </ul>
           <div class="widget-divider"></div>
           <ul id="widget-buttons">
@@ -56,9 +57,9 @@
         </div>
       </li>
       
-      [% column0 = columns.shift %]
-      [% FOREACH widget IN column0.nsort %]
-      	[% IF widget.id > 0 %]
+      [% column = columns.shift %]
+      [% FOREACH widget IN column %]
+      	[% IF widget.id && widget.id > 0 %]
       	  <li class="widget color-[% widget.color %]" id="widget[% widget.id %]">
       	    <div class="widget-head">
       	      <h3>[% widget.title %]</h3>
@@ -74,8 +75,8 @@
     [% FOREACH i IN [1 .. preferences.columns] %]
       [% column = columns.shift %]
       <ul id="column[% i %]" class="column">
-        [% FOREACH widget IN column.nsort %]
-          [% IF widget.id > 0 %]
+        [% FOREACH widget IN column %]
+          [% IF widget.id && widget.id > 0 %]
             <li class="widget color-[% widget.color %]" id="widget[% widget.id %]">
               <div class="widget-head">
                 <h3>[% widget.title %]</h3>

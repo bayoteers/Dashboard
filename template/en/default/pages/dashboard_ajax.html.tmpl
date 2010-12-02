@@ -61,11 +61,16 @@
       </script>
     </div>
   [% ELSE %]
-
+  	[% overlay_ajax %]
   [% END %]
  
   [% IF widget_error %]
     <script>
       alert("[% widget_error | replace('\"','\\"') %]");
+    </script>
+  [% END %]
+	[% IF overlay_error %]
+    <script>
+      alert("[% overlay_error | replace('\"','\\"') %]");
     </script>
   [% END %]
