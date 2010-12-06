@@ -1,0 +1,117 @@
+
+$('#widget[% widget.id %]').find('.refresh').remove();
+
+</script>
+<div id="xeyes[% widget.id %]" style="width:1px;height:1px;position:relative;">
+  <img id="eye_l_b" src="extensions/Dashboard/web/xeyes/img/circle_black.gif">
+  <img id="eye_r_b" src="extensions/Dashboard/web/xeyes/img/circle_black.gif">
+  <img id="eye_l_w" src="extensions/Dashboard/web/xeyes/img/circle_white.gif">
+  <img id="eye_r_w" src="extensions/Dashboard/web/xeyes/img/circle_white.gif">
+  <img id="eye_l_p" src="extensions/Dashboard/web/xeyes/img/circle_black.gif">
+  <img id="eye_r_p" src="extensions/Dashboard/web/xeyes/img/circle_black.gif">
+</div>
+<script>
+
+var x = $("#widget[% widget.id %] .widget-content").width();
+$("#widget[% widget.id %] .widget-content").height(x);
+
+$(window).unbind("resize.widget[% widget.id %]");
+$(window).bind("resize.widget[% widget.id %]", function() {
+  var x = $("#widget[% widget.id %] .widget-content").width();
+  $("#xeyes[% widget.id %]").width(x);
+  
+  if ($('#maximized').parent().parent().attr("id") == "widget[% widget.id %]")
+    var y = $(window).height() - 35;
+  else
+    var y = $("#widget[% widget.id %] .widget-content").height() - 5;
+  
+  $("#xeyes[% widget.id %]").height(y);
+  widget_xeyes[% widget.id %]($("#xeyes[% widget.id %]"),0,0,true);
+});
+
+$("#widget[% widget.id %] .widget-content").unbind("resize.widget[% widget.id %]");
+$("#widget[% widget.id %] .widget-content").bind("resize.widget[% widget.id %]", function() {
+  var y = $("#widget[% widget.id %] .widget-content").height() - 5;
+  $("#xeyes[% widget.id %]").height(y);
+  widget_xeyes[% widget.id %]($("#xeyes[% widget.id %]"),0,0,true);
+});
+
+$(window).trigger("resize");
+
+$("#widget[% widget.id %] .widget-content").trigger("resize");
+
+$("#xeyes[% widget.id %]").children('img').each(function(index) { $(this).css({ 'position':'absolute','top':0,'left':0}); });
+
+function widget_xeyes[% widget.id %]( id, mx, my, resize ){
+  var x = id.width();
+  var y = id.height();
+
+  var t = 0.9;
+  var p = 0.15;
+  var e = 0.7;
+  var xr = x/4;
+  var yr = y/2;
+  var xs1 = x/4;
+  var ys1 = y/2;
+  var xs2 = x/4*3+1;
+  var ys2 = y/2;
+    
+  if (resize) {
+    var xo1 = 0;
+    var yo1 = 0;
+    var xo2 = 0;
+    var yo2 = 0;
+    id.children("#eye_l_b").css({
+      "left": (xs1-xr) + "px",
+      "top" : (ys1-yr) + "px"
+    }).width(xr*2).height(yr*2);
+
+    id.children("#eye_l_w").css({
+      "left": (xs1-xr*t) + "px",
+      "top" : (ys1-yr*t) + "px"
+    }).width(xr*2*t).height(yr*2*t);
+  
+    id.children("#eye_r_b").css({
+      "left": (xs2-xr) + "px",
+      "top" : (ys2-yr) + "px"
+    }).width(xr*2).height(yr*2);
+
+    id.children("#eye_r_w").css({
+      "left": (xs2-xr*t) + "px",
+      "top" : (ys2-yr*t) + "px"
+    }).width(xr*2*t).height(yr*2*t);
+    id.children("#eye_l_p").width(xr*2*p).height(yr*2*p);
+    id.children("#eye_r_p").width(xr*2*p).height(yr*2*p);  
+  }
+  else
+  {
+    dx = mx - xs1;
+    dy = my - ys1;
+    R = Math.sqrt(dx*dx+dy*dy)
+    var xo1 = (R < xr*e)? dx : dx*xr*e/R;
+    var yo1 = (R < yr*e)? dy : dy*yr*e/R;
+    dx = mx - xs2;
+    dy = my - ys2;
+    R = Math.sqrt(dx*dx+dy*dy)
+    var xo2 = (R < xr*e)? dx : dx*xr*e/R;
+    var yo2 = (R < yr*e)? dy : dy*yr*e/R;
+  }
+  
+  id.children("#eye_l_p").css({
+    "left": (xs1-xr*p+xo1) + "px",
+    "top" : (ys1-yr*p+yo1) + "px"
+  });
+
+  id.children("#eye_r_p").css({
+    "left": (xs2-xr*p+xo2) + "px",
+    "top" : (ys2-yr*p+yo2) + "px"
+  });  
+
+}
+
+widget_xeyes[% widget.id %]($("#xeyes[% widget.id %]"),0,0,true);
+
+$(document).bind('mousemove.widget[% widget.id %]',function(e){
+  var position = $("#widget[% widget.id %]").position();
+  widget_xeyes[% widget.id %]($("#xeyes[% widget.id %]"),e.pageX-position.left,e.pageY-position.top-55,false);
+});

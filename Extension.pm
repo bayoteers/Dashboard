@@ -10,691 +10,511 @@
 # implied. See the License for the specific language governing
 # rights and limitations under the License.
 #
-# The Original Code is the Bugzilla Bug Tracking System.
+# The Original Code is the Dashboard Bugzilla Extension.
 #
-# The Initial Developer of the Original Code is Everything Solved, Inc.
-# Portions created by the Initial Developers are Copyright (C) 2009 the
+# The Initial Developer of the Original Code is "Nokia Corporation"
+# Portions created by the Initial Developer are Copyright (C) 2010 the
 # Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#   Max Kanat-Alexander <mkanat@bugzilla.org>
-#   Frédéric Buclin <LpSolit@gmail.com>
+#   Jari Savolainen <ext-jari.a.savolainen@nokia.com>
+#   Stephen Jayna <ext-stephen.jayna@nokia.com>
 
-package Bugzilla::Extension::Example;
+package Bugzilla::Extension::Dashboard;
 use strict;
 use base qw(Bugzilla::Extension);
 
 use Bugzilla::Constants;
 use Bugzilla::Error;
-use Bugzilla::Group;
+use Bugzilla::Util;
 use Bugzilla::User;
-use Bugzilla::Util qw(diff_arrays html_quote);
-use Bugzilla::Status qw(is_open_state);
 
-# This is extensions/Example/lib/Util.pm. I can load this here in my
-# Extension.pm only because I have a Config.pm.
-use Bugzilla::Extension::Example::Util;
+# This code for this is in ./extensions/Dashboard/lib/Util.pm
+use Bugzilla::Extension::Dashboard::Util;
 
-use Data::Dumper;
+# For input sanitization
+use HTML::Scrubber;
 
-# See bugmail_relationships.
-use constant REL_EXAMPLE => -127;
+# For serialization
+use Storable;
 
-our $VERSION = '1.0';
+# Core modules
+use File::Path;
+use File::Basename;
+use File::Copy;
 
-sub attachment_process_data {
-    my ($self, $args) = @_;
-    my $type     = $args->{attributes}->{mimetype};
-    my $filename = $args->{attributes}->{filename};
+our $VERSION = '0.01';
 
-    # Make sure images have the correct extension.
-    # Uncomment the two lines below to make this check effective.
-    if ($type =~ /^image\/(\w+)$/) {
-        my $format = $1;
-        if ($filename =~ /^(.+)(:?\.[^\.]+)$/) {
-            my $name = $1;
-            #$args->{attributes}->{filename} = "${name}.$format";
+# See the documentation of Bugzilla::Hook ("perldoc Bugzilla::Hook"
+# in the bugzilla directory) for a list of all available hooks.
+sub install_update_db {
+  my ( $self, $args ) = @_;
+}
+
+# widget subs
+
+# delete all widget_id related files and return ajax to fade/slide/close the widget
+sub delete_widget {
+  my ( $widget_id, $datauserdir, $vars ) = @_;
+  if ( $widget_id > 0 && -e $datauserdir . "/" . $widget_id . ".widget" ) {
+    my @files = glob $datauserdir . "/" . $widget_id . ".*";
+
+    foreach my $dir_entry (@files) {
+      trick_taint($dir_entry);
+      unlink $dir_entry;
+    }
+
+    # on success jquery hides widget element, slides it to 0 height and removes it from the page
+    $vars->{widget_ajax} =
+"\$('#widget$widget_id').animate({ opacity: 0 }, function() {\$('#widget$widget_id').wrap('<div/>').parent().slideUp(function() {\$('#widget$widget_id').remove();});});";
+
+  }
+  else {
+    if ( $widget_id > 0 ) {
+      $vars->{widget_error} = "Cannot delete widget, preferences not found!";
+    }
+    else {
+      $vars->{widget_error} = "Cannot delete widget, illegal widget id!";
+    }
+
+  }
+}
+
+# load widget specific preferences
+sub load_widget {
+  my ( $widget_id, $datauserdir, $vars ) = @_;
+  if ( $widget_id > 0 && -e $datauserdir . "/" . $widget_id . ".widget" ) {
+    my $widget = retrieve( $datauserdir . "/" . $widget_id . ".widget" );
+    $vars->{widget} = $widget;
+  }
+  else {
+    if ( $widget_id > 0 ) {
+      $vars->{widget_error} = "Cannot load widget, preferences not found!";
+    }
+    else {
+      $vars->{widget_error} = "Cannot load widget, illegal widget id!";
+    }
+  }
+
+}
+
+# create new widget and store all required preferences
+sub new_widget {
+  my ( $widget_id, $datauserdir, $vars ) = @_;
+
+  if ( $widget_id > 0 ) {
+
+    opendir( DIR, $datauserdir ) or die($!);
+    my ( @files, $file );
+    @files = grep( /\.widget$/, readdir(DIR) );
+    closedir(DIR);
+
+    # if widget can be created, get required prefences, store them and tell jquery to save any extra preferences the widget has
+    if ( scalar @files < WIDGETS_MAX ) {
+
+      my $cgi = Bugzilla->cgi;
+      my @fields;
+
+      trick_taint($widget_id);
+
+      # numerical fields
+      # each widget MUST have unique id, position (vertical), column it is and height of the widget
+      @fields = qw(id pos col height);
+
+      foreach (@fields) {
+        $vars->{widget}->{$_} = int( $cgi->param( "widget_" . $_ ) );
+      }
+
+      # ascii only fields
+      # todo: add type verification based on installed widget types
+      @fields = qw(type);
+      foreach (@fields) {
+        $vars->{widget}->{$_} = clean_text( $cgi->param( "widget_" . $_ ) );
+      }
+
+      # force the widget to be resized on load
+      $vars->{widget}->{resized} = 1;
+      store $vars->{widget}, $datauserdir . "/" . $widget_id . ".widget";
+      $vars->{widget_ajax} = "Dashboard.savePreferences('widget$widget_id');";
+    }
+    else {
+
+      # in case of too many widgets, delete widget prefs and tell jquery to remove the widget stub from the UI
+      my @files = glob $datauserdir . "/" . $widget_id . ".*";
+
+      foreach my $dir_entry (@files) {
+        trick_taint($dir_entry);
+        unlink $dir_entry;
+      }
+      $vars->{widget_ajax}  = "\$('#widget$widget_id').remove();";
+      $vars->{widget_error} = 'Cannot create new widget, maximum number reached!';
+    }
+  }
+  else {
+    $vars->{widget_error} = "Cannot create widget, illegal widget id!";
+  }
+}
+
+# get and store all extended widget preferences
+sub save_widget {
+  my ( $widget_id, $datauserdir, $vars ) = @_;
+
+  if ( $widget_id > 0 && -e $datauserdir . "/" . $widget_id . ".widget" ) {
+    trick_taint($widget_id);
+    my $cgi = Bugzilla->cgi;
+    my @fields;
+    my $widget = retrieve( $datauserdir . "/" . $widget_id . ".widget" );
+
+    # numerical fields
+    @fields = qw(id pos col height refresh);
+
+    foreach (@fields) {
+
+      $widget->{$_} = int( $cgi->param( "widget_" . $_ ) ? $cgi->param( "widget_" . $_ ) : 0 );
+    }
+
+    # true/false fields
+    @fields = qw(movable removable collapsible editable resizable resized maximizable minimized controls refreshable);
+
+    foreach (@fields) {
+      $widget->{$_} = $cgi->param( "widget_" . $_ ) eq 'true' ? 1 : 0;
+    }
+
+    # text fields
+    @fields = qw(title URL);
+    my $scrubber = HTML::Scrubber->new;
+    $scrubber->default(0);
+
+    foreach (@fields) {
+      $widget->{$_} = $cgi->param( "widget_" . $_ ) ? $scrubber->scrub( $cgi->param( "widget_" . $_ ) ) : " ";
+    }
+
+    # color
+    $widget->{'color'} = $cgi->param("widget_color") =~ /color-(gray|yellow|red|blue|white|orange|green)/ ? $1 : "gray";
+
+    store $widget, $datauserdir . "/" . $widget_id . ".widget";
+  }
+  else {
+
+    $vars->{widget_error} = "Cannot save widget, illegal widget id!";
+
+  }
+
+}
+
+# delete last column if it is empty and re-init the Sortable UI on success
+sub delete_column {
+  my ( $datauserdir, $vars ) = @_;
+
+  # load all widgets and find out the last column used
+  opendir( DIR, $datauserdir ) or die($!);
+  my ( @files, $file );
+  my $last_col = 1;
+  @files = grep( /\.widget$/, readdir(DIR) );
+  closedir(DIR);
+
+  foreach $file (@files) {
+    my $widget = retrieve( $datauserdir . "/" . $file );
+    if ( $widget->{col} > $last_col ) { $last_col = $widget->{col}; }
+  }
+
+# if column can be deleted, decrease and save the column setting and tell jquery to remove the last column, resize widgets and call makeSortable() to re-init the Sortable UI elements
+  if ( $last_col < $vars->{preferences}->{columns} ) {
+    $last_col = $vars->{preferences}->{columns};
+    $vars->{widget_ajax} = "\$('#column$last_col').remove();\$(window).trigger(\"resize\");Dashboard.makeSortable();";
+    $vars->{preferences}->{columns}--;
+    store $vars->{preferences}, $datauserdir . "/preferences";
+  }
+  elsif ( $last_col > 1 ) {
+    $vars->{widget_error} = 'You must remove widgets from the last column before deleting it!';
+  }
+  else {
+    $vars->{widget_error} = 'You cannot delete the last column!';
+  }
+}
+
+# add new column and re-init the Sortable UI on success
+sub add_column {
+  my ( $datauserdir, $vars ) = @_;
+
+  my $last_col = $vars->{preferences}->{columns};
+  $last_col++;
+
+  # if new column can be added, tell jquery to create new UL element for the column and call makeSortable() to re-init the Sortable UI elements
+  if ( $last_col < COLUMNS_MAX ) {
+    $vars->{preferences}->{columns} = $last_col;
+    $vars->{widget_ajax} = "\$('#columns').append('<ul id=\"column$last_col\" class=\"column\"></ul>');\$(window).trigger(\"resize\");Dashboard.makeSortable();";
+    store $vars->{preferences}, $datauserdir . "/preferences";
+  }
+  else {
+    $vars->{widget_error} = 'Cannot create new column, maximum reached!';
+  }
+
+}
+
+# Hook for page.cgi and dashboard
+sub page_before_template {
+  my ( $self, $args ) = @_;
+  my ( $vars, $page ) = @$args{qw(vars page_id)};
+
+  if ( $page =~ /^dashboard(_ajax|_overlay)?\.html$/ ) {
+
+    my $user_id = Bugzilla->user->id;
+
+    if ( Bugzilla->params->{"dashboard_jquery_path"} ) {
+      $vars->{dashboard_jquery_path} = Bugzilla->params->{"dashboard_jquery_path"};
+    }
+
+    my $datadir     = bz_locations()->{'datadir'};
+    my $dataextdir  = $datadir . EXTENSION_DIR;
+    my $datauserdir = $dataextdir . '/' . $user_id;
+
+    if ( $user_id > 0 ) {
+      my $cgi = Bugzilla->cgi;
+
+      # Get users preferences or create defaults if the user is new
+      if ( -d $datauserdir && -f $datauserdir . "/preferences" ) {
+        $vars->{preferences} = retrieve( $datauserdir . "/preferences" );
+      }
+      else {
+
+        # new user, create prefs folder
+
+        mkpath( $datauserdir, { verbose => 0, mode => 0755, error => \my $err } );
+
+        if (@$err) {
+          for my $diag (@$err) {
+            my ( $file, $message ) = each %$diag;
+            print "Problem making $file: $message\n";
+          }
+          die("Couldn't create $datauserdir");
+
+        }
+
+        # create default preferences
+        my $preferences->{columns} = COLUMNS_DEFAULT;
+        store $preferences, $datauserdir . "/preferences";
+        $vars->{preferences} = $preferences;
+      }
+
+      $vars->{cgi_variables} = { Bugzilla->cgi->Vars };
+
+      # ajax calls, extension can return javascript with 'widget_ajax' and error messages with 'widget_error'
+      if ( $page eq "dashboard_ajax.html" ) {
+
+        my @fields;
+
+        if ( Bugzilla->cgi->param('action') eq 'column_add' ) {
+          add_column( $datauserdir, $vars );
+        }
+        elsif ( Bugzilla->cgi->param('action') eq 'column_del' ) {
+
+          delete_column( $datauserdir, $vars );
+
+        }
+
+        elsif ( Bugzilla->cgi->param('action') eq 'new' ) {
+
+          my $widget_id = int( $cgi->param('widget_id') );
+
+          new_widget( $widget_id, $datauserdir, $vars );
+        }
+        elsif ( Bugzilla->cgi->param('action') eq 'load' ) {
+
+          my $widget_id = int( $cgi->param('widget_id') );
+
+          load_widget( $widget_id, $datauserdir, $vars );
+        }
+        elsif ( Bugzilla->cgi->param('action') eq 'delete' ) {
+
+          my $widget_id = int( $cgi->param('widget_id') );
+
+          delete_widget( $widget_id, $datauserdir, $vars );
+
+        }
+        elsif ( Bugzilla->cgi->param('action') eq 'save' ) {
+
+          my $widget_id = int( $cgi->param('widget_id') );
+
+          save_widget( $widget_id, $datauserdir, $vars );
+        }
+        elsif ( Bugzilla->cgi->param('action') eq 'delete_overlay' ) {
+
+          my $overlay_user_id = int( $cgi->param("overlay_user_id") );
+          my $overlay_id      = int( $cgi->param("overlay_id") );
+
+          if ( ( ( $overlay_user_id == 0 && Bugzilla->user->in_group('admin') ) || $overlay_user_id == $user_id )
+            && -d $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id )
+          {
+
+            my @files = glob $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id . "/*";
+
+            foreach my $dir_entry (@files) {
+              if ( -f $dir_entry ) {
+                trick_taint($dir_entry);
+                unlink $dir_entry;
+              }
+            }
+            rmdir trick_taint( $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id );
+
+            $vars->{"overlay_ajax"} = '<h2>Overlay deleted!</h2><script>$.colorbox.close();</script>';
+          }
+          else {
+            $vars->{"overlay_error"} = "Illegal user or overlay id!";
+          }
+
+        }
+        elsif ( Bugzilla->cgi->param('action') eq 'load_overlay' ) {
+
+          my $overlay_user_id = int( $cgi->param("overlay_user_id") );
+          my $overlay_id      = int( $cgi->param("overlay_id") );
+
+          if ( ( $overlay_user_id == 0 || $overlay_user_id == $user_id ) && -d $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id ) {
+
+            my @files = glob $datauserdir . "/*";
+
+            foreach my $dir_entry (@files) {
+              trick_taint($dir_entry);
+              if ( -f $dir_entry ) {
+                unlink $dir_entry;
+              }
+            }
+
+            @files = glob $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id . "/*";
+
+            foreach my $dir_entry (@files) {
+              if ( -f $dir_entry ) {
+                trick_taint($dir_entry);
+                my $filename = basename($dir_entry);
+                copy( $dir_entry, "$datauserdir/$filename" ) or die "Copy failed: $!";
+              }
+            }
+
+            $vars->{"overlay_ajax"} = "<h2>Overlay loaded!</h2>";
+          }
+          else {
+            $vars->{"overlay_error"} = "Illegal user or overlay id!";
+          }
+
+        }
+        elsif ( Bugzilla->cgi->param('action') eq 'save_overlay' ) {
+
+          my $overlay;
+          my @fields;
+          my $datatargetdir = $datauserdir;
+
+          # true/false fields
+          if ( Bugzilla->user->in_group('admin') ) {
+            @fields = qw(shared);
+            foreach (@fields) {
+              $overlay->{$_} = $cgi->param( "overlay_" . $_ ) eq 'true' ? 1 : 0;
+            }
+            if ( $overlay->{"shared"} ) {
+              $datatargetdir = $dataextdir . '/0';
+            }
+          }
+          else {
+            $overlay->{"shared"} = 0;
+          }
+
+          # text fields
+          @fields = qw(name description);
+          my $scrubber = HTML::Scrubber->new;
+          $scrubber->default(0);
+          foreach (@fields) {
+            $overlay->{$_} = $cgi->param( "overlay_" . $_ ) ? $scrubber->scrub( $cgi->param( "overlay_" . $_ ) ) : " ";
+          }
+
+          # creator of overlay
+          $overlay->{"owner"}   = $user_id;
+          $overlay->{"created"} = time;
+          my $i = 1;
+
+          while ( -d $datatargetdir . "/overlay/" . $i ) {
+            $i++;
+          }
+          my $overlaydir = $datatargetdir . "/overlay/" . $i;
+
+          mkpath( $overlaydir, { verbose => 0, mode => 0755, error => \my $err } );
+
+          if (@$err) {
+            for my $diag (@$err) {
+              my ( $file, $message ) = each %$diag;
+              print "Problem making $file: $message\n";
+            }
+            die("Couldn't create $overlaydir");
+
+          }
+
+          my @files = glob $datauserdir . "/*";
+
+          foreach my $dir_entry (@files) {
+            if ( -f $dir_entry ) {
+              trick_taint($dir_entry);
+              copy( $dir_entry, "$overlaydir/" ) or die "Copy failed: $!";
+            }
+          }
+          store $overlay, $overlaydir . "/overlay";
+
+          $vars->{"overlay_ajax"} = "<h2>Overlay saved!</h2>";
+        }
+      }
+      elsif ( $page eq "dashboard_overlay.html" ) {
+        if ( Bugzilla->user->in_group('admin') ) {
+          $vars->{"is_admin"} = 1;
         }
         else {
-            # The file has no extension. We append it.
-            #$args->{attributes}->{filename} .= ".$format";
+          $vars->{"is_admin"} = 0;
         }
-    }
-}
 
-sub auth_login_methods {
-    my ($self, $args) = @_;
-    my $modules = $args->{modules};
-    if (exists $modules->{Example}) {
-        $modules->{Example} = 'Bugzilla/Extension/Example/Auth/Login.pm';
-    }
-}
-
-sub auth_verify_methods {
-    my ($self, $args) = @_;
-    my $modules = $args->{modules};
-    if (exists $modules->{Example}) {
-        $modules->{Example} = 'Bugzilla/Extension/Example/Auth/Verify.pm';
-    }
-}
-
-sub bug_columns {
-    my ($self, $args) = @_;
-    my $columns = $args->{'columns'};
-    push (@$columns, "delta_ts AS example")
-}
-
-sub bug_end_of_create {
-    my ($self, $args) = @_;
-
-    # This code doesn't actually *do* anything, it's just here to show you
-    # how to use this hook.
-    my $bug = $args->{'bug'};
-    my $timestamp = $args->{'timestamp'};
-    
-    my $bug_id = $bug->id;
-    # Uncomment this line to see a line in your webserver's error log whenever
-    # you file a bug.
-    # warn "Bug $bug_id has been filed!";
-}
-
-sub bug_end_of_create_validators {
-    my ($self, $args) = @_;
-    
-    # This code doesn't actually *do* anything, it's just here to show you
-    # how to use this hook.
-    my $bug_params = $args->{'params'};
-    
-    # Uncomment this line below to see a line in your webserver's error log
-    # containing all validated bug field values every time you file a bug.
-    # warn Dumper($bug_params);
-    
-    # This would remove all ccs from the bug, preventing ANY ccs from being
-    # added on bug creation.
-    # $bug_params->{cc} = [];
-}
-
-sub bug_end_of_update {
-    my ($self, $args) = @_;
-    
-    # This code doesn't actually *do* anything, it's just here to show you
-    # how to use this hook.
-    my ($bug, $old_bug, $timestamp, $changes) = 
-        @$args{qw(bug old_bug timestamp changes)};
-    
-    foreach my $field (keys %$changes) {
-        my $used_to_be = $changes->{$field}->[0];
-        my $now_it_is  = $changes->{$field}->[1];
-    }
-
-    my $old_summary = $old_bug->short_desc;
-
-    my $status_message;
-    if (my $status_change = $changes->{'bug_status'}) {
-        my $old_status = new Bugzilla::Status({ name => $status_change->[0] });
-        my $new_status = new Bugzilla::Status({ name => $status_change->[1] });
-        if ($new_status->is_open && !$old_status->is_open) {
-            $status_message = "Bug re-opened!";
+        my $overlaydir;
+        my @users = ( $user_id, 0 );
+        my $i = 0;
+        foreach (@users) {
+          $overlaydir = $dataextdir . '/' . $_ . '/overlay';
+          if ( -d $overlaydir ) {
+            my @folders = glob $overlaydir . "/*";
+            foreach my $dir_entry (@folders) {
+              if ( -f $dir_entry . '/overlay' ) {
+                trick_taint($dir_entry);
+                my $overlay = retrieve( $dir_entry . '/overlay' );
+                my $folder  = basename($dir_entry);
+                $overlay->{"user_id"}    = $_;
+                $overlay->{"overlay_id"} = $folder;
+                my $key = $overlay->{"name"} . "\t" . $folder;
+                $vars->{"overlays"}->{"$i"}->{"$key"} = $overlay;
+              }
+            }
+          }
+          $i++;
         }
-        if (!$new_status->is_open && $old_status->is_open) {
-            $status_message = "Bug closed!";
+        $vars->{"user_id"} = $user_id;
+      }
+      else {
+
+        # request was for dashboard.html so generate column->widgets structure and populate it with widget preferences
+
+        for ( my $i = 0 ; $i <= $vars->{preferences}->{columns} ; $i++ ) {
+          my $widget->{'id'} = 0;
+          $vars->{"columns"}->[$i]->[0] = $widget;
         }
-    }
-    
-    my $bug_id = $bug->id;
-    my $num_changes = scalar keys %$changes;
-    my $result = "There were $num_changes changes to fields on bug $bug_id"
-                 . " at $timestamp.";
-    # Uncomment this line to see $result in your webserver's error log whenever
-    # you update a bug.
-    # warn $result;
-}
 
-sub bug_fields {
-    my ($self, $args) = @_;
+        opendir( DIR, $datauserdir ) or die($!);
+        my ( @files, $file );
+        @files = grep( /\.widget$/, readdir(DIR) );
+        closedir(DIR);
+        foreach $file (@files) {
+          my $widget = retrieve( $datauserdir . "/" . $file );
+          $vars->{"columns"}->[ $widget->{col} ]->[ $widget->{pos} ] = $widget;
 
-    my $fields = $args->{'fields'};
-    push (@$fields, "example")
-}
-
-sub bug_format_comment {
-    my ($self, $args) = @_;
-    
-    # This replaces every occurrence of the word "foo" with the word
-    # "bar"
-    
-    my $regexes = $args->{'regexes'};
-    push(@$regexes, { match => qr/\bfoo\b/, replace => 'bar' });
-    
-    # And this links every occurrence of the word "bar" to example.com,
-    # but it won't affect "foo"s that have already been turned into "bar"
-    # above (because each regex is run in order, and later regexes don't modify
-    # earlier matches, due to some cleverness in Bugzilla's internals).
-    #
-    # For example, the phrase "foo bar" would become:
-    # bar <a href="http://example.com/bar">bar</a>
-    my $bar_match = qr/\b(bar)\b/;
-    push(@$regexes, { match => $bar_match, replace => \&_replace_bar });
-}
-
-# Used by bug_format_comment--see its code for an explanation.
-sub _replace_bar {
-    my $args = shift;
-    # $match is the first parentheses match in the $bar_match regex 
-    # in bug-format_comment.pl. We get up to 10 regex matches as 
-    # arguments to this function.
-    my $match = $args->{matches}->[0];
-    # Remember, you have to HTML-escape any data that you are returning!
-    $match = html_quote($match);
-    return qq{<a href="http://example.com/">$match</a>};
-};
-
-sub buglist_columns {
-    my ($self, $args) = @_;
-    
-    my $columns = $args->{'columns'};
-    $columns->{'example'} = { 'name' => 'bugs.delta_ts' , 'title' => 'Example' };
-}
-
-sub search_operator_field_override {
-    my ($self, $args) = @_;
-    
-    my $operators = $args->{'operators'};
-
-    my $original = $operators->{component}->{_non_changed};
-    $operators->{component} = {
-        _non_changed => sub { _component_nonchanged($original, @_) }
-    };
-}
-
-sub _component_nonchanged {
-    my $original = shift;
-    my ($invocant, $args) = @_;
-
-    $invocant->$original($args);
-    # Actually, it does not change anything in the result,
-    # just an example.
-    $args->{term} = $args->{term} . " OR 1=2";
-}
-
-sub bugmail_recipients {
-    my ($self, $args) = @_;
-    my $recipients = $args->{recipients};
-    my $bug = $args->{bug};
-
-    my $user = 
-        new Bugzilla::User({ name => Bugzilla->params->{'maintainer'} });
-
-    if ($bug->id == 1) {
-        # Uncomment the line below to add the maintainer to the recipients
-        # list of every bugmail from bug 1 as though that the maintainer
-        # were on the CC list.
-        #$recipients->{$user->id}->{+REL_CC} = 1;
-
-        # And this line adds the maintainer as though he had the "REL_EXAMPLE"
-        # relationship from the bugmail_relationships hook below.
-        #$recipients->{$user->id}->{+REL_EXAMPLE} = 1;
-    }
-}
-
-sub bugmail_relationships {
-    my ($self, $args) = @_;
-    my $relationships = $args->{relationships};
-    $relationships->{+REL_EXAMPLE} = 'Example';
-}
-
-sub colchange_columns {
-    my ($self, $args) = @_;
-    
-    my $columns = $args->{'columns'};
-    push (@$columns, "example")
-}
-
-sub config {
-    my ($self, $args) = @_;
-
-    my $config = $args->{config};
-    $config->{Example} = "Bugzilla::Extension::Example::Config";
-}
-
-sub config_add_panels {
-    my ($self, $args) = @_;
-    
-    my $modules = $args->{panel_modules};
-    $modules->{Example} = "Bugzilla::Extension::Example::Config";
-}
-
-sub config_modify_panels {
-    my ($self, $args) = @_;
-    
-    my $panels = $args->{panels};
-    
-    # Add the "Example" auth methods.
-    my $auth_params = $panels->{'auth'}->{params};
-    my ($info_class)   = grep($_->{name} eq 'user_info_class', @$auth_params);
-    my ($verify_class) = grep($_->{name} eq 'user_verify_class', @$auth_params);
-    
-    push(@{ $info_class->{choices} },   'CGI,Example');
-    push(@{ $verify_class->{choices} }, 'Example');
-}
-
-sub flag_end_of_update {
-    my ($self, $args) = @_;
-    
-    # This code doesn't actually *do* anything, it's just here to show you
-    # how to use this hook.
-    my $flag_params = $args;
-    my ($object, $timestamp, $old_flags, $new_flags) =
-        @$flag_params{qw(object timestamp old_flags new_flags)};
-    my ($removed, $added) = diff_arrays($old_flags, $new_flags);
-    my ($granted, $denied) = (0, 0);
-    foreach my $new_flag (@$added) {
-        $granted++ if $new_flag =~ /\+$/;
-        $denied++ if $new_flag =~ /-$/;
-    }
-    my $bug_id = $object->isa('Bugzilla::Bug') ? $object->id 
-                                               : $object->bug_id;
-    my $result = "$granted flags were granted and $denied flags were denied"
-                 . " on bug $bug_id at $timestamp.";
-    # Uncomment this line to see $result in your webserver's error log whenever
-    # you update flags.
-    # warn $result;
-}
-
-sub group_before_delete {
-    my ($self, $args) = @_;
-    # This code doesn't actually *do* anything, it's just here to show you
-    # how to use this hook.
-
-    my $group = $args->{'group'};
-    my $group_id = $group->id;
-    # Uncomment this line to see a line in your webserver's error log whenever
-    # you file a bug.
-    # warn "Group $group_id is about to be deleted!";
-}
-
-sub group_end_of_create {
-    my ($self, $args) = @_;
-    # This code doesn't actually *do* anything, it's just here to show you
-    # how to use this hook.
-    my $group = $args->{'group'};
-
-    my $group_id = $group->id;
-    # Uncomment this line to see a line in your webserver's error log whenever
-    # you create a new group.
-    #warn "Group $group_id has been created!";
-}
-
-sub group_end_of_update {
-    my ($self, $args) = @_;
-    # This code doesn't actually *do* anything, it's just here to show you
-    # how to use this hook.
-
-    my ($group, $changes) = @$args{qw(group changes)};
-
-    foreach my $field (keys %$changes) {
-        my $used_to_be = $changes->{$field}->[0];
-        my $now_it_is  = $changes->{$field}->[1];
-    }
-
-    my $group_id = $group->id;
-    my $num_changes = scalar keys %$changes;
-    my $result = 
-        "There were $num_changes changes to fields on group $group_id.";
-    # Uncomment this line to see $result in your webserver's error log whenever
-    # you update a group.
-    #warn $result;
-}
-
-sub install_before_final_checks {
-    my ($self, $args) = @_;
-    print "Install-before_final_checks hook\n" unless $args->{silent};
-}
-
-sub mailer_before_send {
-    my ($self, $args) = @_;
-    
-    my $email = $args->{email};
-    # If you add a header to an email, it's best to start it with
-    # 'X-Bugzilla-<Extension>' so that you don't conflict with
-    # other extensions.
-    $email->header_set('X-Bugzilla-Example-Header', 'Example');
-}
-
-sub object_before_create {
-    my ($self, $args) = @_;
-    
-    my $class = $args->{'class'};
-    my $object_params = $args->{'params'};
-    
-    # Note that this is a made-up class, for this example.
-    if ($class->isa('Bugzilla::ExampleObject')) {
-        warn "About to create an ExampleObject!";
-        warn "Got the following parameters: " 
-             . join(', ', keys(%$object_params));
-    }
-}
-
-sub object_before_delete {
-    my ($self, $args) = @_;
-
-    my $object = $args->{'object'};
-
-    # Note that this is a made-up class, for this example.
-    if ($object->isa('Bugzilla::ExampleObject')) {
-        my $id = $object->id;
-        warn "An object with id $id is about to be deleted!";
-    } 
-}
-
-sub object_before_set {
-    my ($self, $args) = @_;
-    
-    my ($object, $field, $value) = @$args{qw(object field value)};
-    
-    # Note that this is a made-up class, for this example.
-    if ($object->isa('Bugzilla::ExampleObject')) {
-        warn "The field $field is changing from " . $object->{$field} 
-             . " to $value!";
-    }
-}
-
-sub object_columns {
-    my ($self, $args) = @_;
-    my ($class, $columns) = @$args{qw(class columns)};
-
-    if ($class->isa('Bugzilla::ExampleObject')) {
-        push(@$columns, 'example');
-    }
-}
-
-sub object_end_of_create {
-    my ($self, $args) = @_;
-    
-    my $class  = $args->{'class'};
-    my $object = $args->{'object'};
-
-    warn "Created a new $class object!";
-}
-
-sub object_end_of_create_validators {
-    my ($self, $args) = @_;
-    
-    my $class = $args->{'class'};
-    my $object_params = $args->{'params'};
-    
-    # Note that this is a made-up class, for this example.
-    if ($class->isa('Bugzilla::ExampleObject')) {
-        # Always set example_field to 1, even if the validators said otherwise.
-        $object_params->{example_field} = 1;
-    }
-    
-}
-
-sub object_end_of_set {
-    my ($self, $args) = @_;
-
-    my ($object, $field) = @$args{qw(object field)};
-
-    # Note that this is a made-up class, for this example.
-    if ($object->isa('Bugzilla::ExampleObject')) {
-        warn "The field $field has changed to " . $object->{$field};
-    }
-}
-
-sub object_end_of_set_all {
-    my ($self, $args) = @_;
-    
-    my $object = $args->{'object'};
-    my $object_params = $args->{'params'};
-    
-    # Note that this is a made-up class, for this example.
-    if ($object->isa('Bugzilla::ExampleObject')) {
-        if ($object_params->{example_field} == 1) {
-            $object->{example_field} = 1;
         }
+
+      }
     }
-    
-}
-
-sub object_end_of_update {
-    my ($self, $args) = @_;
-    
-    my ($object, $old_object, $changes) = 
-        @$args{qw(object old_object changes)};
-    
-    # Note that this is a made-up class, for this example.
-    if ($object->isa('Bugzilla::ExampleObject')) {
-        if (defined $changes->{'name'}) {
-            my ($old, $new) = @{ $changes->{'name'} };
-            print "The name field changed from $old to $new!";
-        }
+    else {
+      ThrowUserError('login_required');
     }
+  }
 }
 
-sub object_update_columns {
-    my ($self, $args) = @_;
-    my ($object, $columns) = @$args{qw(object columns)};
-
-    if ($object->isa('Bugzilla::ExampleObject')) {
-        push(@$columns, 'example');
-    }
-}
-
-sub object_validators {
-    my ($self, $args) = @_;
-    my ($class, $validators) = @$args{qw(class validators)};
-
-    if ($class->isa('Bugzilla::Bug')) {
-        # This is an example of adding a new validator.
-        # See the _check_example subroutine below.
-        $validators->{example} = \&_check_example;
-
-        # This is an example of overriding an existing validator.
-        # See the check_short_desc validator below.
-        my $original = $validators->{short_desc};
-        $validators->{short_desc} = sub { _check_short_desc($original, @_) };
-    }
-}
-
-sub _check_example {
-    my ($invocant, $value, $field) = @_;
-    warn "I was called to validate the value of $field.";
-    warn "The value of $field that I was passed in is: $value";
-
-    # Make the value always be 1.
-    my $fixed_value = 1;
-    return $fixed_value;
-}
-
-sub _check_short_desc {
-    my $original = shift;
-    my $invocant = shift;
-    my $value = $invocant->$original(@_);
-    if ($value !~ /example/i) {
-        # Uncomment this line to make Bugzilla throw an error every time
-        # you try to file a bug or update a bug without the word "example"
-        # in the summary.
-        #ThrowUserError('example_short_desc_invalid');
-    }
-    return $value;
-}
-
-sub page_before_template {
-    my ($self, $args) = @_;
-    
-    my ($vars, $page) = @$args{qw(vars page_id)};
-    
-    # You can see this hook in action by loading page.cgi?id=example.html
-    if ($page eq 'example.html') {
-        $vars->{cgi_variables} = { Bugzilla->cgi->Vars };
-    }
-}
-
-sub product_confirm_delete {
-    my ($self, $args) = @_;
-    
-    my $vars = $args->{vars};
-    $vars->{'example'} = 1;
-}
-
-
-sub product_end_of_create {
-    my ($self, $args) = @_;
-
-    my $product = $args->{product};
-
-    # For this example, any lines of code that actually make changes to your
-    # database have been commented out.
-
-    # This section will take a group that exists in your installation
-    # (possible called test_group) and automatically makes the new
-    # product hidden to only members of the group. Just remove
-    # the restriction if you want the new product to be public.
-
-    my $example_group = new Bugzilla::Group({ name => 'example_group' });
-
-    if ($example_group) {
-        $product->set_group_controls($example_group, 
-                { entry          => 1,
-                  membercontrol  => CONTROLMAPMANDATORY,
-                  othercontrol   => CONTROLMAPMANDATORY });
-#        $product->update();
-    }
-
-    # This section will automatically add a default component
-    # to the new product called 'No Component'.
-
-    my $default_assignee = new Bugzilla::User(
-        { name => Bugzilla->params->{maintainer} });
-
-    if ($default_assignee) {
-#        Bugzilla::Component->create(
-#            { name             => 'No Component',
-#              product          => $product,
-#              description      => 'Select this component if one does not ' . 
-#                                  'exist in the current list of components',
-#              initialowner     => $default_assignee });
-    }
-}
-
-sub sanitycheck_check {
-    my ($self, $args) = @_;
-    
-    my $dbh = Bugzilla->dbh;
-    my $sth;
-    
-    my $status = $args->{'status'};
-    
-    # Check that all users are Australian
-    $status->('example_check_au_user');
-    
-    $sth = $dbh->prepare("SELECT userid, login_name
-                            FROM profiles
-                           WHERE login_name NOT LIKE '%.au'");
-    $sth->execute;
-    
-    my $seen_nonau = 0;
-    while (my ($userid, $login, $numgroups) = $sth->fetchrow_array) {
-        $status->('example_check_au_user_alert',
-                  { userid => $userid, login => $login },
-                  'alert');
-        $seen_nonau = 1;
-    }
-    
-    $status->('example_check_au_user_prompt') if $seen_nonau;
-}
-
-sub sanitycheck_repair {
-    my ($self, $args) = @_;
-    
-    my $cgi = Bugzilla->cgi;
-    my $dbh = Bugzilla->dbh;
-    
-    my $status = $args->{'status'};
-    
-    if ($cgi->param('example_repair_au_user')) {
-        $status->('example_repair_au_user_start');
-    
-        #$dbh->do("UPDATE profiles
-        #             SET login_name = CONCAT(login_name, '.au')
-        #           WHERE login_name NOT LIKE '%.au'");
-    
-        $status->('example_repair_au_user_end');
-    }
-}
-
-sub template_before_create {
-    my ($self, $args) = @_;
-    
-    my $config = $args->{'config'};
-    # This will be accessible as "example_global_variable" in every
-    # template in Bugzilla. See Bugzilla/Template.pm's create() function
-    # for more things that you can set.
-    $config->{VARIABLES}->{example_global_variable} = sub { return 'value' };
-}
-
-sub template_before_process {
-    my ($self, $args) = @_;
-    
-    my ($vars, $file, $context) = @$args{qw(vars file context)};
-
-    if ($file eq 'bug/edit.html.tmpl') {
-        $vars->{'viewing_the_bug_form'} = 1;
-    }
-}
-
-sub bug_check_can_change_field {
-    my ($self, $args) = @_;
-
-    my ($bug, $field, $new_value, $old_value, $priv_results)
-        = @$args{qw(bug field new_value old_value priv_results)};
-
-    my $user = Bugzilla->user;
-
-    # Disallow a bug from being reopened if currently closed unless user 
-    # is in 'admin' group
-    if ($field eq 'bug_status' && $bug->product_obj->name eq 'Example') {
-        if (!is_open_state($old_value) && is_open_state($new_value) 
-            && !$user->in_group('admin')) 
-        {
-            push(@$priv_results, PRIVILEGES_REQUIRED_EMPOWERED);
-            return;
-        }
-    }
-
-    # Disallow a bug's keywords from being edited unless user is the
-    # reporter of the bug 
-    if ($field eq 'keywords' && $bug->product_obj->name eq 'Example' 
-        && $user->login ne $bug->reporter->login) 
-    {
-        push(@$priv_results, PRIVILEGES_REQUIRED_REPORTER);
-        return;
-    }
-
-    # Allow updating of priority even if user cannot normally edit the bug 
-    # and they are in group 'engineering'
-    if ($field eq 'priority' && $bug->product_obj->name eq 'Example'
-        && $user->in_group('engineering')) 
-    {
-        push(@$priv_results, PRIVILEGES_REQUIRED_NONE);
-        return;
-    }
-}
-
-sub webservice {
-    my ($self, $args) = @_;
-
-    my $dispatch = $args->{dispatch};
-    $dispatch->{Example} = "Bugzilla::Extension::Example::WebService";
-}
-
-sub webservice_error_codes {
-    my ($self, $args) = @_;
-    
-    my $error_map = $args->{error_map};
-    $error_map->{'example_my_error'} = 10001;
-}
-
-# This must be the last line of your extension.
 __PACKAGE__->NAME;

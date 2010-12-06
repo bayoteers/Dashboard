@@ -1,0 +1,76 @@
+[%#
+  # The contents of this file are subject to the Mozilla Public
+  # License Version 1.1 (the "License"); you may not use this file
+  # except in compliance with the License. You may obtain a copy of
+  # the License at http://www.mozilla.org/MPL/
+  #
+  # Software distributed under the License is distributed on an "AS
+  # IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+  # implied. See the License for the specific language governing
+  # rights and limitations under the License.
+  #
+  # The Original Code is the Bugzilla Example Plugin.
+  #
+  # The Initial Developer of the Original Code is Canonical Ltd.
+  # Portions created by Canonical Ltd. are Copyright (C) 2009
+  # Canonical Ltd. All Rights Reserved.
+  #
+  # Contributor(s): 
+  #   Allan Savolainen <ext-jari.a.savolainen@nokia.com>
+  #%]
+
+  [% IF widget_ajax %]
+    <script>
+      [% widget_ajax %]
+    </script>
+  [% END %]
+
+  [% IF widget %]
+    <div class="widget_inner">
+      <script>
+      
+	var widget = [];
+	Widgets['widget[% widget.id %]'] = widget;
+      	[% IF widget.controls %]
+  	  Dashboard.addWidgetControls('widget[% widget.id %]');
+        [% END %]
+
+        var thisWidgetSettings = Dashboard.getWidgetSettings("widget"+[% widget.id %]);
+        
+        [% IF widget.minimized %]
+          $("#widget[% widget.id %] .widget-content").hide();
+        [% END %]
+
+        [% IF widget.resized %]
+          $("#widget[% widget.id %] .widget-content").height([% widget.height %]);
+          thisWidgetSettings.resized=true;
+        [% END %]
+
+        [% SWITCH widget.type %]
+        [%   CASE 'url' %]
+        [%     INCLUDE "pages/widget_url.html.tmpl" %]
+        [%   CASE 'rss' %]
+        [%     INCLUDE "pages/widget_rss.html.tmpl" %]
+        [%   CASE 'mybugs' %]
+        [%     INCLUDE "pages/widget_mybugs.html.tmpl" %]
+        [%   CASE 'xeyes' %]
+        [%     INCLUDE "pages/widget_xeyes.html.tmpl" %]
+        [% END %]
+        
+        Widgets['widget[% widget.id %]'] = widget;
+      </script>
+    </div>
+  [% ELSE %]
+  	[% overlay_ajax %]
+  [% END %]
+ 
+  [% IF widget_error %]
+    <script>
+      alert("[% widget_error | replace('\"','\\"') %]");
+    </script>
+  [% END %]
+	[% IF overlay_error %]
+    <script>
+      alert("[% overlay_error | replace('\"','\\"') %]");
+    </script>
+  [% END %]

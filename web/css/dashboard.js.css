@@ -1,0 +1,277 @@
+/* JS-Enabled CSS */
+
+#columns .widget-content .widget-divider {
+	clear: both;
+	border-bottom: 1px dashed #666;
+	margin-bottom: 5px;
+	padding-top: 5px;
+}
+#columns #widget-buttons ul {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+}
+#columns #widget-buttons li {
+	width: 50%;
+	margin-bottom: 4px;
+	float: left;
+}
+#columns #widget-buttons li a {
+	display:block;
+	padding-right: 8px;
+	padding-left: 25px;
+        padding-bottom: 4px;
+	padding-top: 3px;
+}
+#columns #widget-buttons li a:hover {
+	border: 1px dashed #999;
+	background-color: #eee;
+	padding-right: 7px;
+	padding-left: 24px;
+        padding-bottom: 3px;
+	padding-top: 2px;
+}
+#widget-buttons a {
+	text-decoration: none;
+}
+#columns #button-overlay a {
+        background: url(img/icon_overlay.png) center left no-repeat;
+}
+#columns #button-overlay a:hover {
+        background: url(img/icon_overlay_b.png) center left no-repeat;
+}
+#columns #button-new-widget a {
+        background: url(img/icon_new_widget.png) center left no-repeat;
+}
+#columns #button-new-widget a:hover {
+        background: url(img/icon_new_widget_b.png) center left no-repeat;
+}
+#columns #button-add-column a {
+        background: url(img/icon_add_column.png) center left no-repeat;
+}
+#columns #button-add-column a:hover {
+        background: url(img/icon_add_column_b.png) center left no-repeat;
+}
+#columns #button-del-column a {
+        background: url(img/icon_del_column.png) center left no-repeat;
+}
+#columns #button-del-column a:hover {
+        background: url(img/icon_del_column_b.png) center left no-repeat;
+}
+
+#columns #button-new-xeyes a {
+        background: url(img/icon_new_xeyes.png) center left no-repeat;
+}
+#columns #button-new-xeyes a:hover {
+        background: url(img/icon_new_xeyes_b.png) center left no-repeat;
+}
+
+#columns #button-new-rss a {
+        background: url(img/icon_new_rss.png) center left no-repeat;
+}
+#columns #button-new-rss a:hover {
+        background: url(img/icon_new_rss_b.png) center left no-repeat;
+}
+#columns #button-save-widgets a {
+        background: url(img/icon_save.png) center left no-repeat;
+}
+#columns #button-save-widgets a:hover {
+        background: url(img/icon_save_b.png) center left no-repeat;
+}
+
+#columns .loader {
+        margin-top:32px;
+        margin-bottom:32px;
+}
+
+.widget-head a.remove  {
+	float: right;
+	width: 15px;
+	height: 15px;
+	line-height: 15px;
+	display: inline;
+	text-indent: -9999em;
+	margin: 2px 2px 2px 2px;
+	outline: none;
+	background: url(img/red.png) no-repeat;
+}
+.widget-head a.remove:hover  {
+	background: url(img/red_b.png) no-repeat;	
+}
+
+.widget-head a.maximize  {
+	float: right;
+	width: 15px;
+	height: 15px;
+	line-height: 15px;
+	display: inline;
+	text-indent: -9999em;
+	margin: 2px 2px 2px 2px;
+	outline: none;
+	background: url(img/green.png) no-repeat;
+}
+.widget-head a.maximize:hover  {
+	background: url(img/green_b.png) no-repeat;	
+}
+
+.widget-head a.edit  {
+	float: right;
+	width: 15px;
+	height: 15px;
+	line-height: 15px;
+	display: inline;
+	text-indent: -9999em;
+	margin: 2px 2px 2px 2px;
+	outline: none;
+	background: url(img/prefs.png) no-repeat;
+}
+.widget-head a.edit:hover  {
+	background: url(img/prefs_b.png) no-repeat;	
+}
+
+.widget-head a.refresh  {
+	float: right;
+	width: 15px;
+	height: 15px;
+	line-height: 15px;
+	display: inline;
+	text-indent: -9999em;
+	margin: 2px 2px 2px 2px;
+	outline: none;
+	background: url(img/reload.png) no-repeat;
+}
+.widget-head a.refresh:hover  {
+	background: url(img/reload_b.png) no-repeat;	
+}
+
+
+.widget-head a.save  {
+	float: right;
+	width: 15px;
+	height: 15px;
+	line-height: 15px;
+	display: inline;
+	text-indent: -9999em;
+	margin: 2px 2px 2px 2px;
+	outline: none;
+	background: url(img/save.png) no-repeat;
+}
+.widget-head a.save:hover  {
+	background: url(img/save_b.png) no-repeat;	
+}
+
+.widget-head a.collapse  {
+	float: right;
+	width: 15px;
+	height: 15px;
+	line-height: 15px;
+	display: inline;
+	text-indent: -9999em;
+	margin: 2px 2px 2px 2px;
+	outline: none;
+	background: url(img/orange.png) no-repeat;	
+}
+.widget-head a.collapse:hover  {
+	background: url(img/orange_b.png) no-repeat;	
+}
+
+
+.widget-placeholder { border: 2px dashed #999;}
+
+.widget-placeholder { margin: 30px 25px 0 25px; }
+
+.edit-box {
+	overflow: hidden;
+	background: #fff;
+	margin-bottom: 2px;
+	padding: 10px 0;
+	color: #000;
+}
+
+.edit-box li.item {
+	padding: 10px 0;
+	overflow: hidden;
+	float: left;
+	width: 100%;
+	color: #000;
+	clear: both;
+}
+
+
+.edit-box label {
+	float: left;
+	width: 30%;
+	color: #000;
+	padding: 0 0 0 10px;
+}
+
+.edit-box ul.colors li {
+	width: 20px;
+	height: 20px;
+	border: 1px solid #EEE;
+	float: left;
+	display: inline;
+	margin: 0 5px 0 0;
+	cursor: pointer;
+}
+#maximized {
+	background-color: #333;
+	padding: 4px;
+	text-align: center;
+	color: #fff;
+}
+.widget-max {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 99%;
+	height: 98%;
+	margin: 0;
+	padding: 0;
+	z-index: 9999;
+	background: #fff;
+}
+.ui-resizable-handle {
+	background: url(img/resize_handler.png) center top no-repeat;
+	height: 10px;
+}
+.widget_iframe {
+	border: 0;
+	margin: 0;
+	padding: 0;
+	width: 100%;
+}
+
+.widget .rss {
+	overflow: scroll;
+}
+.widget .rss h2 a {
+	border: 1px solid #ccc;
+	display:block;
+	padding: 5px;
+}
+
+.widget .rss h3 a {
+	border-left: 1px solid #ccc;
+	border-right: 1px solid #ccc;
+	border-bottom: 1px dotted #ccc;
+	display:block;
+	padding: 5px;
+}
+.widget .rss .updated {
+	border-left: 1px solid #ccc;
+	border-right: 1px solid #ccc;
+	border-bottom: 1px solid #ccc;
+	display:block;
+	padding: 5px;
+}
+.overlay_box {
+	border:1px dotted #999999;
+	margin: 5px;
+	padding: 10px;
+}
+
+.overlay_field {
+	width:192px;
+}
+
