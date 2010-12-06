@@ -25,6 +25,9 @@
     style_urls = ['extensions/Dashboard/web/css/smoothness/jquery-ui-1.8.5.custom.css','extensions/Dashboard/web/css/dashboard.css','extensions/Dashboard/web/css/colorbox.css']
 %]
 
+[% IF dashboard_jquery_path %]
+  <script type="text/javascript" src="[% dashboard_jquery_path %]"></script>
+[% END %]
 <script type="text/javascript" src="extensions/Dashboard/web/js/jquery-ui-1.8.5.custom.min.js"></script>
 <script type="text/javascript" src="extensions/Dashboard/web/js/jquery.colorbox-min.js"></script>
 <script type="text/javascript" src="extensions/Dashboard/web/js/jquery.jfeed.pack.js"></script>

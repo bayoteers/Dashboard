@@ -261,6 +261,10 @@ sub page_before_template {
 
     my $user_id = Bugzilla->user->id;
 
+    if ( Bugzilla->params->{"dashboard_jquery_path"} ) {
+      $vars->{dashboard_jquery_path} = Bugzilla->params->{"dashboard_jquery_path"};
+    }
+
     my $datadir     = bz_locations()->{'datadir'};
     my $dataextdir  = $datadir . EXTENSION_DIR;
     my $datauserdir = $dataextdir . '/' . $user_id;
