@@ -24,6 +24,9 @@ jQuery.getFeed = function(options) {
             success: function(xml) {
                 var feed = new JFeed(xml);
                 if(jQuery.isFunction(options.success)) options.success(feed);
+            },
+            error: function(XMLHttpRequest, textStatus, errorThrown) {
+            	if(jQuery.isFunction(options.success)) options.error(textStatus);
             }
         });
     }

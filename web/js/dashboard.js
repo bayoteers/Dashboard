@@ -96,14 +96,29 @@ var Dashboard = {
             }
             if (thisWidgetSettings.resizable) {
                 $(this).children(settings.contentSelector).resizable({
-                    handles: 's',
-                    grid: [50, 50],
+                    handles: 'se',
+                    helper: 'widget-state-highlight',
                     stop: function(event, ui) {
-                        $(this).css({
-                            width: ''
-                        });
-                        thisWidgetSettings.resized = true;
-                        Dashboard.savePreferences(id);
+                    	var resized_width = $(this).width() + 55;
+                    	var this_column_id = $(this).parent().parent().attr('id');
+                    	var this_column_width_px = $(this).parent().parent().width();
+                    	var this_column_width_per = parseInt( $(this).parent().parent().css('width') );
+											$(this).css({
+													width: ''
+											});
+                    	var new_width_per = Math.max(10,Math.round(this_column_width_per/this_column_width_px*resized_width));
+                    	var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column").length);
+                    	var total_width_per = 0;
+                    	$('.column:not(#'+this_column_id+')').each(function(index) {
+                    			var cur_width_per = Math.max(10,parseInt( $(this).css('width') ) + delta_width_per);
+                    			$(this).css('width',cur_width_per+"%")
+                    			total_width_per += cur_width_per;
+											});
+                    	$(this).parent().parent().css('width',(100-total_width_per)+"%");
+											$(window).trigger("resize");
+											$('#'+id).trigger('vertical_resize');
+											thisWidgetSettings.resized = true;
+											Dashboard.savePreferences(id);
                     }
                 });
             }
@@ -161,15 +176,30 @@ var Dashboard = {
                         $("#" + widget).children(settings.contentSelector).height(thisWidgetSettings.height);
                         $('#maximized').remove();
                         $("#" + widget).children(settings.contentSelector).resizable({
-                            handles: 's',
-                            grid: [50, 50],
-                            stop: function(event, ui) {
-                                $(this).css({
-                                    width: ''
-                                });
-                                thisWidgetSettings.resized = true;
-                                Dashboard.savePreferences(id);
-                            }
+                            handles: 'se',
+														helper: 'widget-state-highlight',
+														stop: function(event, ui) {
+															var resized_width = $(this).width() + 55;
+															var this_column_id = $(this).parent().parent().attr('id');
+															var this_column_width_px = $(this).parent().parent().width();
+															var this_column_width_per = parseInt( $(this).parent().parent().css('width') );
+															$(this).css({
+																	width: ''
+															});
+															var new_width_per = Math.max(10,Math.round(this_column_width_per/this_column_width_px*resized_width));
+															var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column").length);
+															var total_width_per = 0;
+															$('.column:not(#'+this_column_id+')').each(function(index) {
+																	var cur_width_per = Math.max(10,parseInt( $(this).css('width') ) + delta_width_per);
+																	$(this).css('width',cur_width_per+"%")
+																	total_width_per += cur_width_per;
+															});
+															$(this).parent().parent().css('width',(100-total_width_per)+"%");
+															
+															$(window).trigger("resize");
+															thisWidgetSettings.resized = true;
+															Dashboard.savePreferences(id);
+														}
                         });
                         $(".widget").each(function() {
                             $(this).show();
@@ -219,6 +249,40 @@ var Dashboard = {
                 return $('> li:not(' + notSortable + ')', settings.columns);
             })();
 
+				$('.column_helper').remove();
+				$('.column:first').prepend('<li class="column_helper"><div class="arrow_right"></div><br clear="both"></li>');
+				$('.column:not(:first):not(:last)').each(function(index) {
+						$(this).prepend('<li class="column_helper"><div class="arrow_left"></div><div class="arrow_right"></div><br clear="both"></li>');
+				});
+				$('.column:last').prepend('<li class="column_helper"><div class="arrow_left"></div><br clear="both"></li>');
+         $('.column_helper:not(:last)').resizable({
+						handles: 'e',
+						helper: 'column-state-highlight',
+						stop: function(event, ui) {
+					
+							var resized_width = $(this).width();
+							var this_column_id = $(this).parent().attr('id');
+							var this_column_width_px = $(this).parent().width();
+							var this_column_width_per = parseInt( $(this).parent().css('width') );
+							
+							$(this).css({
+									width: ''
+							});
+							var new_width_per = Math.max(10,Math.round(this_column_width_per/this_column_width_px*resized_width));
+							var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column").length);
+							var total_width_per = 0;
+							$('.column:not(#'+this_column_id+')').each(function(index) {
+									var cur_width_per = Math.max(10,parseInt( $(this).css('width') ) + delta_width_per);
+									$(this).css('width',cur_width_per+"%")
+									total_width_per += cur_width_per;
+							});
+							$(this).parent().css('width',(100-total_width_per)+"%");
+							$(window).trigger("resize");
+							SaveColumns();
+						}
+					});
+            
+            
         $sortableItems.find(settings.handleSelector).css({
             cursor: 'move'
         }).mousedown(function(e) {
@@ -293,6 +357,7 @@ var Dashboard = {
     // Store preferences to Bugzilla via POST
     savePreferences: function(id) {
         SaveWidget(id, $("#" + id).index(), $("#" + id).parent().attr('id').substring(6));
+        SaveColumns();
     },
     getSettings: function(id) {
         var Dashboard = this,
@@ -399,12 +464,22 @@ function SaveWidgets() {
 
         function(pos) {
             var id = $(this).attr('id');
-            if (id != 'main') {
+            if (id != 'main' && id.length>5) {
                 SaveWidget(id, pos, col);
             }
         });
     }
     return false;
+}
+
+function SaveColumns() {
+	
+	var post = 'action=column_save';
+	$('.column').each(function(index) {
+			post += '&column'+index+'='+parseInt( $(this).css('width') );
+	});
+	$.post("page.cgi?id=dashboard_ajax.html", post, function(result) {
+	});
 }
 
 // contains possible extra fields from widgets, is populated by dashboard_ajax.html
@@ -416,12 +491,53 @@ $(".overlay-open").colorbox();
 
 // bind columns to resize event to dynamically resize them in case of browser resize or change in number of columns
 $(window).bind("resize.columns", function() {
-    var x = ($("#columns").width() - $("#column0").width() - 15) / ($("#columns").children().size() - 1);
-    $("#columns").children().not('#column0').width(x);
+	var total_width_per = 0;
+	$('.column').each(function(index) {
+			var cur_width_per = Math.max(10,parseInt( $(this).css('width') ));
+			$(this).css('width',cur_width_per+"%");
+			total_width_per += cur_width_per;
+	});
+	var delta_per = Math.floor((100-total_width_per)/$('.column').length);
+	total_width_per = 0;
+	$('.column:not(#column0)').each(function(index) {
+			var cur_width_per = Math.max(10,parseInt( $(this).css('width') )+delta_per);
+			$(this).css('width',cur_width_per+"%");
+			total_width_per += cur_width_per;
+	});
+	var cur_width_per = 100 - total_width_per;
+	$('#column0').css('width',cur_width_per+"%");
+
 });
 
 // everything is rendered so call resize manually to fix possible errors is elements' dimensions
 $(window).trigger("resize");
+
+$('.column_helper:not(:last)').resizable({
+	handles: 'e',
+	helper: 'column-state-highlight',
+	stop: function(event, ui) {
+
+		var resized_width = $(this).width();
+		var this_column_id = $(this).parent().attr('id');
+		var this_column_width_px = $(this).parent().width();
+		var this_column_width_per = parseInt( $(this).parent().css('width') );
+		
+		$(this).css({
+				width: ''
+		});
+		var new_width_per = Math.max(10,Math.round(this_column_width_per/this_column_width_px*resized_width));
+		var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column").length);
+		var total_width_per = 0;
+		$('.column:not(#'+this_column_id+')').each(function(index) {
+				var cur_width_per = Math.max(10,parseInt( $(this).css('width') ) + delta_width_per);
+				$(this).css('width',cur_width_per+"%")
+				total_width_per += cur_width_per;
+		});
+		$(this).parent().css('width',(100-total_width_per)+"%");
+		$(window).trigger("resize");
+		SaveColumns();
+	}
+});
 
 $(document).keyup(function(e) {
     // clear possible maximized widgets when esc is pressed
@@ -434,15 +550,30 @@ $(document).keyup(function(e) {
             $("#" + id).children('.widget-content').height(thisWidgetSettings.height);
             $('#maximized').remove();
             $("#" + id).children('.widget-content').resizable({
-                handles: 's',
-                grid: [50, 50],
-                stop: function(event, ui) {
-                    $(this).css({
-                        width: ''
-                    });
-                    thisWidgetSettings.resized = true;
-                    Dashboard.savePreferences(id);
-                }
+            		handles: 'se',
+								helper: 'widget-state-highlight',
+								stop: function(event, ui) {
+									var resized_width = $(this).width() + 55;
+									var this_column_id = $(this).parent().parent().attr('id');
+									var this_column_width_px = $(this).parent().parent().width();
+									var this_column_width_per = parseInt( $(this).parent().parent().css('width') );
+									$(this).css({
+											width: ''
+									});
+									var new_width_per = Math.max(10,Math.round(this_column_width_per/this_column_width_px*resized_width));
+									var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column").length);
+									var total_width_per = 0;
+									$('.column:not(#'+this_column_id+')').each(function(index) {
+											var cur_width_per = Math.max(10,parseInt( $(this).css('width') ) + delta_width_per);
+											$(this).css('width',cur_width_per+"%")
+											total_width_per += cur_width_per;
+									});
+									$(this).parent().parent().css('width',(100-total_width_per)+"%");
+									
+									$(window).trigger("resize");
+									thisWidgetSettings.resized = true;
+									Dashboard.savePreferences(id);
+								}
             });
             $(".widget").each(function() {
                 $(this).show();
