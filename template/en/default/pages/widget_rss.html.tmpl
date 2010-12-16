@@ -1,14 +1,14 @@
 
-$('<li class="item"><label>URL:</label><input id="widget[% widget.id %]_url" value=""></li>').appendTo('#widget[% widget.id %] .edit-box');
-$('<li class="item"><label>Username:</label><input id="widget[% widget.id %]_username" value=""></li>').appendTo('#widget[% widget.id %] .edit-box');
-$('<li class="item"><label>Password:</label><input type="password" id="widget[% widget.id %]_password" value=""></li>').appendTo('#widget[% widget.id %] .edit-box');
+$('<li class="item"><label>URL:</label><input id="widget[% widget.id %]_url" value="1"></li>').appendTo('#widget[% widget.id %] .edit-box');
+$('<li class="item"><label>Username:</label><input id="widget[% widget.id %]_username" value="2"></li>').appendTo('#widget[% widget.id %] .edit-box');
+$('<li class="item"><label>Password:</label><input type="password" id="widget[% widget.id %]_password" value="3"></li>').appendTo('#widget[% widget.id %] .edit-box');
 $('<li class="item"><label>Load:</label><input type="button" id="widget[% widget.id %]_load" value="Load RSS"></li>').appendTo('#widget[% widget.id %] .edit-box');
 
 [% IF widget.refreshable %]
   $('<li class="item"><label>Reload:</label><select id="widget[% widget.id %]_refresh"><option value="0">no refresh</option><option value="15">every 15 seconds</option><option value="60">every minute</option><option value="300">every 5 minutes</option><option value="900">every 15 minutes</option><option value="1800">every 30 minutes</option></select></li>').appendTo('#widget[% widget.id %] .edit-box');
   function widget[% widget.id %]_refresh(){
     //$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html("<div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>");
-    widget[% widget.id %]_load_rss($('#widget[% widget.id %]_url').val(),$('#widget[% widget.id %]_username').val(),$('#widget[% widget.id %]_password').val());
+    widget[% widget.id %]_load_rss($('#widget[% widget.id %]_url').val().trim(),$('#widget[% widget.id %]_username').val().trim(),$('#widget[% widget.id %]_password').val().trim());
   }
   [% IF widget.refresh>0 %]
     $('#widget[% widget.id %]_refresh').val([% widget.refresh %])
@@ -42,7 +42,6 @@ $("#widget[% widget.id %]").bind('vertical_resize', function(event) {
 
 function widget[% widget.id %]_resize() {
   var y = $("#widget[% widget.id %] .widget-content").height() - 3;
-	alert(y);
   $('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').children('.rss').height(y);	
 }
 
@@ -159,39 +158,44 @@ $('#widget[% widget.id %]_refresh').change(function() {
 }).trigger('change');
 
 $('#widget[% widget.id %]_username').keyup(function(e) {
-  Widgets['widget[% widget.id %]']['username'] = $(this).val();
+  Widgets['widget[% widget.id %]']['username'] = $.trim( $(this).val() );
 });
 $('#widget[% widget.id %]_password').keyup(function(e) {
-  Widgets['widget[% widget.id %]']['password'] = $(this).val();
+  Widgets['widget[% widget.id %]']['password'] = $.trim( $(this).val() );
 });
 
 $('#widget[% widget.id %]_url').keyup(function(e) {
-  Widgets['widget[% widget.id %]']['URL'] = $(this).val();
+  Widgets['widget[% widget.id %]']['URL'] = $.trim( $(this).val() );
 //  if (e.keyCode == 13) {
 //  }
 });
 $('#widget[% widget.id %]_load').click(function(e) {
  	var y = $("#widget[% widget.id %] .widget-content").height();
 	if (y==1) $("#widget[% widget.id %] .widget-content").height(400);
-	var url = $('#widget[% widget.id %]_url').val();
-	var username = $('#widget[% widget.id %]_username').val();
-	var password = $('#widget[% widget.id %]_password').val();
+	var url = $.trim( $('#widget[% widget.id %]_url').val() );
+	var username = $.trim( $('#widget[% widget.id %]_username').val() );
+	var password = $.trim( $('#widget[% widget.id %]_password').val() );
 	widget[% widget.id %]_load_rss(url,username,password);
 });
 
 [% IF widget.username %]
-  $('#widget[% widget.id %]_username').val('[% widget.username %]');
-  widget['username'] = '[% widget.username %]';
+  widget['username'] = $.trim('[% widget.username %]');
+[% ELSE %]
+	widget['username'] = '';
 [% END %]
+$('#widget[% widget.id %]_username').val(widget['username']);
+
 [% IF widget.password %]
-  $('#widget[% widget.id %]_password').val('[% widget.password %]');
-  widget['password'] = '[% widget.password %]';
+  widget['password'] = $.trim('[% widget.password %]');
+[% ELSE %]
+	widget['password'] = '';
 [% END %]
+$('#widget[% widget.id %]_password').val(widget['password']);
 
 [% IF widget.URL %]
-  widget[% widget.id %]_load_rss('[% widget.URL %]','[% widget.username %]','[% widget.password %]');
-  $('#widget[% widget.id %]_url').val('[% widget.URL %]');
-  widget['URL'] = '[% widget.URL %]';
+  widget['URL'] = $.trim('[% widget.URL %]');
+  $('#widget[% widget.id %]_url').val(widget['URL']);
+  widget[% widget.id %]_load_rss(widget['URL'],widget['username'],widget['password']);
 [% END %]
 
 if (y==1) {
