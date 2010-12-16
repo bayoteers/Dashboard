@@ -1,7 +1,7 @@
 
-$('<li class="item"><label>URL:</label><input id="widget[% widget.id %]_url" value="1"></li>').appendTo('#widget[% widget.id %] .edit-box');
-$('<li class="item"><label>Username:</label><input id="widget[% widget.id %]_username" value="2"></li>').appendTo('#widget[% widget.id %] .edit-box');
-$('<li class="item"><label>Password:</label><input type="password" id="widget[% widget.id %]_password" value="3"></li>').appendTo('#widget[% widget.id %] .edit-box');
+$('<li class="item"><label>URL:</label><input id="widget[% widget.id %]_url" value=""></li>').appendTo('#widget[% widget.id %] .edit-box');
+$('<li class="item"><label>Username:</label><input id="widget[% widget.id %]_username" value=""></li>').appendTo('#widget[% widget.id %] .edit-box');
+$('<li class="item"><label>Password:</label><input type="password" id="widget[% widget.id %]_password" value=""></li>').appendTo('#widget[% widget.id %] .edit-box');
 $('<li class="item"><label>Load:</label><input type="button" id="widget[% widget.id %]_load" value="Load RSS"></li>').appendTo('#widget[% widget.id %] .edit-box');
 
 [% IF widget.refreshable %]
