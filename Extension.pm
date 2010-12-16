@@ -38,10 +38,14 @@ use HTML::Scrubber;
 # For serialization
 use Storable;
 
+# For RSS proxy
+use LWP;
+
 # Core modules
 use File::Path;
 use File::Basename;
 use File::Copy;
+use List::Util;
 
 our $VERSION = '0.01';
 
@@ -181,7 +185,7 @@ sub save_widget {
     }
 
     # text fields
-    @fields = qw(title URL);
+    @fields = qw(title URL username password);
     my $scrubber = HTML::Scrubber->new;
     $scrubber->default(0);
 
@@ -252,12 +256,25 @@ sub add_column {
 
 }
 
+# save the widths of the columns in percentages
+sub save_columns {
+  my ( $datauserdir, $vars ) = @_;
+
+  my $cgi = Bugzilla->cgi;
+
+  for ( my $i = 0 ; $i <= $vars->{preferences}->{columns} ; $i++ ) {
+    $vars->{preferences}->{ "column" . $i } = int( $cgi->param( "column" . $i ) ? $cgi->param( "column" . $i ) : 0 );
+  }
+
+  store $vars->{preferences}, $datauserdir . "/preferences";
+}
+
 # Hook for page.cgi and dashboard
 sub page_before_template {
   my ( $self, $args ) = @_;
   my ( $vars, $page ) = @$args{qw(vars page_id)};
 
-  if ( $page =~ /^dashboard(_ajax|_overlay)?\.html$/ ) {
+  if ( $page =~ /^dashboard(_ajax|_overlay|_rss)?\.html$/ ) {
 
     my $user_id = Bugzilla->user->id;
 
@@ -293,6 +310,9 @@ sub page_before_template {
 
         # create default preferences
         my $preferences->{columns} = COLUMNS_DEFAULT;
+        for ( my $i = 0 ; $i < COLUMNS_DEFAULT ; $i++ ) {
+          $preferences->{ "column" . $i } = int( 100 / COLUMNS_DEFAULT );
+        }
         store $preferences, $datauserdir . "/preferences";
         $vars->{preferences} = $preferences;
       }
@@ -304,7 +324,10 @@ sub page_before_template {
 
         my @fields;
 
-        if ( Bugzilla->cgi->param('action') eq 'column_add' ) {
+        if ( Bugzilla->cgi->param('action') eq 'column_save' ) {
+          save_columns( $datauserdir, $vars );
+        }
+        elsif ( Bugzilla->cgi->param('action') eq 'column_add' ) {
           add_column( $datauserdir, $vars );
         }
         elsif ( Bugzilla->cgi->param('action') eq 'column_del' ) {
@@ -411,6 +434,7 @@ sub page_before_template {
             }
             if ( $overlay->{"shared"} ) {
               $datatargetdir = $dataextdir . '/0';
+
             }
           }
           else {
@@ -451,9 +475,19 @@ sub page_before_template {
           foreach my $dir_entry (@files) {
             if ( -f $dir_entry ) {
               trick_taint($dir_entry);
-              copy( $dir_entry, "$overlaydir/" ) or die "Copy failed: $!";
+              if ( $dir_entry =~ m/\/\d+\.widget$/ && $overlay->{"shared"} ) {
+                ## strip usernames and passwords from widgets : todo to be changed so that widgets can define their private/public fields
+                my $widget = retrieve($dir_entry);
+                $widget->{'username'} = '';
+                $widget->{'password'} = '';
+                store $widget, $overlaydir . "/" . fileparse($dir_entry);
+              }
+              else {
+                copy( $dir_entry, "$overlaydir/" ) or die "Copy failed: $!";
+              }
             }
           }
+
           store $overlay, $overlaydir . "/overlay";
 
           $vars->{"overlay_ajax"} = "<h2>Overlay saved!</h2>";
@@ -490,13 +524,42 @@ sub page_before_template {
         }
         $vars->{"user_id"} = $user_id;
       }
+      elsif ( $page eq "dashboard_rss.html" ) {
+
+        # JQuery requires proper content-type for rss
+        print $cgi->header( -type => "text/xml" );
+        my $browser = LWP::UserAgent->new();
+        $browser->timeout(10);
+        my $response = $browser->get( $cgi->param('rss_url') );
+        if ( $response->is_success ) {
+          $vars->{"dashboard_external_rss"} = $response->content;
+        }
+        else {
+          $vars->{"dashboard_external_rss"} = '<?xml version="1.0" encoding="UTF-8" ?><rss version="2.0"><channel><title>Couldn\'t load RSS feed</title></channel></rss>';
+        }
+      }
       else {
 
         # request was for dashboard.html so generate column->widgets structure and populate it with widget preferences
 
+        my $column_total_width = 0;
+        my $column_width       = 0;
         for ( my $i = 0 ; $i <= $vars->{preferences}->{columns} ; $i++ ) {
+          if ( !$vars->{preferences}->{ "column" . $i } ) {
+            $vars->{"column"}->[$i] = int( 100 / ( $vars->{preferences}->{columns} + 1 ) );
+          }
+          else {
+            $column_width = int( $vars->{preferences}->{ "column" . $i } );
+            $vars->{"column"}->[$i] = ( $column_width > 10 ) ? $column_width : 10;
+          }
+          $column_total_width += $vars->{"column"}->[$i];
           my $widget->{'id'} = 0;
           $vars->{"columns"}->[$i]->[0] = $widget;
+        }
+        if ( $column_total_width != 100 ) {
+          for ( my $i = 0 ; $i <= $vars->{preferences}->{columns} ; $i++ ) {
+            $vars->{"column"}->[$i] = int( 100 / ( $vars->{preferences}->{columns} + 1 ) );
+          }
         }
 
         opendir( DIR, $datauserdir ) or die($!);

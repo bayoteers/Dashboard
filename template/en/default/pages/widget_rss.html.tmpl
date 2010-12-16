@@ -1,10 +1,14 @@
+
 $('<li class="item"><label>URL:</label><input id="widget[% widget.id %]_url" value=""></li>').appendTo('#widget[% widget.id %] .edit-box');
+$('<li class="item"><label>Username:</label><input id="widget[% widget.id %]_username" value=""></li>').appendTo('#widget[% widget.id %] .edit-box');
+$('<li class="item"><label>Password:</label><input type="password" id="widget[% widget.id %]_password" value=""></li>').appendTo('#widget[% widget.id %] .edit-box');
+$('<li class="item"><label>Load:</label><input type="button" id="widget[% widget.id %]_load" value="Load RSS"></li>').appendTo('#widget[% widget.id %] .edit-box');
 
 [% IF widget.refreshable %]
   $('<li class="item"><label>Reload:</label><select id="widget[% widget.id %]_refresh"><option value="0">no refresh</option><option value="15">every 15 seconds</option><option value="60">every minute</option><option value="300">every 5 minutes</option><option value="900">every 15 minutes</option><option value="1800">every 30 minutes</option></select></li>').appendTo('#widget[% widget.id %] .edit-box');
   function widget[% widget.id %]_refresh(){
-    $('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html("<div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>");
-    widget[% widget.id %]_load_rss($('#widget[% widget.id %]_url').val());
+    //$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html("<div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>");
+    widget[% widget.id %]_load_rss($('#widget[% widget.id %]_url').val(),$('#widget[% widget.id %]_username').val(),$('#widget[% widget.id %]_password').val());
   }
   [% IF widget.refresh>0 %]
     $('#widget[% widget.id %]_refresh').val([% widget.refresh %])
@@ -14,8 +18,6 @@ $('<li class="item"><label>URL:</label><input id="widget[% widget.id %]_url" val
 [% END %]
 
 $('#widget[% widget.id %]').find('.maximize').remove();
-
-
 
 $('#widget[% widget.id %] .widget-head .refresh').mousedown(function(e) {
   e.stopPropagation();
@@ -27,60 +29,121 @@ $('#widget[% widget.id %] .widget-head .refresh').mousedown(function(e) {
 </script>
 <div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>
 <script>
-
 var y = $("#widget[% widget.id %] .widget-content").height();
 if (y==1) {
   $("#widget[% widget.id %] .widget-content").height(70);
 }
 
-$("#widget[% widget.id %] .widget-content").unbind("resize.widget[% widget.id %]");
-$("#widget[% widget.id %] .widget-content").bind("resize.widget[% widget.id %]", function() {
+$("#widget[% widget.id %]").unbind('vertical_resize');
+$("#widget[% widget.id %]").bind('vertical_resize', function(event) {
   var y = $("#widget[% widget.id %] .widget-content").height() - 3;
-  //$("#widget[% widget.id %]_iframe").height(y);
   $('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').children('.rss').height(y);
 });
 
-function widget[% widget.id %]_load_rss(url) {
+function widget[% widget.id %]_resize() {
+  var y = $("#widget[% widget.id %] .widget-content").height() - 3;
+	alert(y);
+  $('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').children('.rss').height(y);	
+}
 
+function widget[% widget.id %]_load_rss(url,username,password) {
 
-jQuery.getFeed({
-  url:url, //'xml/rss-20.xml',
-  success: function(feed) {
-  
-    var html = '<h2>'
-      + '<a href="'
-      + feed.link
-      + '">'
-      + feed.title
-      + '</a>'
-      + '</h2>';
-     
-    for(var i = 0; i < feed.items.length && i < 5; i++) {
-      var item = feed.items[i];
-       
-      html += '<h3>'
-        + '<a href="'
-        + item.link
-        + '">'
-        + item.title
-        + '</a>'
-        + '</h3>';
-         
-      html += '<div class="updated">'
-        + item.updated
-        + '</div>';
-       
-      html += '<div>'
-        + item.description
-        + '</div>';
-    }
-    
-    
-    $('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html('<div class="rss">'+html+'</div>');
-    $('.rss').children().children('a').colorbox({width:"80%", height:"80%", iframe:true});
-    $("#widget[% widget.id %] .widget-content").trigger("resize");
-  }
-});
+	var local_domain = new RegExp("^(http|https):\/\/"+document.domain+"\/",""); // url is in current bugzilla domain, jquery can access directly
+	var valid_url = new RegExp("^(http|https):\/\/.+\/"); // atleast resembles an url
+	
+	if (valid_url.test(url))
+	{
+		if (username && password && username.length>0 && password.length>0)
+		{
+			var i = url.indexOf('://')+3;
+			url = url.slice(0,i)+username+":"+password+"@"+url.slice(i);
+		}
+		if (!local_domain.test(url))
+		{
+			url = "page.cgi?id=dashboard_rss.html&rss_url=" + encodeURIComponent(url);
+		}
+		jQuery.getFeed({
+			url:url,
+			error: function(error) {
+				$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html('<p class="error">Feed returned error: '+error+'</p>');
+			},
+			success: function(feed) {
+				
+				var feed_id = $.md5(url);
+				var feed_store = $.Storage.get(feed_id);
+
+				if (!feed_store) feed_store = '';
+								
+				if (feed.link.length>0) {
+					var html = '<h2><a href="' + feed.link + '">' + feed.title + '</a></h2>';
+				}
+				else
+				{
+					var html = '<h2>' + feed.title + '</h2>';
+				}
+				
+				feed_store_new = '0';
+		
+				for(var i = 0; i < feed.items.length && i < 5; i++) {
+					var item = feed.items[i];
+					var uniqid = $.md5(item.link+item.title+item.updated+item.id);
+					var re_displayed = new RegExp("\\|"+uniqid+":d","");
+					var re_clicked = new RegExp("\\|"+uniqid+":c","");
+					var item_class='';
+
+					if (re_clicked.test(feed_store))
+					{
+						item_class='rss_clicked';
+						feed_store_new += '|' + uniqid + ':c';
+					}
+					else if (re_displayed.test(feed_store)) 
+					{
+						item_class='rss_displayed';
+						feed_store_new += '|' + uniqid + ':d';
+					}
+					else
+					{
+						item_class='rss_new';
+						feed_store_new += '|' + uniqid + ':d';
+					}
+					
+					html += '<div id="'+uniqid+'" class="rss_title '+item_class+'"><a title="open in popup" class="open_popup" href="' + item.link + '"></a><a title="open link" class="open_link" href="' + item.link + '"></a><h3>' + item.title + '</h3></div>';
+						 
+					html += '<div class="updated"><p>' + item.updated + '</p></div>';
+					
+					var description = item.description.replace(/^<.+>/,'');
+					html += '<div>' + description.replace(/<.+/g,'') + '</div>';
+					
+				}
+
+				$.Storage.set(feed_id, feed_store_new);
+				$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html('<div id="'+feed_id+'"class="rss">'+html+'</div>');
+				$('#'+feed_id).children().children('a.open_popup').click(function(event) {
+						event.preventDefault();
+						var feed_store = $.Storage.get(feed_id);
+						feed_store += '|' + $(this).parent().attr('id')+":c";
+						$.Storage.set(feed_id, feed_store);
+						$(this).parent().attr('class','rss_title rss_clicked');
+						$(this).colorbox({width:"80%", height:"80%", iframe:true});
+				});
+				$('#'+feed_id).children().children('a.open_link').click(function(event) {
+						event.preventDefault();
+						var feed_store = $.Storage.get(feed_id);
+						feed_store += '|' + $(this).parent().attr('id')+":c";
+						$.Storage.set(feed_id, feed_store); 
+						$(this).parent().attr('class','rss_title rss_clicked');
+						window.open($(this).attr('href'));
+				});
+				$("#widget[% widget.id %] .widget-content").trigger("resize");
+			}
+		});
+
+	}
+	else
+	{
+		$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html('<p class="error">Not a valid URL!</p>');
+		$("#widget[% widget.id %] .widget-content").trigger("resize");
+	}
 }
 
 $('#widget[% widget.id %]_refresh').change(function() {
@@ -95,17 +158,38 @@ $('#widget[% widget.id %]_refresh').change(function() {
   });
 }).trigger('change');
 
-$('#widget[% widget.id %]_url').keyup(function(e) {
-  Widgets['widget[% widget.id %]']['URL'] = $(this).val();
-  if (e.keyCode == 13) {
-    var y = $("#widget[% widget.id %] .widget-content").height();
-    if (y==1) $("#widget[% widget.id %] .widget-content").height(400);
-    widget[% widget.id %]_load_rss($(this).val());
-  }
+$('#widget[% widget.id %]_username').keyup(function(e) {
+  Widgets['widget[% widget.id %]']['username'] = $(this).val();
+});
+$('#widget[% widget.id %]_password').keyup(function(e) {
+  Widgets['widget[% widget.id %]']['password'] = $(this).val();
 });
 
+$('#widget[% widget.id %]_url').keyup(function(e) {
+  Widgets['widget[% widget.id %]']['URL'] = $(this).val();
+//  if (e.keyCode == 13) {
+//  }
+});
+$('#widget[% widget.id %]_load').click(function(e) {
+ 	var y = $("#widget[% widget.id %] .widget-content").height();
+	if (y==1) $("#widget[% widget.id %] .widget-content").height(400);
+	var url = $('#widget[% widget.id %]_url').val();
+	var username = $('#widget[% widget.id %]_username').val();
+	var password = $('#widget[% widget.id %]_password').val();
+	widget[% widget.id %]_load_rss(url,username,password);
+});
+
+[% IF widget.username %]
+  $('#widget[% widget.id %]_username').val('[% widget.username %]');
+  widget['username'] = '[% widget.username %]';
+[% END %]
+[% IF widget.password %]
+  $('#widget[% widget.id %]_password').val('[% widget.password %]');
+  widget['password'] = '[% widget.password %]';
+[% END %]
+
 [% IF widget.URL %]
-  widget[% widget.id %]_load_rss('[% widget.URL %]');
+  widget[% widget.id %]_load_rss('[% widget.URL %]','[% widget.username %]','[% widget.password %]');
   $('#widget[% widget.id %]_url').val('[% widget.URL %]');
   widget['URL'] = '[% widget.URL %]';
 [% END %]
@@ -117,5 +201,5 @@ if (y==1) {
 $("#widget[% widget.id %] .widget-content").height(y);
 $('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').children('.rss').height(y);
 $("#widget[% widget.id %] .widget-content").trigger("resize");
-    
+
 

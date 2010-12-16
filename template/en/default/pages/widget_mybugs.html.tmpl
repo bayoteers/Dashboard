@@ -3,7 +3,7 @@
 [% IF widget.refreshable %]
   $('<li class="item"><label>Reload:</label><select id="widget[% widget.id %]_refresh"><option value="0">no refresh</option><option value="15">every 15 seconds</option><option value="60">every minute</option><option value="300">every 5 minutes</option><option value="900">every 15 minutes</option><option value="1800">every 30 minutes</option></select></li>').appendTo('#widget[% widget.id %] .edit-box');
   function widget[% widget.id %]_refresh(){
-    $('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html("<div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>");
+    //$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html("<div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>");
     widget[% widget.id %]_load_rss();
   }
   [% IF widget.refresh>0 %]
@@ -33,53 +33,89 @@ if (y==1) {
   $("#widget[% widget.id %] .widget-content").height(70);
 }
 
-$("#widget[% widget.id %] .widget-content").unbind("resize.widget[% widget.id %]");
-$("#widget[% widget.id %] .widget-content").bind("resize.widget[% widget.id %]", function() {
+$("#widget[% widget.id %]").unbind('vertical_resize');
+$("#widget[% widget.id %]").bind('vertical_resize', function(event) {
   var y = $("#widget[% widget.id %] .widget-content").height() - 3;
   $('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').children('.rss').height(y);
 });
 
 function widget[% widget.id %]_load_rss() {
+	var url = 'buglist.cgi?bug_status=NEW&bug_status=ASSIGNED&bug_status=NEED_INFO&bug_status=REOPENED&bug_status=WAITING&bug_status=RESOLVED&bug_status=RELEASED&email1=[% user.login FILTER url_quote %]&emailassigned_to1=1&emailreporter1=1&emailtype1=exact&field0-0-0=bug_status&field0-0-1=reporter&query_format=advanced&type0-0-0=notequals&type0-0-1=equals&value0-0-0=UNCONFIRMED&value0-0-1=[% user.login FILTER url_quote %]&title=Bug%20List&ctype=atom';
+	jQuery.getFeed({
+  	url: url,
+		error: function(error) {
+			$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html('<p class="error">Feed returned error: '+error+'</p>');
+		},
+		success: function(feed) {
+			
+			var feed_id = $.md5(url);
+			var feed_store = $.Storage.get(feed_id);
 
+			if (!feed_store) feed_store = '';
+							
+			if (feed.link.length>0) {
+				var html = '<h2><a href="' + feed.link + '">' + feed.title + '</a></h2>';
+			}
+			else
+			{
+				var html = '<h2>' + feed.title + '</h2>';
+			}
+			
+			feed_store_new = '0';
+	
+			for(var i = 0; i < feed.items.length && i < 5; i++) {
+				var item = feed.items[i];
+				var uniqid = $.md5(item.link+item.title+item.updated+item.id);
+				var re_displayed = new RegExp("\\|"+uniqid+":d","");
+				var re_clicked = new RegExp("\\|"+uniqid+":c","");
+				var item_class='';
 
-jQuery.getFeed({
-  url:'buglist.cgi?bug_status=NEW&bug_status=ASSIGNED&bug_status=NEED_INFO&bug_status=REOPENED&bug_status=WAITING&bug_status=RESOLVED&bug_status=RELEASED&email1=[% user.login FILTER url_quote %]&emailassigned_to1=1&emailreporter1=1&emailtype1=exact&field0-0-0=bug_status&field0-0-1=reporter&query_format=advanced&type0-0-0=notequals&type0-0-1=equals&value0-0-0=UNCONFIRMED&value0-0-1=[% user.login FILTER url_quote %]&title=Bug%20List&ctype=atom', //'xml/rss-20.xml',
-  success: function(feed) {
-  
-    var html = '<h2>'
-      + '<a href="'
-      + feed.link
-      + '">'
-      + feed.title
-      + '</a>'
-      + '</h2>';
-     
-    for(var i = 0; i < feed.items.length && i < 5; i++) {
-      var item = feed.items[i];
-       
-      html += '<h3>'
-        + '<a href="'
-        + item.link
-        + '">'
-        + item.title
-        + '</a>'
-        + '</h3>';
-         
-      html += '<div class="updated">'
-        + item.updated
-        + '</div>';
-       
-      html += '<div>'
-        + item.description
-        + '</div>';
-    }
-    
-    
-    $('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html('<div class="rss">'+html+'</div>');
-    $('.rss').children().children('a').colorbox({width:"80%", height:"80%", iframe:true});
-    $("#widget[% widget.id %] .widget-content").trigger("resize");
-  }
-});
+				if (re_clicked.test(feed_store))
+				{
+					item_class='rss_clicked';
+					feed_store_new += '|' + uniqid + ':c';
+				}
+				else if (re_displayed.test(feed_store)) 
+				{
+					item_class='rss_displayed';
+					feed_store_new += '|' + uniqid + ':d';
+				}
+				else
+				{
+					item_class='rss_new';
+					feed_store_new += '|' + uniqid + ':d';
+				}
+				
+				html += '<div id="'+uniqid+'" class="rss_title '+item_class+'"><a title="open in popup" class="open_popup" href="' + item.link + '"></a><a title="open link" class="open_link" href="' + item.link + '"></a><h3>' + item.title + '</h3></div>';
+					 
+				html += '<div class="updated"><p>' + item.updated + '</p></div>';
+				
+				var description = item.description.replace(/^<.+>/,'');
+				html += '<div>' + description.replace(/<.+/g,'') + '</div>';
+				
+			}
+
+			$.Storage.set(feed_id, feed_store_new);
+			$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html('<div id="'+feed_id+'"class="rss">'+html+'</div>');
+			$('#'+feed_id).children().children('a.open_popup').click(function(event) {
+					event.preventDefault();
+					var feed_store = $.Storage.get(feed_id);
+					feed_store += '|' + $(this).parent().attr('id')+":c";
+					$.Storage.set(feed_id, feed_store);
+					$(this).parent().attr('class','rss_title rss_clicked');
+					$(this).colorbox({width:"80%", height:"80%", iframe:true});
+			});
+			$('#'+feed_id).children().children('a.open_link').click(function(event) {
+					event.preventDefault();
+					var feed_store = $.Storage.get(feed_id);
+					feed_store += '|' + $(this).parent().attr('id')+":c";
+					$.Storage.set(feed_id, feed_store); 
+					$(this).parent().attr('class','rss_title rss_clicked');
+					window.open($(this).attr('href'));
+			});
+			$("#widget[% widget.id %] .widget-content").trigger("resize");
+		}
+	});
 }
 
 $('#widget[% widget.id %]_refresh').change(function() {

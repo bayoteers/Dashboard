@@ -34,14 +34,11 @@
 /* Columns section */
 #columns .column {
 	float: left;
-	awidth: 25%;
 	min-height: 400px;
 	height: auto !important;
 	height: 400px;
 }
 #columns #column0 {
-	width: 350px;
-	min-width: 350px;
 }
 #columns .widget {
 	margin: 30px 20px 0 20px;
