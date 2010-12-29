@@ -45,7 +45,9 @@
 			<tr>
 				<th align="right" valign="top">
 					[% IF is_admin %]
-						<input id="overlay_shared" type="checkbox"> Shared
+						<input id="overlay_shared" type="checkbox"> Shared 
+					[% ELSE %]
+						<input id="overlay_shared" type="checkbox"> Shared <small><br>requires<br>admin<br>approval</small>
 					[% END %]
 				</th>
 				<td align="right" valign="top">
@@ -55,7 +57,6 @@
 		</table>
 	</div>
 
-
 	<div class="overlay_box" id="overload_load_box">
 		<h2>Select overlay to load:</h2>
 		<table>
@@ -63,7 +64,10 @@
 				[% FOREACH key IN overlays.$user.keys.sort %]
 					<tr>
 						<th align="right" valign="top">
-						<a class="overlay_load_link" href="page.cgi?id=dashboard_ajax.html&action=load_overlay&overlay_user_id=[% overlays.$user.$key.user_id %]&overlay_id=[% overlays.$user.$key.overlay_id %]">[% overlays.$user.$key.name %]</a>[% IF overlays.$user.$key.user_id == user_id || overlays.$user.$key.user_id==0 && is_admin %] [<a class="overlay_delete_link" href="page.cgi?id=dashboard_ajax.html&action=delete_overlay&overlay_user_id=[% overlays.$user.$key.user_id %]&overlay_id=[% overlays.$user.$key.overlay_id %]">x</a>][% END %]:&nbsp;
+						<a class="overlay_load_link" href="page.cgi?id=dashboard_ajax.html&action=load_overlay&overlay_user_id=[% overlays.$user.$key.user_id %]&overlay_id=[% overlays.$user.$key.overlay_id %]">[% overlays.$user.$key.name %]</a>
+						[% IF overlays.$user.$key.user_id == user_id || overlays.$user.$key.user_id==0 && is_admin %]
+							[<a class="overlay_delete_link" href="page.cgi?id=dashboard_ajax.html&action=delete_overlay&overlay_user_id=[% overlays.$user.$key.user_id %]&overlay_id=[% overlays.$user.$key.overlay_id %]">x</a>]
+						[% END %]:&nbsp;
 						</th>
 						<td valign="top">
 							[% overlays.$user.$key.description %]
@@ -73,6 +77,31 @@
 			[% END %]
 		</table>
 	</div>
+
+	[% IF is_admin %]
+		<div class="overlay_box" id="overload_pending_box">
+			<h2>Pending overlays:</h2>
+			<table>
+				[% FOREACH user IN pending.keys.nsort %]
+					[% FOREACH key IN pending.$user.keys.sort %]
+						<tr>
+							<th align="right" valign="top">
+							<a class="overlay_load_link" href="page.cgi?id=dashboard_ajax.html&action=load_overlay&overlay_user_id=[% pending.$user.$key.user_id %]&overlay_id=[% pending.$user.$key.overlay_id %]">[% pending.$user.$key.name %]</a>
+							[% IF pending.$user.$key.user_id == user_id || pending.$user.$key.user_id==0 && is_admin %] 
+								[<a class="overlay_publish_link" href="page.cgi?id=dashboard_ajax.html&action=publish_overlay&overlay_user_id=[% pending.$user.$key.user_id %]&overlay_id=[% pending.$user.$key.overlay_id %]">ok</a>]
+								[<a class="overlay_delete_link" href="page.cgi?id=dashboard_ajax.html&action=delete_overlay&overlay_user_id=[% pending.$user.$key.user_id %]&overlay_id=[% pending.$user.$key.overlay_id %]">x</a>]
+							[% END %]:&nbsp;
+							</th>
+							<td valign="top">
+								[% pending.$user.$key.description %] <small>([% pending.$user.$key.user_login %])</small>
+							</td>
+						</tr>
+					[% END %]
+				[% END %]
+			</table>
+		</div>
+	[% END %]
+
 	<script>
 		$('#overlay_save_button').click(function() {
 			var name = $('#overlay_name').val();
@@ -117,4 +146,5 @@
 		});
 		
 		$('.overlay_delete_link').colorbox();
+		$('.overlay_publish_link').colorbox();
 	</script>

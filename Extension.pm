@@ -305,7 +305,6 @@ sub page_before_template {
             print "Problem making $file: $message\n";
           }
           die("Couldn't create $datauserdir");
-
         }
 
         # create default preferences
@@ -325,15 +324,16 @@ sub page_before_template {
         my @fields;
 
         if ( Bugzilla->cgi->param('action') eq 'column_save' ) {
+
           save_columns( $datauserdir, $vars );
         }
         elsif ( Bugzilla->cgi->param('action') eq 'column_add' ) {
+
           add_column( $datauserdir, $vars );
         }
         elsif ( Bugzilla->cgi->param('action') eq 'column_del' ) {
 
           delete_column( $datauserdir, $vars );
-
         }
 
         elsif ( Bugzilla->cgi->param('action') eq 'new' ) {
@@ -353,7 +353,6 @@ sub page_before_template {
           my $widget_id = int( $cgi->param('widget_id') );
 
           delete_widget( $widget_id, $datauserdir, $vars );
-
         }
         elsif ( Bugzilla->cgi->param('action') eq 'save' ) {
 
@@ -380,7 +379,7 @@ sub page_before_template {
             }
             rmdir trick_taint( $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id );
 
-            $vars->{"overlay_ajax"} = '<h2>Overlay deleted!</h2><script>$.colorbox.close();</script>';
+            $vars->{"overlay_ajax"} = '<h2>Overlay deleted!</h2>';
           }
           else {
             $vars->{"overlay_error"} = "Illegal user or overlay id!";
@@ -392,7 +391,9 @@ sub page_before_template {
           my $overlay_user_id = int( $cgi->param("overlay_user_id") );
           my $overlay_id      = int( $cgi->param("overlay_id") );
 
-          if ( ( $overlay_user_id == 0 || $overlay_user_id == $user_id ) && -d $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id ) {
+          if ( ( ( $overlay_user_id == 0 || $overlay_user_id == $user_id ) && -e $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id . "/overlay" )
+            || ( $overlay_user_id == 0 && Bugzilla->user->in_group('admin') && -e $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id . "/overlay.pending" ) )
+          {
 
             my @files = glob $datauserdir . "/*";
 
@@ -409,6 +410,7 @@ sub page_before_template {
               if ( -f $dir_entry ) {
                 trick_taint($dir_entry);
                 my $filename = basename($dir_entry);
+                if ( $filename eq "overlay.pending" ) { $filename = "overlay"; }
                 copy( $dir_entry, "$datauserdir/$filename" ) or die "Copy failed: $!";
               }
             }
@@ -420,6 +422,26 @@ sub page_before_template {
           }
 
         }
+        elsif ( Bugzilla->cgi->param('action') eq 'publish_overlay' ) {
+          my $overlay_id      = int( $cgi->param("overlay_id") );
+          my $overlay_user_id = int( $cgi->param("overlay_user_id") );
+          if ( $overlay_user_id == 0 && Bugzilla->user->in_group('admin') && -e $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id . "/overlay.pending" ) {
+            trick_taint($dataextdir);
+            trick_taint($overlay_user_id);
+            trick_taint($overlay_id);
+
+            move(
+              $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id . "/overlay.pending",
+              $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id . "/overlay"
+            );
+            $vars->{"overlay_ajax"} = "<h2>Overlay published!</h2>";
+          }
+          else {
+            $vars->{"overlay_error"} =
+              $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id . "/overlay.pending" . ":Illegal overlay id or overlay already published!";
+          }
+
+        }
         elsif ( Bugzilla->cgi->param('action') eq 'save_overlay' ) {
 
           my $overlay;
@@ -427,18 +449,12 @@ sub page_before_template {
           my $datatargetdir = $datauserdir;
 
           # true/false fields
-          if ( Bugzilla->user->in_group('admin') ) {
-            @fields = qw(shared);
-            foreach (@fields) {
-              $overlay->{$_} = $cgi->param( "overlay_" . $_ ) eq 'true' ? 1 : 0;
-            }
-            if ( $overlay->{"shared"} ) {
-              $datatargetdir = $dataextdir . '/0';
-
-            }
+          @fields = qw(shared);
+          foreach (@fields) {
+            $overlay->{$_} = $cgi->param( "overlay_" . $_ ) eq 'true' ? 1 : 0;
           }
-          else {
-            $overlay->{"shared"} = 0;
+          if ( $overlay->{"shared"} ) {
+            $datatargetdir = $dataextdir . '/0';
           }
 
           # text fields
@@ -467,7 +483,6 @@ sub page_before_template {
               print "Problem making $file: $message\n";
             }
             die("Couldn't create $overlaydir");
-
           }
 
           my @files = glob $datauserdir . "/*";
@@ -488,9 +503,14 @@ sub page_before_template {
             }
           }
 
-          store $overlay, $overlaydir . "/overlay";
-
-          $vars->{"overlay_ajax"} = "<h2>Overlay saved!</h2>";
+          if ( $overlay->{"shared"} && !Bugzilla->user->in_group('admin') ) {
+            store $overlay, $overlaydir . "/overlay.pending";
+            $vars->{"overlay_ajax"} = "<h2>Overlay saved, pending for approval!</h2>";
+          }
+          else {
+            store $overlay, $overlaydir . "/overlay";
+            $vars->{"overlay_ajax"} = "<h2>Overlay saved!</h2>";
+          }
         }
       }
       elsif ( $page eq "dashboard_overlay.html" ) {
@@ -503,7 +523,8 @@ sub page_before_template {
 
         my $overlaydir;
         my @users = ( $user_id, 0 );
-        my $i = 0;
+        my $i     = 0;
+        my $j     = 0;
         foreach (@users) {
           $overlaydir = $dataextdir . '/' . $_ . '/overlay';
           if ( -d $overlaydir ) {
@@ -517,10 +538,23 @@ sub page_before_template {
                 $overlay->{"overlay_id"} = $folder;
                 my $key = $overlay->{"name"} . "\t" . $folder;
                 $vars->{"overlays"}->{"$i"}->{"$key"} = $overlay;
+                $i++;
+              }
+              elsif ( -f $dir_entry . '/overlay.pending' && $vars->{"is_admin"} ) {
+                trick_taint($dir_entry);
+                my $overlay = retrieve( $dir_entry . '/overlay.pending' );
+                my $folder  = basename($dir_entry);
+                $overlay->{"user_id"}    = $_;
+                $overlay->{"overlay_id"} = $folder;
+
+                $overlay->{"user_login"} = user_id_to_login( $overlay->{"owner"} );
+
+                my $key = $overlay->{"name"} . "\t" . $folder;
+                $vars->{"pending"}->{"$j"}->{"$key"} = $overlay;
+                $j++;
               }
             }
           }
-          $i++;
         }
         $vars->{"user_id"} = $user_id;
       }
@@ -569,9 +603,7 @@ sub page_before_template {
         foreach $file (@files) {
           my $widget = retrieve( $datauserdir . "/" . $file );
           $vars->{"columns"}->[ $widget->{col} ]->[ $widget->{pos} ] = $widget;
-
         }
-
       }
     }
     else {
