@@ -231,7 +231,7 @@
 	z-index: 9999;
 	background: #fff;
 }
-.ui-resizable-handle {
+.oro_ui-resizable-handle {
 	background: url(img/resize_handler.png) center top no-repeat;
 	height: 10px;
 }
@@ -245,26 +245,66 @@
 .widget .rss {
 	overflow: scroll;
 }
+.widget .rss h1,
+.widget .rss h2,
+.widget .rss h3,
+.widget .rss p {
+	color: #000;
+}
+.widget .rss .rss_new {
+	background: #ffc;
+}
+.widget .rss .rss_displayed {
+	background: #cfc;
+}
+.widget .rss .rss_clicked {
+	background: #ddd;
+}
 .widget .rss h2 a {
 	border: 1px solid #ccc;
 	display:block;
 	padding: 5px;
 }
-
-.widget .rss h3 a {
+.widget .rss h3 {
+}
+.widget .rss_title {
 	border-left: 1px solid #ccc;
 	border-right: 1px solid #ccc;
 	border-bottom: 1px dotted #ccc;
 	display:block;
 	padding: 5px;
 }
-.widget .rss .updated {
+.widget .rss div {
 	border-left: 1px solid #ccc;
 	border-right: 1px solid #ccc;
 	border-bottom: 1px solid #ccc;
 	display:block;
 	padding: 5px;
 }
+.widget .rss .updated {
+}
+
+.widget .rss a.open_popup {
+	width:15px;
+	height:15px;
+	margin-left:5px;
+	float:right;
+	background: url(img/icon_rss_popup.png) center left no-repeat;
+}
+.widget .rss a:hover.open_popup {
+	background: url(img/icon_rss_popup_b.png) center left no-repeat;
+}
+.widget .rss a.open_link {
+	width:15px;
+	height:15px;
+	margin-left:5px;
+	float:right;
+	background: url(img/icon_rss_link.png) center left no-repeat;
+}
+.widget .rss a:hover.open_link {
+	background: url(img/icon_rss_link_b.png) center left no-repeat;
+}
+
 .overlay_box {
 	border:1px dotted #999999;
 	margin: 5px;
@@ -273,5 +313,32 @@
 
 .overlay_field {
 	width:192px;
+}
+.widget-state-highlight {
+	border:2px dotted #000;
+	background: #fff;
+	opacity:0.4;
+	filter:alpha(opacity=40);
+}
+.column-state-highlight {
+	opacity:0.4;
+	filter:alpha(opacity=40);
+	background: url(img/sizer_right_b.png) center right no-repeat #fff;
+}
+#columns .column_helper {
+	height: 16px;
+	background: url(img/sizer_mid.png) repeat-x;
+}
+#columns .column_helper .arrow_left {
+	height: 16px;
+	width: 16px;
+	float: left;
+	background: url(img/sizer_left.png) no-repeat;
+}
+#columns .column_helper .arrow_right {
+	height: 16px;
+	width: 16px;
+	float: right;
+	background: url(img/sizer_right.png) no-repeat;
 }
 

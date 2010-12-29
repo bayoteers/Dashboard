@@ -30,13 +30,16 @@
 [% END %]
 <script type="text/javascript" src="extensions/Dashboard/web/js/jquery-ui-1.8.5.custom.min.js"></script>
 <script type="text/javascript" src="extensions/Dashboard/web/js/jquery.colorbox-min.js"></script>
-<script type="text/javascript" src="extensions/Dashboard/web/js/jquery.jfeed.pack.js"></script>
+<script type="text/javascript" src="extensions/Dashboard/web/js/jquery.jfeed.js"></script>
+<script type="text/javascript" src="extensions/Dashboard/web/js/jquery.md5.js"></script>
+<script type="text/javascript" src="extensions/Dashboard/web/js/jquery.Storage.js"></script>
 
 <div id="ajax_message"></div>
 
+
 <div id="dashboard">
   <div id="columns">
-    <ul id="column0" class="column">
+    <ul id="column0" class="column" style="width:[% column.shift %]%">
       <li class="widget color-gray" id="main">
         <div class="widget-head">
           <h3>Dashboard</h3>
@@ -60,8 +63,8 @@
         </div>
       </li>
       
-      [% column = columns.shift %]
-      [% FOREACH widget IN column %]
+      [% cur_column = columns.shift %]
+      [% FOREACH widget IN cur_column %]
       	[% IF widget.id && widget.id > 0 %]
       	  <li class="widget color-[% widget.color %]" id="widget[% widget.id %]">
       	    <div class="widget-head">
@@ -76,9 +79,9 @@
     </ul>
     
     [% FOREACH i IN [1 .. preferences.columns] %]
-      [% column = columns.shift %]
-      <ul id="column[% i %]" class="column">
-        [% FOREACH widget IN column %]
+      [% cur_column = columns.shift %]
+      <ul id="column[% i %]" class="column" style="width:[% column.shift %]%">
+        [% FOREACH widget IN cur_column %]
           [% IF widget.id && widget.id > 0 %]
             <li class="widget color-[% widget.color %]" id="widget[% widget.id %]">
               <div class="widget-head">
