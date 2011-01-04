@@ -35,16 +35,6 @@ var Dashboard = {
             content: "<div align='center'><img class='loader' src='" + Dashboard_folder + "css/img/ajax-loader.gif'></div>"
         },
         widgetIndividual: {
-            main: {
-                movable: false,
-                removable: false,
-                collapsible: true,
-                editable: false,
-                maximizable: false,
-                resizable: false,
-                refreshable: false,
-                controls: true
-            }
         }
     },
 
@@ -53,7 +43,6 @@ var Dashboard = {
         this.attachStylesheet(Dashboard_folder + 'css/dashboard.js.css');
 
         this.makeSortable();
-        this.addWidgetControls('main');
         $(".loader").each(function(i) {
             var id = $(this).parent().parent().parent().attr('id');
             $.post("page.cgi?id=dashboard_ajax.html", {
@@ -97,24 +86,25 @@ var Dashboard = {
             if (thisWidgetSettings.resizable) {
                 $(this).children(settings.contentSelector).resizable({
                     handles: 'se',
-                    helper: 'widget-state-highlight',
-                    stop: function(event, ui) {
-                    	var resized_width = $(this).width() + 55;
-                    	var this_column_id = $(this).parent().parent().attr('id');
-                    	var this_column_width_px = $(this).parent().parent().width();
-                    	var this_column_width_per = parseInt( $(this).parent().parent().css('width') );
+                    minWidth: 75,
+										helper: 'widget-state-highlight',
+										stop: function(event, ui) {
+											var resized_width = $(this).width() + 55;
+											var this_column_id = $(this).parent().parent().attr('id');
+											var this_column_width_px = $(this).parent().parent().width();
+											var this_column_width_per = parseInt( $(this).parent().parent().css('width') );
 											$(this).css({
 													width: ''
 											});
-                    	var new_width_per = Math.max(10,Math.round(this_column_width_per/this_column_width_px*resized_width));
-                    	var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column").length);
-                    	var total_width_per = 0;
-                    	$('.column:not(#'+this_column_id+')').each(function(index) {
-                    			var cur_width_per = Math.max(10,parseInt( $(this).css('width') ) + delta_width_per);
-                    			$(this).css('width',cur_width_per+"%")
-                    			total_width_per += cur_width_per;
+											var new_width_per = Math.max(10,Math.round(this_column_width_per/this_column_width_px*resized_width));
+											var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column").length);
+											var total_width_per = 0;
+											$('.column:not(#'+this_column_id+')').each(function(index) {
+													var cur_width_per = Math.max(10,parseInt( $(this).css('width') ) + delta_width_per);
+													$(this).css('width',cur_width_per+"%")
+													total_width_per += cur_width_per;
 											});
-                    	$(this).parent().parent().css('width',(100-total_width_per)+"%");
+											$(this).parent().parent().css('width',(100-total_width_per)+"%");
 											$(window).trigger("resize");
 											$('#'+id).trigger('vertical_resize');
 											thisWidgetSettings.resized = true;
@@ -144,7 +134,7 @@ var Dashboard = {
                 .insertAfter($(settings.handleSelector, this));
             }
             if (thisWidgetSettings.collapsible) {
-                $('<a href="#" class="collapse">COLLAPSE</a>').mousedown(function(e) {
+                $('<a href="#" class="collapse" id="'+id+'-collapse">COLLAPSE</a>').mousedown(function(e) {
                     e.stopPropagation();
                 }).toggle(function() {
                     $(this).parents(settings.widgetSelector).find(settings.contentSelector).hide();
@@ -158,6 +148,11 @@ var Dashboard = {
             }
             if (thisWidgetSettings.maximizable) {
                 $('<a href="#" class="maximize">MAXIMIZE</a>').mousedown(function(e) {
+                		
+                		if ( $("#" + id + " " + settings.contentSelector).css('display') === 'none' ) {
+                			$("#" + id + " " + settings.contentSelector).show();
+                		}
+                		
                     thisWidgetSettings.height = $(this).parents(settings.widgetSelector).children(settings.contentSelector).height();
                     $(this).parents(settings.widgetSelector).children(settings.contentSelector).resizable("destroy");
                     $(this).parents(settings.widgetSelector).children(settings.contentSelector).addClass('widget-max').prepend('<div id="maximized"><p>Press ESC or click here to return to the Dashboard</p></div>');
@@ -246,7 +241,10 @@ var Dashboard = {
                         notSortable += '#' + this.id + ',';
                     }
                 });
-                return $('> li:not(' + notSortable + ')', settings.columns);
+                if (notSortable.length>0)
+                	return $('> li:not(' + notSortable + ')', settings.columns);
+                else
+                	return $('> li', settings.columns);
             })();
 
 				$('.column_helper').remove();
@@ -255,32 +253,33 @@ var Dashboard = {
 						$(this).prepend('<li class="column_helper"><div class="arrow_left"></div><div class="arrow_right"></div><br clear="both"></li>');
 				});
 				$('.column:last').prepend('<li class="column_helper"><div class="arrow_left"></div><br clear="both"></li>');
-         $('.column_helper:not(:last)').resizable({
-						handles: 'e',
-						helper: 'column-state-highlight',
-						stop: function(event, ui) {
-					
-							var resized_width = $(this).width();
-							var this_column_id = $(this).parent().attr('id');
-							var this_column_width_px = $(this).parent().width();
-							var this_column_width_per = parseInt( $(this).parent().css('width') );
-							
-							$(this).css({
-									width: ''
-							});
-							var new_width_per = Math.max(10,Math.round(this_column_width_per/this_column_width_px*resized_width));
-							var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column").length);
-							var total_width_per = 0;
-							$('.column:not(#'+this_column_id+')').each(function(index) {
-									var cur_width_per = Math.max(10,parseInt( $(this).css('width') ) + delta_width_per);
-									$(this).css('width',cur_width_per+"%")
-									total_width_per += cur_width_per;
-							});
-							$(this).parent().css('width',(100-total_width_per)+"%");
-							$(window).trigger("resize");
-							SaveColumns();
-						}
-					});
+				$('.column_helper:not(:last)').resizable({
+					handles: 'e',
+					minWidth: 75,
+					helper: 'column-state-highlight',
+					stop: function(event, ui) {
+				
+						var resized_width = $(this).width();
+						var this_column_id = $(this).parent().attr('id');
+						var this_column_width_px = $(this).parent().width();
+						var this_column_width_per = parseInt( $(this).parent().css('width') );
+						
+						$(this).css({
+								width: ''
+						});
+						var new_width_per = Math.max(10,Math.round(this_column_width_per/this_column_width_px*resized_width));
+						var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column").length);
+						var total_width_per = 0;
+						$('.column:not(#'+this_column_id+')').each(function(index) {
+								var cur_width_per = Math.max(10,parseInt( $(this).css('width') ) + delta_width_per);
+								$(this).css('width',cur_width_per+"%")
+								total_width_per += cur_width_per;
+						});
+						$(this).parent().css('width',(100-total_width_per)+"%");
+						$(window).trigger("resize");
+						SaveColumns();
+					}
+				});
             
             
         $sortableItems.find(settings.handleSelector).css({
@@ -419,7 +418,7 @@ function AddWidget(type) {
 		// find first available widget id
     var i = 1;
     while ($("#widget" + i).length > 0) i++;
-    Dashboard.addWidget("#column1", {
+    Dashboard.addWidget("#column0", {
         id: "widget" + i,
         color: "color-gray",
         type: type,
@@ -514,6 +513,7 @@ $(window).trigger("resize");
 
 $('.column_helper:not(:last)').resizable({
 	handles: 'e',
+	minWidth: 75,
 	helper: 'column-state-highlight',
 	stop: function(event, ui) {
 
@@ -551,6 +551,7 @@ $(document).keyup(function(e) {
             $('#maximized').remove();
             $("#" + id).children('.widget-content').resizable({
             		handles: 'se',
+            		minWidth: 75,
 								helper: 'widget-state-highlight',
 								stop: function(event, ui) {
 									var resized_width = $(this).width() + 55;

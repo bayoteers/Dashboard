@@ -1,29 +1,29 @@
 /* JS-Enabled CSS */
 
-#columns .widget-content .widget-divider {
+#dashboard .widget-divider {
 	clear: both;
 	border-bottom: 1px dashed #666;
 	margin-bottom: 5px;
 	padding-top: 5px;
 }
-#columns #widget-buttons ul {
+#widget-buttons ul, .dashboard-main ul {
 	list-style: none;
 	padding: 0;
 	margin: 0;
 }
-#columns #widget-buttons li {
+#widget-buttons li {
 	width: 50%;
 	margin-bottom: 4px;
 	float: left;
 }
-#columns #widget-buttons li a {
+#widget-buttons li a {
 	display:block;
 	padding-right: 8px;
 	padding-left: 25px;
         padding-bottom: 4px;
 	padding-top: 3px;
 }
-#columns #widget-buttons li a:hover {
+#widget-buttons li a:hover {
 	border: 1px dashed #999;
 	background-color: #eee;
 	padding-right: 7px;
@@ -34,52 +34,52 @@
 #widget-buttons a {
 	text-decoration: none;
 }
-#columns #button-overlay a {
+#dashboard #button-overlay a {
         background: url(img/icon_overlay.png) center left no-repeat;
 }
-#columns #button-overlay a:hover {
+#dashboard #button-overlay a:hover {
         background: url(img/icon_overlay_b.png) center left no-repeat;
 }
-#columns #button-new-widget a {
+#dashboard #button-new-widget a {
         background: url(img/icon_new_widget.png) center left no-repeat;
 }
-#columns #button-new-widget a:hover {
+#dashboard #button-new-widget a:hover {
         background: url(img/icon_new_widget_b.png) center left no-repeat;
 }
-#columns #button-add-column a {
+#dashboard #button-add-column a {
         background: url(img/icon_add_column.png) center left no-repeat;
 }
-#columns #button-add-column a:hover {
+#dashboard #button-add-column a:hover {
         background: url(img/icon_add_column_b.png) center left no-repeat;
 }
-#columns #button-del-column a {
+#dashboard #button-del-column a {
         background: url(img/icon_del_column.png) center left no-repeat;
 }
-#columns #button-del-column a:hover {
+#dashboard #button-del-column a:hover {
         background: url(img/icon_del_column_b.png) center left no-repeat;
 }
 
-#columns #button-new-xeyes a {
+#dashboard #button-new-xeyes a {
         background: url(img/icon_new_xeyes.png) center left no-repeat;
 }
-#columns #button-new-xeyes a:hover {
+#dashboard #button-new-xeyes a:hover {
         background: url(img/icon_new_xeyes_b.png) center left no-repeat;
 }
 
-#columns #button-new-rss a {
+#dashboard #button-new-rss a {
         background: url(img/icon_new_rss.png) center left no-repeat;
 }
-#columns #button-new-rss a:hover {
+#dashboard #button-new-rss a:hover {
         background: url(img/icon_new_rss_b.png) center left no-repeat;
 }
-#columns #button-save-widgets a {
+#dashboard #button-save-widgets a {
         background: url(img/icon_save.png) center left no-repeat;
 }
-#columns #button-save-widgets a:hover {
+#dashboard #button-save-widgets a:hover {
         background: url(img/icon_save_b.png) center left no-repeat;
 }
 
-#columns .loader {
+#dashboard .loader {
         margin-top:32px;
         margin-bottom:32px;
 }
@@ -325,17 +325,17 @@
 	filter:alpha(opacity=40);
 	background: url(img/sizer_right_b.png) center right no-repeat #fff;
 }
-#columns .column_helper {
+#dashboard .column_helper {
 	height: 16px;
 	background: url(img/sizer_mid.png) repeat-x;
 }
-#columns .column_helper .arrow_left {
+#dashboard .column_helper .arrow_left {
 	height: 16px;
 	width: 16px;
 	float: left;
 	background: url(img/sizer_left.png) no-repeat;
 }
-#columns .column_helper .arrow_right {
+#dashboard .column_helper .arrow_right {
 	height: 16px;
 	width: 16px;
 	float: right;

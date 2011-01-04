@@ -113,5 +113,5 @@ widget_xeyes[% widget.id %]($("#xeyes[% widget.id %]"),0,0,true);
 
 $(document).bind('mousemove.widget[% widget.id %]',function(e){
   var position = $("#widget[% widget.id %]").position();
-  widget_xeyes[% widget.id %]($("#xeyes[% widget.id %]"),e.pageX-position.left,e.pageY-position.top-55,false);
+  widget_xeyes[% widget.id %]($("#xeyes[% widget.id %]"),e.pageX-position.left-25,e.pageY-position.top-60,false);
 });
