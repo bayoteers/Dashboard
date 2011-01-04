@@ -1,4 +1,5 @@
 $('<li class="item"><label>URL:</label><input id="widget[% widget.id %]_url" value=""></li>').appendTo('#widget[% widget.id %] .edit-box');
+$('<li class="item"><label>Load:</label><input type="button" id="widget[% widget.id %]_load" value="Load URL"></li>').appendTo('#widget[% widget.id %] .edit-box');
 $('<li class="item"><label>Reload:</label><select id="widget[% widget.id %]_refresh"><option value="0">no refresh</option><option value="15">every 15 seconds</option><option value="60">every minute</option><option value="300">every 5 minutes</option><option value="900">every 15 minutes</option><option value="1800">every 30 minutes</option></select></li>').appendTo('#widget[% widget.id %] .edit-box');
 
 [% IF widget.refreshable %]
@@ -45,6 +46,13 @@ $('#widget[% widget.id %] .widget-head .refresh').mousedown(function(e) {
 }).click(function() {
   $('#widget[% widget.id %]_iframe').attr("src", $("#widget[% widget.id %]_iframe").attr("src"));
 })
+
+$('#widget[% widget.id %]_load').click(function(e) {
+    var y = $("#widget[% widget.id %] .widget-content").height();
+    if (y==1) $("#widget[% widget.id %] .widget-content").height(400);
+    widget[% widget.id %]_get_url($('#widget[% widget.id %]_url').val());
+});
+
 
 $('#widget[% widget.id %]_url').keyup(function(e) {
   Widgets['widget[% widget.id %]']['URL'] = $(this).val();

@@ -38,6 +38,6 @@ use constant OPTIONAL_MODULES => [];
 use constant EXTENSION_DIR   => '/extensions/Dashboard';
 use constant COLUMNS_DEFAULT => 3;
 use constant COLUMNS_MAX     => 4;
-use constant WIDGETS_MAX     => 10;
+use constant WIDGETS_MAX     => 30;
 
 __PACKAGE__->NAME;

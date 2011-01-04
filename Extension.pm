@@ -491,7 +491,9 @@ sub page_before_template {
             if ( -f $dir_entry ) {
               trick_taint($dir_entry);
               if ( $dir_entry =~ m/\/\d+\.widget$/ && $overlay->{"shared"} ) {
-                ## strip usernames and passwords from widgets : todo to be changed so that widgets can define their private/public fields
+
+                # strip usernames and passwords from widgets : todo to be changed so that widgets can define their private/public fields
+
                 my $widget = retrieve($dir_entry);
                 $widget->{'username'} = '';
                 $widget->{'password'} = '';
