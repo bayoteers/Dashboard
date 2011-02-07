@@ -18,8 +18,9 @@
 #
 # Contributor(s): Max Kanat-Alexander <mkanat@bugzilla.org>
 #                 Bradley Baetz <bbaetz@acm.org>
+#                 Jari Savolainen <ext-jari.a.savolainen@nokia.com>
 
-package Bugzilla::Extension::Example::Config;
+package Bugzilla::Extension::Dashboard::Config;
 use strict;
 use warnings;
 
@@ -31,11 +32,26 @@ sub get_param_list {
     my ($class) = @_;
 
     my @param_list = (
-    {
-        name => 'example_string',
-        type => 't',
-        default => 'EXAMPLE',
-    },
+			{
+				name => 'dashboard_rss_max_items',
+				desc => 'How many items rss widget can display at a time',
+				type => 't',
+			},
+			{
+				name => 'dashboard_rss_color_new',
+				desc => 'Color for RSS item that was just displayed',
+				type => 't',
+			},
+			{
+				name => 'dashboard_rss_color_unread',
+				desc => 'Color for RSS item that is not read yet',
+				type => 't',
+			},
+			{
+				name => 'dashboard_rss_color_read',
+				desc => 'Color for RSS item that has been read',
+				type => 't',
+			},
     );
     return @param_list;
 }

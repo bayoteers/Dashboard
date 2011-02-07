@@ -241,7 +241,6 @@
 	padding: 0;
 	width: 100%;
 }
-
 .widget .rss {
 	overflow: scroll;
 }
@@ -252,13 +251,10 @@
 	color: #000;
 }
 .widget .rss .rss_new {
-	background: #ffc;
 }
 .widget .rss .rss_displayed {
-	background: #cfc;
 }
 .widget .rss .rss_clicked {
-	background: #ddd;
 }
 .widget .rss h2 a {
 	border: 1px solid #ccc;

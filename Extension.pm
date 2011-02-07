@@ -614,4 +614,19 @@ sub page_before_template {
   }
 }
 
+sub config {
+  my ( $self, $args ) = @_;
+
+  my $config = $args->{config};
+  $config->{Dashboard} = "Bugzilla::Extension::Dashboard::Config";
+}
+
+sub config_add_panels {
+  my ( $self, $args ) = @_;
+
+  my $modules = $args->{panel_modules};
+  $modules->{Dashboard} = "Bugzilla::Extension::Dashboard::Config";
+}
+
+
 __PACKAGE__->NAME;
