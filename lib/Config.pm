@@ -34,7 +34,7 @@ sub get_param_list {
     my @param_list = (
                       {
                          name => 'dashboard_jquery_path',
-                         desc => 'Path to JQuery, empty if using Dashboard JQuery',
+                         desc => 'Path to JQuery, empty if Bugzilla already uses JQuery',
                          type => 't',
                       },
                       {
