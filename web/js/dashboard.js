@@ -393,21 +393,27 @@ var Dashboard = {
 };
 
 function AddColumn() {
+	var cols = $('.column').size();
     $.post("page.cgi?id=dashboard_ajax.html", {
         "action": 'column_add',
     }, function(data) {
         $('#ajax_message').html(data);
+        if (cols != $('.column').size())
+        	$('#dashboard p').text('Added new column!');
     });
     return false;
 }
 
 function DelColumn() {
-    var last_column = $("#columns").children().last().attr("id");
-    if ($("#columns").children().size() > 1) {
+	var cols = $('.column').size();
+	var last_column = $("#columns").children().last().attr("id");
+    if (cols>1) {
         $.post("page.cgi?id=dashboard_ajax.html", {
             "action": 'column_del',
         }, function(data) {
             $('#ajax_message').html(data);
+            if (cols != $('.column').size())
+        	$('#dashboard p').text('Removed column!');
         });
     }
     else alert('Cannot delete last column!');
@@ -424,6 +430,7 @@ function AddWidget(type) {
         type: type,
         title: "Widget " + i
     });
+    $('#dashboard p').text('Creating widget '+type+' called Widget '+i+'!');
     return false;
 }
 
@@ -437,6 +444,7 @@ function DeleteWidget(id) {
     }, function(data) {
         $('#ajax_message').html(data);
     });
+    $('#dashboard p').text('Deleting widget!');
     return false;
 }
 
@@ -453,6 +461,7 @@ function SaveWidget(id, pos, col) {
     }
     $.post("page.cgi?id=dashboard_ajax.html", post, function(result) {
         $(result).prependTo("#" + id + " .widget-content");
+        $('#dashboard p').text('Saved settings for '+widget["title"]+'!');
     });
 }
 
@@ -475,7 +484,7 @@ function SaveColumns() {
 	
 	var post = 'action=column_save';
 	$('.column:not(#column-1)').each(function(index) {
-			post += '&column'+index+'='+parseInt( $(this).css('width') );
+		post += '&column'+index+'='+parseInt( $(this).css('width') );
 	});
 	$.post("page.cgi?id=dashboard_ajax.html", post, function(result) {
 	});
