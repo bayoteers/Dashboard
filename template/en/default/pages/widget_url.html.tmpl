@@ -15,6 +15,11 @@ $('<li class="item"><label>Reload:</label><select id="widget[% widget.id %]_refr
 
 function widget[% widget.id %]_get_url(url) {
 
+  if (url.length<4) {
+    $('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html("");		
+    return false;
+  }
+
   $("#widget[% widget.id %] .widget-content .widget_inner").html('<iframe id="widget[% widget.id %]_iframe" class="widget_iframe" frameborder="0" scrolling="auto" src="' + url + '"></iframe>');
 
   $(window).unbind("resize.widget[% widget.id %]");

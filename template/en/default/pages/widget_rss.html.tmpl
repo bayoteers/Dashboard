@@ -45,6 +45,11 @@ function widget[% widget.id %]_resize() {
 
 function widget[% widget.id %]_load_rss(url,username,password) {
 
+	if (url.length<4) {
+		$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html("");		
+		return false;
+	}
+
 	var local_domain = new RegExp("^(http|https):\/\/"+document.domain+"\/",""); // url is in current bugzilla domain, jquery can access directly
 	var valid_url = new RegExp("^(http|https):\/\/.+\/"); // atleast resembles an url
 	

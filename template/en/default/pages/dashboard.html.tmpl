@@ -44,8 +44,6 @@ if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_warn %]/)) 
 if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_block %]/)) {
 	browser_quality = -1;
 }
-		alert(browser_quality);
-
 </script>
 
 <div id="ajax_message"></div>
@@ -134,7 +132,7 @@ if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_block %]/))
 			<li id="button-new-xeyes"><a onclick="return AddWidget('xeyes');">New Xeyes</a></li>
 		</ul>
 		<div class="widget-divider"></div>
-		<p>Welcome to Dashboard!</p>
+		<p id="dashboard_notify">Welcome to Dashboard!</p>
 	</div>
 </div>
 
@@ -143,10 +141,10 @@ if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_block %]/))
 	if (browser_quality==0)
 	{
 		warning = '<p style="color:red">Your current web browser is not compliant with the Dashboard, please use Firefox instead, thank you.</p>';
-		$('#dashboard p').append(warning);
+		$('#dashboard_notify').append(warning);
 	}
 	if (browser_quality<0) {
-		$('#dashboard').html('<h2 style="text-align:center">Dashboard is not supported on your browser, please use Firefox.</h2>');
+		$('#dashboard').html('<h2 style="text-align:center">Your current web browser is not currently supported to access the Dashboard, please use Firefox instead, thank you.</h2>');
 	}
 	else {
 		$('#dashboard-link').colorbox({width:"384px", inline:true, href:".dashboard-main"});

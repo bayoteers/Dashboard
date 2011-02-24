@@ -32,37 +32,42 @@ sub get_param_list {
     my ($class) = @_;
 
     my @param_list = (
-			{
-				name => 'dashboard_browsers_warn',
-				desc => 'Regexp for browsers that are not recommended',
-				type => 't',
-			},
-			{
-				name => 'dashboard_browsers_block',
-				desc => 'Regexp for browsers that are not supported',
-				type => 't',
-			},
-			{
-				name => 'dashboard_rss_max_items',
-				desc => 'How many items rss widget can display at a time',
-				type => 't',
-			},
-			{
-				name => 'dashboard_rss_color_new',
-				desc => 'Color for RSS item that was just displayed',
-				type => 't',
-			},
-			{
-				name => 'dashboard_rss_color_unread',
-				desc => 'Color for RSS item that is not read yet',
-				type => 't',
-			},
-			{
-				name => 'dashboard_rss_color_read',
-				desc => 'Color for RSS item that has been read',
-				type => 't',
-			},
-    );
+                      {
+                         name => 'dashboard_jquery_path',
+                         desc => 'Path to JQuery, empty if using Dashboard JQuery',
+                         type => 't',
+                      },
+                      {
+                         name => 'dashboard_browsers_warn',
+                         desc => 'Regexp for browsers that are not recommended',
+                         type => 't',
+                      },
+                      {
+                         name => 'dashboard_browsers_block',
+                         desc => 'Regexp for browsers that are not supported',
+                         type => 't',
+                      },
+                      {
+                         name => 'dashboard_rss_max_items',
+                         desc => 'How many items rss widget can display at a time',
+                         type => 't',
+                      },
+                      {
+                         name => 'dashboard_rss_color_new',
+                         desc => 'Color for RSS item that was just displayed',
+                         type => 't',
+                      },
+                      {
+                         name => 'dashboard_rss_color_unread',
+                         desc => 'Color for RSS item that is not read yet',
+                         type => 't',
+                      },
+                      {
+                         name => 'dashboard_rss_color_read',
+                         desc => 'Color for RSS item that has been read',
+                         type => 't',
+                      },
+                     );
     return @param_list;
 }
 

@@ -1,7 +1,5 @@
 [% USE Bugzilla %]
 
-$('<li class="item"><label>URL:</label><input id="widget[% widget.id %]_url" value="1"></li>').appendTo('#widget[% widget.id %] .edit-box');
-
 $('<li class="item"><label>Reload:</label><select id="widget[% widget.id %]_refresh"><option value="0">no refresh</option><option value="15">every 15 seconds</option><option value="60">every minute</option><option value="300">every 5 minutes</option><option value="900">every 15 minutes</option><option value="1800">every 30 minutes</option></select></li>').appendTo('#widget[% widget.id %] .edit-box');
 function widget[% widget.id %]_refresh(){
 	$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html("<div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>");

@@ -16,6 +16,7 @@
   # Canonical Ltd. All Rights Reserved.
   #
   # Contributor(s): Bradley Baetz <bbaetz@acm.org>
+  #                 Jari Savolainen <ext-jari.a.savolainen@nokia.com>
   #%]
 [%
     title = "Dashboard"
@@ -23,6 +24,7 @@
 %]
 
 [% param_descs = {
+  dashboard_jquery_path => "URL to JQuery library, empty if using one included in Dashboard",
   dashboard_browsers_warn => "Regexp for browser UserAgents to be warned",
   dashboard_browsers_block => "Regexp for browser UserAgents to be blocked",
   dashboard_rss_max_items => "How many items rss widget can display at a time.",

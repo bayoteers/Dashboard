@@ -26,12 +26,12 @@ use strict;
 use constant NAME => 'Dashboard';
 
 use constant REQUIRED_MODULES => [
-  {
-    package => 'HTML-Scrubber',
-    module  => 'HTML::Scrubber',
-    version => 0.08,
-  },
-];
+                                   {
+                                      package => 'HTML-Scrubber',
+                                      module  => 'HTML::Scrubber',
+                                      version => 0.08,
+                                   },
+                                 ];
 
 use constant OPTIONAL_MODULES => [];
 
