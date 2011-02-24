@@ -580,6 +580,7 @@ sub page_before_template {
 
         my $column_total_width = 0;
         my $column_width       = 0;
+
         for ( my $i = 0 ; $i <= $vars->{preferences}->{columns} ; $i++ ) {
           if ( !$vars->{preferences}->{ "column" . $i } ) {
             $vars->{"column"}->[$i] = int( 100 / ( $vars->{preferences}->{columns} + 1 ) );
@@ -604,7 +605,11 @@ sub page_before_template {
         closedir(DIR);
         foreach $file (@files) {
           my $widget = retrieve( $datauserdir . "/" . $file );
-          $vars->{"columns"}->[ $widget->{col} ]->[ $widget->{pos} ] = $widget;
+          if ($widget->{col}<0) {
+          	  $vars->{"top_column"}->[ $widget->{pos} ] = $widget;          }
+          else {
+          	  $vars->{"columns"}->[ $widget->{col} ]->[ $widget->{pos} ] = $widget;
+          }
         }
       }
     }

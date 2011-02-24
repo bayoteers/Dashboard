@@ -97,9 +97,9 @@ var Dashboard = {
 													width: ''
 											});
 											var new_width_per = Math.max(10,Math.round(this_column_width_per/this_column_width_px*resized_width));
-											var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column").length);
+											var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column:not(#column-1)").length);
 											var total_width_per = 0;
-											$('.column:not(#'+this_column_id+')').each(function(index) {
+											$('.column:not(#'+this_column_id+'):not(#column-1)').each(function(index) {
 													var cur_width_per = Math.max(10,parseInt( $(this).css('width') ) + delta_width_per);
 													$(this).css('width',cur_width_per+"%")
 													total_width_per += cur_width_per;
@@ -182,7 +182,7 @@ var Dashboard = {
 																	width: ''
 															});
 															var new_width_per = Math.max(10,Math.round(this_column_width_per/this_column_width_px*resized_width));
-															var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column").length);
+															var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column:not(#column-1)").length);
 															var total_width_per = 0;
 															$('.column:not(#'+this_column_id+')').each(function(index) {
 																	var cur_width_per = Math.max(10,parseInt( $(this).css('width') ) + delta_width_per);
@@ -209,7 +209,7 @@ var Dashboard = {
         $('.edit-box').each(function() {
             var thisWidgetSettings = Dashboard.getWidgetSettings(this.id);
             $('#' + id + '_title', this).keyup(function() {
-                $(this).parents(settings.widgetSelector).find('h3').text($(this).val().length > 20 ? $(this).val().substr(0, 20) + '...' : $(this).val());
+                $(this).parents(settings.widgetSelector).find('h3').text($(this).val());
             });
             $('ul.colors li', this).click(function() {
                 var colorStylePattern = /\bcolor-[\w]{1,}\b/,
@@ -248,12 +248,12 @@ var Dashboard = {
             })();
 
 				$('.column_helper').remove();
-				$('.column:first').prepend('<li class="column_helper"><div class="arrow_right"></div><br clear="both"></li>');
-				$('.column:not(:first):not(:last)').each(function(index) {
+				$('.column:not(#column-1):first').prepend('<li class="column_helper"><div class="arrow_right"></div><br clear="both"></li>');
+				$('.column:not(#column-1):not(:first):not(:last)').each(function(index) {
 						$(this).prepend('<li class="column_helper"><div class="arrow_left"></div><div class="arrow_right"></div><br clear="both"></li>');
 				});
-				$('.column:last').prepend('<li class="column_helper"><div class="arrow_left"></div><br clear="both"></li>');
-				$('.column_helper:not(:last)').resizable({
+				$('.column:not(#column-1):last').prepend('<li class="column_helper"><div class="arrow_left"></div><br clear="both"></li>');
+				$('.column_helper:not(#column-1):not(:last)').resizable({
 					handles: 'e',
 					minWidth: 75,
 					helper: 'column-state-highlight',
@@ -268,9 +268,9 @@ var Dashboard = {
 								width: ''
 						});
 						var new_width_per = Math.max(10,Math.round(this_column_width_per/this_column_width_px*resized_width));
-						var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column").length);
+						var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column:not(#column-1)").length);
 						var total_width_per = 0;
-						$('.column:not(#'+this_column_id+')').each(function(index) {
+						$('.column:not(#'+this_column_id+'):not(#column-1)').each(function(index) {
 								var cur_width_per = Math.max(10,parseInt( $(this).css('width') ) + delta_width_per);
 								$(this).css('width',cur_width_per+"%")
 								total_width_per += cur_width_per;
@@ -458,7 +458,7 @@ function SaveWidget(id, pos, col) {
 
 function SaveWidgets() {
 		// store prefs from all widgets
-    for (var col = 0; col < $("#columns").children().size(); col++) {
+    for (var col = -1; col < $("#columns").children().size(); col++) {
         $("#column" + col).children().each(
 
         function(pos) {
@@ -474,7 +474,7 @@ function SaveWidgets() {
 function SaveColumns() {
 	
 	var post = 'action=column_save';
-	$('.column').each(function(index) {
+	$('.column:not(#column-1)').each(function(index) {
 			post += '&column'+index+'='+parseInt( $(this).css('width') );
 	});
 	$.post("page.cgi?id=dashboard_ajax.html", post, function(result) {
@@ -491,27 +491,36 @@ $(".overlay-open").colorbox();
 // bind columns to resize event to dynamically resize them in case of browser resize or change in number of columns
 $(window).bind("resize.columns", function() {
 	var total_width_per = 0;
-	$('.column').each(function(index) {
+	$('.column:not(#column-1)').each(function(index) {
 			var cur_width_per = Math.max(10,parseInt( $(this).css('width') ));
 			$(this).css('width',cur_width_per+"%");
 			total_width_per += cur_width_per;
 	});
 	var delta_per = Math.floor((100-total_width_per)/$('.column').length);
 	total_width_per = 0;
-	$('.column:not(#column0)').each(function(index) {
+	$('.column:not(#column0):not(#column-1)').each(function(index) {
 			var cur_width_per = Math.max(10,parseInt( $(this).css('width') )+delta_per);
 			$(this).css('width',cur_width_per+"%");
 			total_width_per += cur_width_per;
 	});
 	var cur_width_per = 100 - total_width_per;
 	$('#column0').css('width',cur_width_per+"%");
+	$('#column-1').css('width',100+"%");
+
+	$('.widget-head').each(function(index) {
+		var x = $(this).parent().width();
+		$(this).children(':not(h3)').each(function(index) {
+			x = x - $(this).outerWidth(true);
+		});
+		$(this).children('h3').width(x-16);
+    	});
 
 });
 
 // everything is rendered so call resize manually to fix possible errors is elements' dimensions
 $(window).trigger("resize");
 
-$('.column_helper:not(:last)').resizable({
+$('.column_helper:not(:last):not(#column-1)').resizable({
 	handles: 'e',
 	minWidth: 75,
 	helper: 'column-state-highlight',
@@ -526,9 +535,9 @@ $('.column_helper:not(:last)').resizable({
 				width: ''
 		});
 		var new_width_per = Math.max(10,Math.round(this_column_width_per/this_column_width_px*resized_width));
-		var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column").length);
+		var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column:not(#column-1)").length);
 		var total_width_per = 0;
-		$('.column:not(#'+this_column_id+')').each(function(index) {
+		$('.column:not(#'+this_column_id+'):not(#column-1)').each(function(index) {
 				var cur_width_per = Math.max(10,parseInt( $(this).css('width') ) + delta_width_per);
 				$(this).css('width',cur_width_per+"%")
 				total_width_per += cur_width_per;
@@ -562,9 +571,9 @@ $(document).keyup(function(e) {
 											width: ''
 									});
 									var new_width_per = Math.max(10,Math.round(this_column_width_per/this_column_width_px*resized_width));
-									var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column").length);
+									var delta_width_per = Math.round((this_column_width_per - new_width_per)/ $(".column:not(#column-1)").length);
 									var total_width_per = 0;
-									$('.column:not(#'+this_column_id+')').each(function(index) {
+									$('.column:not(#'+this_column_id+'):not(#column-1)').each(function(index) {
 											var cur_width_per = Math.max(10,parseInt( $(this).css('width') ) + delta_width_per);
 											$(this).css('width',cur_width_per+"%")
 											total_width_per += cur_width_per;

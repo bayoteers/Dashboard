@@ -40,6 +40,10 @@
 }
 #columns #column0 {
 }
+#columns #column-1 {
+	width: 100%;
+	min-height: 16px;
+}
 #columns .widget {
 	margin: 30px 20px 0 20px;
 	padding: 3px;
@@ -65,6 +69,7 @@
 #columns .widget .widget-head h3 {
 	padding: 0 5px;
 	float: left;
+	overflow:hidden;
 }
 #columns .widget .widget-content {
 	background: #FFF url(img/bg_gradient.png) repeat-x;

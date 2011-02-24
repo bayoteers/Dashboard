@@ -43,7 +43,27 @@
 <h1 align="center"><a href="#" id="dashboard-link">Dashboard</a></h1>
 
 <div id="dashboard">
+
   <div id="columns">
+
+    <ul id="column-1" class="column">
+      [% FOREACH widget IN top_column %]
+      	[% IF widget.id && widget.id > 0 %]
+	      	[% active_widgets = active_widgets + 1 %]
+      	  <li class="widget color-[% widget.color %]" id="widget[% widget.id %]">
+      	    <div class="widget-head">
+      	      <h3>[% widget.title %]</h3>
+      	    </div>
+      	    <div class="widget-content">
+      	      <div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>
+      	    </div>
+       	  </li>
+      	[% END %]
+      [% END %]
+    </ul>
+  
+  <br clear="both"> 
+  
     <ul id="column0" class="column" style="width:[% column.shift %]%">
       [% cur_column = columns.shift %]
       [% FOREACH widget IN cur_column %]
