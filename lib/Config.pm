@@ -33,6 +33,16 @@ sub get_param_list {
 
     my @param_list = (
 			{
+				name => 'dashboard_browsers_warn',
+				desc => 'Regexp for browsers that are not recommended',
+				type => 't',
+			},
+			{
+				name => 'dashboard_browsers_block',
+				desc => 'Regexp for browsers that are not supported',
+				type => 't',
+			},
+			{
 				name => 'dashboard_rss_max_items',
 				desc => 'How many items rss widget can display at a time',
 				type => 't',

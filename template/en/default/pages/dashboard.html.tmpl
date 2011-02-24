@@ -36,6 +36,18 @@
 <script type="text/javascript" src="extensions/Dashboard/web/js/jquery.md5.js"></script>
 <script type="text/javascript" src="extensions/Dashboard/web/js/jquery.Storage.js"></script>
 
+<script>
+var browser_quality = 1;
+if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_warn %]/)) {
+	browser_quality = 0;
+}
+if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_block %]/)) {
+	browser_quality = -1;
+}
+		alert(browser_quality);
+
+</script>
+
 <div id="ajax_message"></div>
 
 [% active_widgets = 0 %]
@@ -127,12 +139,29 @@
 </div>
 
 <script>
-	$('#dashboard-link').colorbox({width:"384px", inline:true, href:".dashboard-main"});
-	[% IF active_widgets==0 %]
-		$(document).ready(function(){
-			$.colorbox({width:"384px", inline:true, href:".dashboard-main"});
-		});
-	[% END %]
+	var warning = false;
+	if (browser_quality==0)
+	{
+		warning = '<p style="color:red">Your current web browser is not compliant with the Dashboard, please use Firefox instead, thank you.</p>';
+		$('#dashboard p').append(warning);
+	}
+	if (browser_quality<0) {
+		$('#dashboard').html('<h2 style="text-align:center">Dashboard is not supported on your browser, please use Firefox.</h2>');
+	}
+	else {
+		$('#dashboard-link').colorbox({width:"384px", inline:true, href:".dashboard-main"});
+		[% IF active_widgets==0 %]
+			$(document).ready(function(){
+				$.colorbox({width:"384px", inline:true, href:".dashboard-main"});
+			});
+		[% ELSE %]
+			if (warning) {
+				$(document).ready(function(){
+					$.colorbox({width:"384px", inline:true, href:".dashboard-main"});
+				});
+			}
+		[% END %]
+	}
 </script>
 
 [% IF widget_error %]
