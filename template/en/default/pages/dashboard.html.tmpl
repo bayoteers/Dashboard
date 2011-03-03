@@ -20,6 +20,8 @@
   #   Allan Savolainen <ext-jari.a.savolainen@nokia.com>
   #%]
 
+[% USE Bugzilla %]
+
 [% PROCESS global/header.html.tmpl
     title = "Bugzilla Dashboard" 
     style_urls = ['extensions/Dashboard/web/css/smoothness/jquery-ui-1.8.5.custom.css','extensions/Dashboard/web/css/dashboard.css','extensions/Dashboard/web/css/colorbox.css']
@@ -34,6 +36,16 @@
 <script type="text/javascript" src="extensions/Dashboard/web/js/jquery.md5.js"></script>
 <script type="text/javascript" src="extensions/Dashboard/web/js/jquery.Storage.js"></script>
 
+<script>
+var browser_quality = 1;
+if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_warn %]/)) {
+	browser_quality = 0;
+}
+if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_block %]/)) {
+	browser_quality = -1;
+}
+</script>
+
 <div id="ajax_message"></div>
 
 [% active_widgets = 0 %]
@@ -41,7 +53,27 @@
 <h1 align="center"><a href="#" id="dashboard-link">Dashboard</a></h1>
 
 <div id="dashboard">
+
   <div id="columns">
+
+    <ul id="column-1" class="column">
+      [% FOREACH widget IN top_column %]
+      	[% IF widget.id && widget.id > 0 %]
+	      	[% active_widgets = active_widgets + 1 %]
+      	  <li class="widget color-[% widget.color %]" id="widget[% widget.id %]">
+      	    <div class="widget-head">
+      	      <h3>[% widget.title %]</h3>
+      	    </div>
+      	    <div class="widget-content">
+      	      <div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>
+      	    </div>
+       	  </li>
+      	[% END %]
+      [% END %]
+    </ul>
+  
+  <br clear="both"> 
+  
     <ul id="column0" class="column" style="width:[% column.shift %]%">
       [% cur_column = columns.shift %]
       [% FOREACH widget IN cur_column %]
@@ -100,17 +132,34 @@
 			<li id="button-new-xeyes"><a onclick="return AddWidget('xeyes');">New Xeyes</a></li>
 		</ul>
 		<div class="widget-divider"></div>
-		<p>Welcome to Dashboard!</p>
+		<p id="dashboard_notify">Welcome to Dashboard!</p>
 	</div>
 </div>
 
 <script>
-	$('#dashboard-link').colorbox({width:"384px", inline:true, href:".dashboard-main"});
-	[% IF active_widgets==0 %]
-		$(document).ready(function(){
-			$.colorbox({width:"384px", inline:true, href:".dashboard-main"});
-		});
-	[% END %]
+	var warning = false;
+	if (browser_quality==0)
+	{
+		warning = '<p style="color:red">Your current web browser is not compliant with the Dashboard, please use Firefox instead, thank you.</p>';
+		$('#dashboard_notify').append(warning);
+	}
+	if (browser_quality<0) {
+		$('#dashboard').html('<h2 style="text-align:center">Your current web browser is not currently supported to access the Dashboard, please use Firefox instead, thank you.</h2>');
+	}
+	else {
+		$('#dashboard-link').colorbox({width:"384px", inline:true, href:".dashboard-main"});
+		[% IF active_widgets==0 %]
+			$(document).ready(function(){
+				$.colorbox({width:"384px", inline:true, href:".dashboard-main"});
+			});
+		[% ELSE %]
+			if (warning) {
+				$(document).ready(function(){
+					$.colorbox({width:"384px", inline:true, href:".dashboard-main"});
+				});
+			}
+		[% END %]
+	}
 </script>
 
 [% IF widget_error %]

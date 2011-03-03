@@ -57,6 +57,7 @@
         [% END %]
         
         Widgets['widget[% widget.id %]'] = widget;
+        $(window).trigger("resize");
       </script>
     </div>
   [% ELSE %]

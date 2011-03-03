@@ -4,18 +4,16 @@ $('<li class="item"><label>Username:</label><input id="widget[% widget.id %]_use
 $('<li class="item"><label>Password:</label><input type="password" id="widget[% widget.id %]_password" value="3"></li>').appendTo('#widget[% widget.id %] .edit-box');
 $('<li class="item"><label>Load:</label><input type="button" id="widget[% widget.id %]_load" value="Load RSS"></li>').appendTo('#widget[% widget.id %] .edit-box');
 
-[% IF widget.refreshable %]
-  $('<li class="item"><label>Reload:</label><select id="widget[% widget.id %]_refresh"><option value="0">no refresh</option><option value="15">every 15 seconds</option><option value="60">every minute</option><option value="300">every 5 minutes</option><option value="900">every 15 minutes</option><option value="1800">every 30 minutes</option></select></li>').appendTo('#widget[% widget.id %] .edit-box');
-  function widget[% widget.id %]_refresh(){
-    //$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html("<div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>");
-    widget[% widget.id %]_load_rss($('#widget[% widget.id %]_url').val().trim(),$('#widget[% widget.id %]_username').val().trim(),$('#widget[% widget.id %]_password').val().trim());
-  }
-  [% IF widget.refresh>0 %]
-    $('#widget[% widget.id %]_refresh').val([% widget.refresh %])
-    $('#widget[% widget.id %]_refresh').trigger("change");
-  [% END %]
-  widget['refresh'] = '[% widget.refresh %]';
+$('<li class="item"><label>Reload:</label><select id="widget[% widget.id %]_refresh"><option value="0">no refresh</option><option value="15">every 15 seconds</option><option value="60">every minute</option><option value="300">every 5 minutes</option><option value="900">every 15 minutes</option><option value="1800">every 30 minutes</option></select></li>').appendTo('#widget[% widget.id %] .edit-box');
+function widget[% widget.id %]_refresh(){
+	$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html("<div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>");
+	widget[% widget.id %]_load_rss($('#widget[% widget.id %]_url').val().trim(),$('#widget[% widget.id %]_username').val().trim(),$('#widget[% widget.id %]_password').val().trim());
+}
+[% IF widget.refresh>0 %]
+	$('#widget[% widget.id %]_refresh').val([% widget.refresh %])
+	$('#widget[% widget.id %]_refresh').trigger("change");
 [% END %]
+widget['refresh'] = '[% widget.refresh %]';
 
 $('#widget[% widget.id %]').find('.maximize').remove();
 
@@ -46,6 +44,11 @@ function widget[% widget.id %]_resize() {
 }
 
 function widget[% widget.id %]_load_rss(url,username,password) {
+
+	if (url.length<4) {
+		$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html("");		
+		return false;
+	}
 
 	var local_domain = new RegExp("^(http|https):\/\/"+document.domain+"\/",""); // url is in current bugzilla domain, jquery can access directly
 	var valid_url = new RegExp("^(http|https):\/\/.+\/"); // atleast resembles an url
@@ -83,7 +86,7 @@ function widget[% widget.id %]_load_rss(url,username,password) {
 				
 				feed_store_new = '0';
 		
-				for(var i = 0; i < feed.items.length && i < 5; i++) {
+				for(var i = 0; i < feed.items.length && i < [% Param('dashboard_rss_max_items') %]; i++) {
 					var item = feed.items[i];
 					var uniqid = $.md5(item.link+item.title+item.updated+item.id);
 					var re_displayed = new RegExp("\\|"+uniqid+":d","");
@@ -93,20 +96,23 @@ function widget[% widget.id %]_load_rss(url,username,password) {
 					if (re_clicked.test(feed_store))
 					{
 						item_class='rss_clicked';
+						item_color='[% Param('dashboard_rss_color_read') %]';
 						feed_store_new += '|' + uniqid + ':c';
 					}
 					else if (re_displayed.test(feed_store)) 
 					{
 						item_class='rss_displayed';
+						item_color='[% Param('dashboard_rss_color_unread') %]';
 						feed_store_new += '|' + uniqid + ':d';
 					}
 					else
 					{
 						item_class='rss_new';
+						item_color='[% Param('dashboard_rss_color_new') %]';
 						feed_store_new += '|' + uniqid + ':d';
 					}
 					
-					html += '<div id="'+uniqid+'" class="rss_title '+item_class+'"><a title="open in popup" class="open_popup" href="' + item.link + '"></a><a title="open link" class="open_link" href="' + item.link + '"></a><h3>' + item.title + '</h3></div>';
+					html += '<div id="'+uniqid+'" style="background-color:'+item_color+';" class="rss_title '+item_class+'"><a title="open in popup" class="open_popup" href="' + item.link + '"></a><a title="open link" class="open_link" href="' + item.link + '"></a><h3>' + item.title + '</h3></div>';
 						 
 					html += '<div class="updated"><p>' + item.updated + '</p></div>';
 					
@@ -123,6 +129,7 @@ function widget[% widget.id %]_load_rss(url,username,password) {
 						feed_store += '|' + $(this).parent().attr('id')+":c";
 						$.Storage.set(feed_id, feed_store);
 						$(this).parent().attr('class','rss_title rss_clicked');
+						$(this).parent().css('background-color','[% Param('dashboard_rss_color_read') %]');
 						$(this).colorbox({width:"80%", height:"80%", iframe:true});
 				});
 				$('#'+feed_id).children().children('a.open_link').click(function(event) {
@@ -131,18 +138,19 @@ function widget[% widget.id %]_load_rss(url,username,password) {
 						feed_store += '|' + $(this).parent().attr('id')+":c";
 						$.Storage.set(feed_id, feed_store); 
 						$(this).parent().attr('class','rss_title rss_clicked');
+						$(this).parent().css('background-color','[% Param('dashboard_rss_color_read') %]');
 						window.open($(this).attr('href'));
 				});
-				$("#widget[% widget.id %] .widget-content").trigger("resize");
+				var y = $("#widget[% widget.id %] .widget-content").height() - 3;
+				$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').children('.rss').height(y);	
 			}
 		});
-
 	}
 	else
 	{
 		$('#widget[% widget.id %]').children('.widget-content').children('.widget_inner').html('<p class="error">Not a valid URL!</p>');
-		$("#widget[% widget.id %] .widget-content").trigger("resize");
 	}
+	
 }
 
 $('#widget[% widget.id %]_refresh').change(function() {
