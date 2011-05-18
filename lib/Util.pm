@@ -10,14 +10,14 @@
 # implied. See the License for the specific language governing
 # rights and limitations under the License.
 #
-# The Original Code is the Dashboard Bugzilla Extension.
+# The Original Code is the Unified Dashboard Bugzilla Extension.
 #
-# The Initial Developer of the Original Code is YOUR NAME
+# The Initial Developer of the Original Code is "Nokia Corporation"
 # Portions created by the Initial Developer are Copyright (C) 2010 the
 # Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
-#   YOUR NAME <YOUR EMAIL ADDRESS>
+#   Jari Savolainen <ext-jari.a.savolainen@nokia.com>
 
 package Bugzilla::Extension::Dashboard::Util;
 use strict;
