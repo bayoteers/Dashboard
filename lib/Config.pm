@@ -36,36 +36,43 @@ sub get_param_list {
                          name => 'dashboard_jquery_path',
                          desc => 'Path to JQuery, empty if Bugzilla already uses JQuery',
                          type => 't',
+                         default => 'extensions/Dashboard/web/js/jquery-1.4.2.min.js',
                       },
                       {
                          name => 'dashboard_browsers_warn',
                          desc => 'Regexp for browsers that are not recommended',
                          type => 't',
+                         default => 'AppleWebkit',
                       },
                       {
                          name => 'dashboard_browsers_block',
                          desc => 'Regexp for browsers that are not supported',
                          type => 't',
+                         default => 'MSIE\s\d\.\d',
                       },
                       {
                          name => 'dashboard_rss_max_items',
                          desc => 'How many items rss widget can display at a time',
                          type => 't',
+                         default => '25'
                       },
                       {
                          name => 'dashboard_rss_color_new',
                          desc => 'Color for RSS item that was just displayed',
                          type => 't',
+                         default => '#ffaa00',
                       },
                       {
                          name => 'dashboard_rss_color_unread',
                          desc => 'Color for RSS item that is not read yet',
                          type => 't',
+                         default => '#ffaa00',
                       },
                       {
                          name => 'dashboard_rss_color_read',
                          desc => 'Color for RSS item that has been read',
                          type => 't',
+                         default => '#cccccc',
                       },
                      );
     return @param_list;
