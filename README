@@ -1,17 +1,20 @@
 
-    BUD - Bugzilla Unified Dashboard
+    Dashboard
+======================
 
-Unified Dashboard is an extension to Bugzilla reporting system. Unified Dashboard-extension allows you to create and view versatile dashboard of reports and graphs. Dashboard is versatile mash-up of numerous sources in reporting system.
+Dashboard is an extension to Bugzilla reporting system. Unified Dashboard-extension allows you to create and view versatile dashboard of reports and graphs. Dashboard is versatile mash-up of numerous sources in reporting system.
 
-Unified Dashboard-extension has the purpose of gathering valuable information from reporting system into reports and graphs.
+Dashboard-extension has the purpose of gathering valuable information from reporting system into reports and graphs.
 
 
     INSTALLATION
+======================
 
 Install extension by extracting files from archive. Switch to 'extension' directory below Bugzilla root directory and extract files from archive.
 
 
     LICENCE
+======================
 
 The code/extension is released under the Mozilla Public License Version 1.1
 http://www.mozilla.org/MPL/
