@@ -3,7 +3,6 @@
  * Dual licensed under the MIT (MIT-license.txt)
  * and GPL (GPL-license.txt) licenses.
  */
-
 jQuery.getFeed = function(options) {
 
     options = jQuery.extend({
@@ -13,15 +12,22 @@ jQuery.getFeed = function(options) {
         success: null
         
     }, options);
-
+    
     if(options.url) {
-
         $.ajax({
             type: 'GET',
             url: options.url,
             data: options.data,
             dataType: 'xml',
-            success: function(xml) {
+            success: function(data) {
+            	    var xml;
+		    if ($.browser.msie) {
+			xml = new ActiveXObject("Microsoft.XMLDOM");
+			xml.async = false;
+			xml.loadXML(data);                
+		    } else {
+			xml = data;
+		    }
                 var feed = new JFeed(xml);
                 if(jQuery.isFunction(options.success)) options.success(feed);
             },
@@ -29,6 +35,7 @@ jQuery.getFeed = function(options) {
             	if(jQuery.isFunction(options.success)) options.error(textStatus);
             }
         });
+        
     }
 };
 

@@ -10,7 +10,7 @@
 # implied. See the License for the specific language governing
 # rights and limitations under the License.
 #
-# The Original Code is the Unified Dashboard Bugzilla Extension.
+# The Original Code is the Dashboard Bugzilla Extension.
 #
 # The Initial Developer of the Original Code is "Nokia Corporation"
 # Portions created by the Initial Developer are Copyright (C) 2010 the
@@ -46,6 +46,7 @@ use File::Path;
 use File::Basename;
 use File::Copy;
 use List::Util;
+use POSIX qw(strftime);
 
 our $VERSION = '0.01';
 
@@ -174,7 +175,11 @@ sub _save_widget {
 
         foreach (@fields) {
 
-            $widget->{$_} = int($cgi->param("widget_" . $_) ? $cgi->param("widget_" . $_) : 0);
+            $widget->{$_} = int(
+                                  $cgi->param("widget_" . $_)
+                                ? $cgi->param("widget_" . $_)
+                                : 0
+                               );
         }
 
         # true/false fields
@@ -190,7 +195,10 @@ sub _save_widget {
         $scrubber->default(0);
 
         foreach (@fields) {
-            $widget->{$_} = $cgi->param("widget_" . $_) ? $scrubber->scrub($cgi->param("widget_" . $_)) : " ";
+            $widget->{$_} =
+                $cgi->param("widget_" . $_)
+              ? $scrubber->scrub($cgi->param("widget_" . $_))
+              : " ";
         }
 
         # color
@@ -290,6 +298,12 @@ sub page_before_template {
         if ($user_id > 0) {
             my $cgi = Bugzilla->cgi;
 
+            # force http cache to be expired
+            print $cgi->header(-expires       => 'Sat, 26 Jul 1997 05:00:00 GMT');
+            print $cgi->header(-Last_Modified => strftime('%a, %d %b %Y %H:%M:%S GMT', gmtime));
+            print $cgi->header(-Pragma        => 'no-cache');
+            print $cgi->header(-Cache_Control => join(', ', qw(private no-cache no-store must-revalidate max-age=0 pre-check=0 post-check=0)));
+
             # Get users preferences or create defaults if the user is new
             if (-d $datauserdir && -f $datauserdir . "/preferences") {
                 $vars->{preferences} = retrieve($datauserdir . "/preferences");
@@ -309,7 +323,8 @@ sub page_before_template {
                 }
 
                 # create default preferences
-                my $preferences->{columns} = COLUMNS_DEFAULT;
+                my $preferences;
+                $preferences->{columns} = COLUMNS_DEFAULT;
                 for (my $i = 0 ; $i < COLUMNS_DEFAULT ; $i++) {
                     $preferences->{ "column" . $i } = int(100 / COLUMNS_DEFAULT);
                 }
@@ -416,8 +431,11 @@ sub page_before_template {
                             if (-f $dir_entry) {
                                 trick_taint($dir_entry);
                                 my $filename = basename($dir_entry);
-                                if ($filename eq "overlay.pending") { $filename = "overlay"; }
-                                copy($dir_entry, "$datauserdir/$filename") or die "Copy failed: $!";
+                                if ($filename eq "overlay.pending") {
+                                    $filename = "overlay";
+                                }
+                                copy($dir_entry, "$datauserdir/$filename")
+                                  or die "Copy failed: $!";
                             }
                         }
 
@@ -473,7 +491,10 @@ sub page_before_template {
                     my $scrubber = HTML::Scrubber->new;
                     $scrubber->default(0);
                     foreach (@fields) {
-                        $overlay->{$_} = $cgi->param("overlay_" . $_) ? $scrubber->scrub($cgi->param("overlay_" . $_)) : " ";
+                        $overlay->{$_} =
+                            $cgi->param("overlay_" . $_)
+                          ? $scrubber->scrub($cgi->param("overlay_" . $_))
+                          : " ";
                     }
 
                     # creator of overlay
@@ -501,7 +522,8 @@ sub page_before_template {
                     foreach my $dir_entry (@files) {
                         if (-f $dir_entry) {
                             trick_taint($dir_entry);
-                            if ($dir_entry =~ m/\/\d+\.widget$/ && $overlay->{"shared"}) {
+                            if (   $dir_entry =~ m/\/\d+\.widget$/
+                                && $overlay->{"shared"}) {
 
                                 # strip usernames and passwords from widgets : todo to be changed so that widgets can define their private/public fields
 
@@ -511,12 +533,14 @@ sub page_before_template {
                                 store $widget, $overlaydir . "/" . fileparse($dir_entry);
                             }
                             else {
-                                copy($dir_entry, "$overlaydir/") or die "Copy failed: $!";
+                                copy($dir_entry, "$overlaydir/")
+                                  or die "Copy failed: $!";
                             }
                         }
                     }
 
-                    if ($overlay->{"shared"} && !Bugzilla->user->in_group('admin')) {
+                    if ($overlay->{"shared"}
+                        && !Bugzilla->user->in_group('admin')) {
                         store $overlay, $overlaydir . "/overlay.pending";
                         $vars->{"overlay_ajax"} = "<h2>Overlay saved, pending for approval!</h2>";
                     }
@@ -553,7 +577,8 @@ sub page_before_template {
                                 $vars->{"overlays"}->{"$i"}->{"$key"} = $overlay;
                                 $i++;
                             }
-                            elsif (-f $dir_entry . '/overlay.pending' && $vars->{"is_admin"}) {
+                            elsif (-f $dir_entry . '/overlay.pending'
+                                   && $vars->{"is_admin"}) {
                                 trick_taint($dir_entry);
                                 my $overlay = retrieve($dir_entry . '/overlay.pending');
                                 my $folder  = basename($dir_entry);
@@ -581,7 +606,7 @@ sub page_before_template {
                     $browser->proxy(['http'], $proxy_url);
                 }
                 else {
-                    $browser->env_proxy;
+                    $browser->env_proxy();
                 }
                 $browser->timeout(10);
                 my $response = $browser->get($cgi->param('rss_url'));
@@ -609,7 +634,8 @@ sub page_before_template {
                         $vars->{"column"}->[$i] = ($column_width > 10) ? $column_width : 10;
                     }
                     $column_total_width += $vars->{"column"}->[$i];
-                    my $widget->{'id'} = 0;
+                    my $widget;
+                    $widget->{'id'} = 0;
                     $vars->{"columns"}->[$i]->[0] = $widget;
                 }
                 if ($column_total_width != 100) {

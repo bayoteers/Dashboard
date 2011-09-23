@@ -9,6 +9,7 @@
  */
 
 var Dashboard_folder = 'extensions/Dashboard/web/';
+
 var Dashboard = {
     jQuery: $,
 
@@ -248,9 +249,12 @@ var Dashboard = {
             })();
 
 				$('.column_helper').remove();
+				var column_count = $('.column:not(#column-1)').size()-1;
 				$('.column:not(#column-1):first').prepend('<li class="column_helper"><div class="arrow_right"></div><br clear="both"></li>');
-				$('.column:not(#column-1):not(:first):not(:last)').each(function(index) {
-						$(this).prepend('<li class="column_helper"><div class="arrow_left"></div><div class="arrow_right"></div><br clear="both"></li>');
+				$('.column:not(#column-1)').each(function(index) {
+						///alert(index);:not(:first):not(:last)
+						if (index>0 && index<column_count)
+							$(this).prepend('<li class="column_helper"><div class="arrow_left"></div><div class="arrow_right"></div><br clear="both"></li>');
 				});
 				$('.column:not(#column-1):last').prepend('<li class="column_helper"><div class="arrow_left"></div><br clear="both"></li>');
 				$('.column_helper:not(#column-1):not(:last)').resizable({
@@ -392,14 +396,16 @@ var Dashboard = {
     }
 };
 
+$(".overlay-open").colorbox();
+
 function AddColumn() {
-	var cols = $('.column').size();
+    var cols = $('.column').size();
     $.post("page.cgi?id=dashboard_ajax.html", {
-        "action": 'column_add',
+        "action": 'column_add'
     }, function(data) {
         $('#ajax_message').html(data);
         if (cols != $('.column').size())
-        	$('#dashboard_notify').text('Added new column!');
+            $('#dashboard_notify').text('Added new column!');
     });
     return false;
 }
@@ -409,7 +415,7 @@ function DelColumn() {
 	var last_column = $("#columns").children().last().attr("id");
     if (cols>1) {
         $.post("page.cgi?id=dashboard_ajax.html", {
-            "action": 'column_del',
+            "action": 'column_del'
         }, function(data) {
             $('#ajax_message').html(data);
             if (cols != $('.column').size())
@@ -490,12 +496,14 @@ function SaveColumns() {
 	});
 }
 
+function ReloadWidgets() {
+	document.location='page.cgi?id=dashboard.html&ref='+Math.floor(Math.random()*999999);
+}
+
 // contains possible extra fields from widgets, is populated by dashboard_ajax.html
 Widgets = [];
 
 Dashboard.init();
-
-$(".overlay-open").colorbox();
 
 // bind columns to resize event to dynamically resize them in case of browser resize or change in number of columns
 $(window).bind("resize.columns", function() {
@@ -601,3 +609,4 @@ $(document).keyup(function(e) {
         });
     }
 });
+

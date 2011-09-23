@@ -9,11 +9,11 @@
   # implied. See the License for the specific language governing
   # rights and limitations under the License.
   #
-  # The Original Code is the Unified Dashboard Bugzilla Extension.
+  # The Original Code is the Bugzilla Example Plugin.
   #
-  # The Initial Developer of the Original Code is "Nokia Corporation"
-  # Portions created by the Initial Developer are Copyright (C) 2011 the
-  # Initial Developer. All Rights Reserved.
+  # The Initial Developer of the Original Code is Canonical Ltd.
+  # Portions created by Canonical Ltd. are Copyright (C) 2009
+  # Canonical Ltd. All Rights Reserved.
   #
   # Contributor(s): 
   #   Stephen Jayna <ext-stephen.jayna@nokia.com>
@@ -24,12 +24,13 @@
 
 [% PROCESS global/header.html.tmpl
     title = "Bugzilla Dashboard" 
-    style_urls = ['extensions/Dashboard/web/css/smoothness/jquery-ui-1.8.5.custom.css','extensions/Dashboard/web/css/dashboard.css','extensions/Dashboard/web/css/colorbox.css']
+    style_urls = ['extensions/Dashboard/web/css/smoothness/jquery-ui-1.8.5.custom.css','extensions/Dashboard/web/css/dashboard.css','extensions/Dashboard/web/css/dashboard.ie.css','extensions/Dashboard/web/css/colorbox.css']
 %]
 
 [% IF dashboard_jquery_path %]
   <script type="text/javascript" src="[% dashboard_jquery_path %]"></script>
 [% END %]
+
 <script type="text/javascript" src="extensions/Dashboard/web/js/jquery-ui-1.8.5.custom.min.js"></script>
 <script type="text/javascript" src="extensions/Dashboard/web/js/jquery.colorbox-min.js"></script>
 <script type="text/javascript" src="extensions/Dashboard/web/js/jquery.jfeed.js"></script>
@@ -38,19 +39,26 @@
 
 <script>
 var browser_quality = 1;
-if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_warn %]/)) {
-	browser_quality = 0;
-}
-if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_block %]/)) {
-	browser_quality = -1;
-}
+[% IF Bugzilla.params.dashboard_browsers_warn %]
+	if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_warn %]/)) {
+		browser_quality = 0;
+	}
+[% END %]
+[% IF Bugzilla.params.dashboard_browsers_block %]
+	if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_block %]/)) {
+		browser_quality = -1;
+	}
+[% END %]
 </script>
+
+<!--[if IE 7 ]><div id="ie7"><![endif]-->
+<!--[if IE 8 ]><div id="ie8"><![endif]-->
 
 <div id="ajax_message"></div>
 
 [% active_widgets = 0 %]
 
-<h1 align="center"><a href="#" id="dashboard-link">Dashboard</a></h1>
+<h1 align="center"><a href="#" id="dashboard-link">Dashboard</a> <img onclick="ReloadWidgets()" src='extensions/Dashboard/web/css/img/reload.png'></h1>
 
 <div id="dashboard">
 
@@ -112,8 +120,7 @@ if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_block %]/))
   </div>
 </div>
 
-<br clear="both">
-<br>
+<br clear="both"><br>
 
 <div style="display:none">
 	<div id="dashboard" class="dashboard-main">
@@ -169,6 +176,9 @@ if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_block %]/))
 [% END %]
 
 <script type="text/javascript" src="extensions/Dashboard/web/js/dashboard.js"></script>
+
+<!--[if IE 7 ]></div><![endif]-->
+<!--[if IE 8 ]></div><![endif]-->
 
 [% PROCESS global/footer.html.tmpl %]
 
