@@ -2,15 +2,20 @@
     Dashboard
 ======================
 
-Dashboard is an extension to Bugzilla reporting system. Unified Dashboard-extension allows you to create and view versatile dashboard of reports and graphs. Dashboard is versatile mash-up of numerous sources in reporting system.
+Dashboard is an extension to Bugzilla reporting system. Unified
+Dashboard-extension allows you to create and view versatile dashboard of
+reports and graphs. Dashboard is versatile mash-up of numerous sources in
+reporting system.
 
-Dashboard-extension has the purpose of gathering valuable information from reporting system into reports and graphs.
+Dashboard-extension has the purpose of gathering valuable information from
+reporting system into reports and graphs.
 
 
     INSTALLATION
 ======================
 
-Install extension by extracting files from archive. Switch to 'extension' directory below Bugzilla root directory and extract files from archive.
+Install extension by extracting files from archive. Switch to 'extension'
+directory below Bugzilla root directory and extract files from archive.
 
 
     LICENCE
@@ -19,7 +24,6 @@ Install extension by extracting files from archive. Switch to 'extension' direct
 The code/extension is released under the Mozilla Public License Version 1.1
 http://www.mozilla.org/MPL/
 
-The Initial Developer of the Original Code is "Nokia Corporation"
-Portions created by the Initial Developer are Copyright (C) 2011 the
-Initial Developer. All Rights Reserved.
-
+The Initial Developer of the Original Code is "Nokia Corporation" Portions
+created by the Initial Developer are Copyright (C) 2011 the Initial Developer.
+All Rights Reserved.
