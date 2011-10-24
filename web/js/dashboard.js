@@ -41,8 +41,6 @@ var Dashboard = {
 
     // Load stylesheet for widgets and initalize them
     init: function() {
-        this.attachStylesheet(Dashboard_folder + 'css/dashboard.js.css');
-
         this.makeSortable();
         $(".loader").each(function(i) {
             var id = $(this).parent().parent().parent().attr('id');
@@ -221,11 +219,6 @@ var Dashboard = {
                     return false;
             });
         });
-    },
-    // load advanced stylesheet for widgets
-    attachStylesheet: function(href) {
-        var $ = this.jQuery;
-        return $('<link href="' + href + '" rel="stylesheet" type="text/css" />').appendTo('head');
     },
     // make the columns Sortable
     makeSortable: function() {
