@@ -6,10 +6,22 @@
   # extension, so that I wouldn't conflict with other error names in
   # Bugzilla or other extensions.
   #%]
-[% IF error == "example_my_error" %]
-   [% title = "Example Error Title" %]
-   This is the error message! It contains <em>some html</em>.
-[% ELSIF error == "example_short_desc_invalid" %]
-  [% title = "Bad Summary" %]
-  The Summary must contain the word "example".
+[% IF error == "dashboard_illegal_id" %]
+    [% title = "Fatal Error" %]
+    Your request contained an illegal overlay, widget, or user ID.
+[% ELSIF error == "dashboard_max_columns" %]
+    [% title = "Fatal Error" %]
+    Cannot create new column, maximum reached!
+[% ELSIF error == "dashboard_column_nonempty" %]
+    [% title = "Fatal Error" %]
+    You must remove widgets from the last column before deleting it!
+[% ELSIF error == "dashboard_last_column" %]
+   [% title = "Fatal Error" %]
+   You cannot delete the last column.
+[% ELSIF error == "dashboard_max_widgets" %]
+   [% title = "Fatal Error" %]
+   Cannot create new widget, maximum number reached!
+[% ELSIF error == "dashboard_not_found" %]
+   [% title = "Fatal Error" %]
+    Cannot load, preferences not found!
 [% END %]
