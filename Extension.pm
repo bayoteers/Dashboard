@@ -31,7 +31,7 @@ use Bugzilla::User;
 
 # This code for this is in ./extensions/Dashboard/lib/Util.pm
 use Bugzilla::Extension::Dashboard::Config;
-use Bugzilla::Extension::Dashboard::Util;
+use Bugzilla::Extension::Dashboard::Util qw(cgi_no_cache);
 
 # For input sanitization
 use HTML::Scrubber;
@@ -300,10 +300,7 @@ sub page_before_template {
             my $cgi = Bugzilla->cgi;
 
             # force http cache to be expired
-            print $cgi->header(-expires       => 'Sat, 26 Jul 1997 05:00:00 GMT');
-            print $cgi->header(-Last_Modified => strftime('%a, %d %b %Y %H:%M:%S GMT', gmtime));
-            print $cgi->header(-Pragma        => 'no-cache');
-            print $cgi->header(-Cache_Control => join(', ', qw(private no-cache no-store must-revalidate max-age=0 pre-check=0 post-check=0)));
+            cgi_no_cache;
 
             # Get users preferences or create defaults if the user is new
             if (-d $datauserdir && -f $datauserdir . "/preferences") {
