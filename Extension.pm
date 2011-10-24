@@ -673,4 +673,16 @@ sub config_add_panels {
     $modules->{Dashboard} = "Bugzilla::Extension::Dashboard::Config";
 }
 
+sub webservice {
+    my ($self, $args) = @_;
+    $args->{dispatch}->{Dashboard} = "Bugzilla::Extension::Dashboard::WebService";
+}
+
+sub webservice_error_codes {
+    my ($self, $args) = @_;
+
+    my $error_map = $args->{error_map};
+    $error_map->{'dashboard_my_error'} = 10001;
+}
+
 __PACKAGE__->NAME;
