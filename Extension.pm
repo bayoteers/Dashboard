@@ -30,6 +30,7 @@ use Bugzilla::Util;
 use Bugzilla::User;
 
 # This code for this is in ./extensions/Dashboard/lib/Util.pm
+use Bugzilla::Extension::Dashboard::Config;
 use Bugzilla::Extension::Dashboard::Util;
 
 # For input sanitization

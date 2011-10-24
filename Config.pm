@@ -20,6 +20,11 @@
 #   Jari Savolainen <ext-jari.a.savolainen@nokia.com>
 #   Stephen Jayna <ext-stephen.jayna@nokia.com>
 
+# Note: this file is used only to inform checkconfig.pl of the required module
+# list; the fact that constants defined here magically appear in Extension.pm
+# is a side-effect. Place any extension-specific configuration in
+# lib/Config.pm.
+
 package Bugzilla::Extension::Dashboard;
 use strict;
 
@@ -34,10 +39,5 @@ use constant REQUIRED_MODULES => [
                                  ];
 
 use constant OPTIONAL_MODULES => [];
-
-use constant EXTENSION_DIR   => '/extensions/Dashboard';
-use constant COLUMNS_DEFAULT => 3;
-use constant COLUMNS_MAX     => 4;
-use constant WIDGETS_MAX     => 30;
 
 __PACKAGE__->NAME;

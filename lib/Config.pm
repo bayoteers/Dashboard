@@ -26,6 +26,19 @@ use warnings;
 
 use Bugzilla::Config::Common;
 
+use Exporter 'import';
+our @EXPORT = qw(
+    EXTENSION_DIR
+    COLUMNS_DEFAULT
+    COLUMNS_MAX
+    WIDGETS_MAX
+);
+
+use constant EXTENSION_DIR   => '/extensions/Dashboard';
+use constant COLUMNS_DEFAULT => 3;
+use constant COLUMNS_MAX     => 4;
+use constant WIDGETS_MAX     => 30;
+
 our $sortkey = 5000;
 
 sub get_param_list {
