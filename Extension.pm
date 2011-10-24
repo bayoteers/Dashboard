@@ -385,16 +385,9 @@ sub page_before_template {
                     if ((($overlay_user_id == 0 && Bugzilla->user->in_group('admin')) || $overlay_user_id == $user_id)
                         && -d $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id) {
 
-                        my @files = glob $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id . "/*";
-
-                        foreach my $dir_entry (@files) {
-                            if (-f $dir_entry) {
-                                trick_taint($dir_entry);
-                                unlink $dir_entry;
-                            }
-                        }
-                        rmdir trick_taint($dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id);
-
+                        my $overlay_dir = $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id;
+                        trick_taint($overlay_dir);
+                        File::Path->remove_tree($overlay_dir);
                         $vars->{"overlay_ajax"} = '<h2>Overlay deleted!</h2>';
                     }
                     else {
