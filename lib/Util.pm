@@ -87,6 +87,7 @@ use warnings;
 use Exporter 'import';
 our @EXPORT_OK = qw(
     cgi_no_cache
+    dir_glob
     get_overlay_dir
     get_user_overlay_dir
     get_user_prefs

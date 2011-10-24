@@ -31,7 +31,7 @@ use Bugzilla::User;
 
 # This code for this is in ./extensions/Dashboard/lib/Util.pm
 use Bugzilla::Extension::Dashboard::Config;
-use Bugzilla::Extension::Dashboard::Util qw(cgi_no_cache);
+use Bugzilla::Extension::Dashboard::Util qw(cgi_no_cache dir_glob);
 
 # For input sanitization
 use HTML::Scrubber;
@@ -416,16 +416,10 @@ sub page_before_template {
                             }
                         }
 
-                        @files = glob $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id . "/*";
-
-                        foreach my $dir_entry (@files) {
-                            if (-f $dir_entry) {
-                                trick_taint($dir_entry);
-                                my $filename = basename($dir_entry);
-                                if ($filename eq "overlay.pending") {
-                                    $filename = "overlay";
-                                }
-                                copy($dir_entry, "$datauserdir/$filename")
+                        my $source_dir = $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id;
+                        foreach my $path (dir_glob($source_dir, '*')) {
+                            if(-f $path && basename($path) !~ /^overlay/) {
+                                copy($path, $datauserdir)
                                   or die "Copy failed: $!";
                             }
                         }
