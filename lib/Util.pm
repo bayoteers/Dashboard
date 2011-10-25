@@ -87,6 +87,7 @@ use warnings;
 use Exporter 'import';
 our @EXPORT_OK = qw(
     cgi_no_cache
+    clear_user_workspace
     dir_glob
     get_overlay_dir
     get_user_overlay_dir
@@ -94,6 +95,7 @@ our @EXPORT_OK = qw(
     get_user_widget
     get_user_widgets
     get_user_overlays
+    load_user_overlay
     make_path
     set_user_prefs
     to_int
@@ -281,8 +283,6 @@ sub set_user_widgets {
         $paths->{$path} = 1;
     }
 
-    unlink dir_glob '/tmp/foo*';
-
     my @old = dir_glob(get_user_dir($user_id), "*.widget");
     unlink grep { !$paths->{$_} } @old;
 }
@@ -320,6 +320,42 @@ sub scrub_string {
         return $scrubber->scrub($s);
     }
     return $default || ' ';
+}
+
+
+# Clear the user's workspace and load a new overlay.
+sub clear_user_workspace {
+    my ($user_id) = @_;
+
+    my $prefs = get_user_prefs($user_id);
+    for (my $i = 0; $i <  $prefs->{columns}; $i++) {
+        delete $prefs->{"column$i"};
+    }
+
+    $prefs->{widgets} = [];
+    $prefs->{columns} = 3;
+    for (my $i = 0; $i <  $prefs->{columns}; $i++) {
+        $prefs->{"column$i"} = 33; # percent
+    }
+
+    set_user_prefs($user_id, $prefs);
+}
+
+
+# Clear the user's workspace and load a new overlay.
+sub load_user_overlay {
+    my ($user_id, $overlay_user_id, $overlay_id) = @_;
+    clear_user_workspace $user_id;
+
+    my $source_dir = get_overlay_dir($overlay_user_id, $overlay_id);
+    my $user_dir = get_user_dir($user_id);
+
+    foreach my $path (dir_glob($source_dir, '*')) {
+        if(-f $path && basename($path) !~ /^overlay/) {
+            copy($path, $user_dir)
+              or die "Copy failed: $!";
+        }
+    }
 }
 
 1;

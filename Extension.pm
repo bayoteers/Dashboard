@@ -31,7 +31,11 @@ use Bugzilla::User;
 
 # This code for this is in ./extensions/Dashboard/lib/Util.pm
 use Bugzilla::Extension::Dashboard::Config;
-use Bugzilla::Extension::Dashboard::Util qw(cgi_no_cache dir_glob);
+use Bugzilla::Extension::Dashboard::Util qw(
+    cgi_no_cache
+    dir_glob
+    load_user_overlay
+);
 
 # For input sanitization
 use HTML::Scrubber;
@@ -406,24 +410,7 @@ sub page_before_template {
                             && Bugzilla->user->in_group('admin')
                             && -e $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id . "/overlay.pending")
                       ) {
-
-                        my @files = glob $datauserdir . "/*";
-
-                        foreach my $dir_entry (@files) {
-                            trick_taint($dir_entry);
-                            if (-f $dir_entry) {
-                                unlink $dir_entry;
-                            }
-                        }
-
-                        my $source_dir = $dataextdir . "/" . $overlay_user_id . "/overlay/" . $overlay_id;
-                        foreach my $path (dir_glob($source_dir, '*')) {
-                            if(-f $path && basename($path) !~ /^overlay/) {
-                                copy($path, $datauserdir)
-                                  or die "Copy failed: $!";
-                            }
-                        }
-
+                        load_user_overlay(undef, $overlay_user_id, $overlay_id);
                         $vars->{"overlay_ajax"} = "<h2>Overlay loaded!</h2>";
                     }
                     else {

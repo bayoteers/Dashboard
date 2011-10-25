@@ -34,6 +34,7 @@ use Bugzilla::Util;
 use Bugzilla::Error;
 
 use Bugzilla::Extension::Dashboard::Util qw(
+    clear_user_workspace
     get_user_overlays
     get_overlay_dir
     get_user_prefs
@@ -49,8 +50,6 @@ sub require_account {
         die 'You must provide Bugzilla_login and Bugzilla_password parameters.';
     }
 }
-
-
 
 
 sub _widget_from_params {
@@ -291,18 +290,10 @@ sub load_overlay {
         ThrowUserError('dashboard_illegal_id');
     }
 
-    unlink grep { -f $_ } dir_glob(get_user_dir(), '*');
-    foreach my $path (dir_glob($dir, "*")) {
-        if (-f $path) {
-            my $filename = basename($path);
-            if ($filename eq "overlay.pending") {
-                $filename = "overlay";
-            }
-            copy($path, File::Spec->catfile(get_user_dir(), $filename))
-                or die "Copy failed: $!";
-        }
-    }
+    load_user_overlay(undef, $user_id, $id);
+    return 1;
 }
+
 
 # add new column and re-init the Sortable UI on success
 sub add_column {
@@ -353,20 +344,7 @@ sub delete_column {
 # reset user workspace back to 1 column, zero widgets.
 sub clear_workspace {
     require_account;
-    my ($self, $params) = @_;
-
-    my $prefs = get_user_prefs();
-    for (my $i = 0; $i <  $prefs->{columns}; $i++) {
-        delete $prefs->{"column$i"};
-    }
-
-    $prefs->{widgets} = [];
-    $prefs->{columns} = 3;
-    for (my $i = 0; $i <  $prefs->{columns}; $i++) {
-        $prefs->{"column$i"} = 33;
-    }
-
-    set_user_prefs(undef, $prefs);
+    clear_user_workspace();
 }
 
 
