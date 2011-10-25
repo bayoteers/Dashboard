@@ -38,16 +38,20 @@ use Bugzilla::Error;
 use Bugzilla::Extension::Dashboard::Util qw(
     clear_user_workspace
     dir_glob
-    get_user_overlays
     get_overlay_dir
     get_user_dir
     get_user_overlay_dir
+    get_user_overlays
     get_user_prefs
     get_user_widgets
+    get_widget_path
+    is_valid_widget_type
     scrub_string
-    to_bool
-    to_int
     set_user_prefs
+    set_user_widgets
+    to_bool
+    to_color
+    to_int
 );
 use Bugzilla::Extension::Dashboard::Config;
 
@@ -59,38 +63,72 @@ sub require_account {
 }
 
 
+my $WIDGET_FIELD_DEFS = {
+    collapsible => { type => 'bool' },
+    color => { type => 'color', required => 1, default => 'gray' },
+    col => { type => 'int', required => 1 },
+    controls => { type => 'bool', default => 1, required => 1 },
+    editable => { type => 'bool', default => 1, required => 1 },
+    height => { type => 'int' },
+    id => { type => 'int', required => 1 },
+    maximizable => { type => 'bool' },
+    minimized => { type => 'bool' },
+    movable => { type => 'bool' },
+    password => { type => 'text' },
+    pos => { type => 'int', required => 1 },
+    refreshable => { type => 'bool', default => 1, required => 1 },
+    refresh => { type => 'int', default => 600, required => 1 },
+    removable => { type => 'bool' },
+    resizable => { type => 'bool', default => 1, required => 1 },
+    resized => { type => 'bool' },
+    title => { type => 'text', required => 1 },
+    type => { type => 'text', required => 1 },
+    URL => { type => 'text' },
+    username => { type => 'text' },
+};
+
+
 sub _widget_from_params {
-    my ($params) = @_;
+    my ($params, $check_required) = @_;
     my $widget;
 
-    # Numerical fields. Each widget MUST have unique id, position (vertical),
-    # column it is and height of the widget
-    my @fields = qw(id pos col height refresh);
-    foreach (@fields) {
-        $widget->{$_} = to_int($params->{ "widget_" . $_ });
+    while(my ($field, $value) = each(%$params)) {
+        my $def = $WIDGET_FIELD_DEFS->{$field};
+        if(! defined($def)) {
+            die 'Invalid field name: ' . $field;
+        }
+
+        # Integer fields. Each widget MUST have ID, column, row and height.
+        if($def->{type} eq 'int') {
+            $widget->{$field} = to_int($value);
+        } elsif($def->{type} eq 'bool') {
+            $widget->{$field} = to_bool($value);
+        } elsif($def->{type} eq 'text') {
+            $widget->{$field} = scrub_string($value);
+        } elsif($def->{type} eq 'color') {
+            $widget->{color} = to_color($value);
+        } else {
+            die 'Internal error';
+        }
     }
 
-    # true/false fields
-    @fields = qw(movable removable collapsible editable resizable resized
-        maximizable minimized controls refreshable);
-    foreach (@fields) {
-        $widget->{$_} = to_bool($params->{ "widget_" . $_ });
+    if($check_required) {
+        while(my ($field, $def) = each(%$WIDGET_FIELD_DEFS)) {
+            if(defined($widget->{$field}) || !$def->{required}) {
+                next;
+            } elsif($def->{default}) {
+                $widget->{$field} = $def->{default};
+            } else {
+                die 'Missing required field: ' . $field;
+            }
+        }
     }
 
-    # text fields
-    @fields = qw(title URL username password);
-    foreach (@fields) {
-        $widget->{$_} = scrub_string($params->{ "widget_" . $_ });
+    if(defined($widget->{type})
+       && !is_valid_widget_type($widget->{type})) {
+        die 'Invalid widget type: ' . $widget->{type};
     }
 
-    # ASCII-only fields. TODO: add type verification based on installed widget
-    # types.
-    foreach my $field (qw(type)) {
-        $widget->{$field} = clean_text($params->{ "widget_" . $field });
-    }
-
-    # color
-    $widget->{'color'} = $params->{"widget_color"} =~ /color-(gray|yellow|red|blue|white|orange|green)/ ? $1 : "gray";
     return $widget;
 }
 
@@ -99,24 +137,24 @@ sub new_widget {
     require_account;
     my ($self, $params) = @_;
 
-    my $widget_id = to_int($params->{'widget_id'});
+    my $widget_id = to_int($params->{'id'});
     if ($widget_id <= 0) {
         ThrowUserError('dashboard_illegal_id');
     }
 
     # if widget can be created, get required prefences, store them and tell
     # jquery to save any extra preferences the widget has
-    if ((scalar get_user_widgets()) >= WIDGETS_MAX) {
+    my @widgets = get_user_widgets();
+    if(@widgets >= WIDGETS_MAX) {
         ThrowUserError('dashboard_max_widgets');
     }
 
-    my $widget = _widget_from_params($params);
-    # force the widget to be resized on load
+    my $widget = _widget_from_params($params, 1);
+    # Force the widget to be resized on load.
     $widget->{resized} = 1;
 
-    my $widgets = get_user_widgets();
-    push @$widgets, $widget;
-    set_user_widgets(undef, $widgets);
+    push @widgets, $widget;
+    set_user_widgets(undef, \@widgets);
     return $widget;
 }
 
@@ -125,17 +163,22 @@ sub save_widget {
     require_account;
     my ($self, $params) = @_;
 
-    my $widget_id = to_int($params->{'widget_id'});
+    my $widget_id = to_int($params->{'id'});
 
     my $path = get_widget_path(undef, $widget_id);
     if ($widget_id <= 0 || !-e $path) {
         ThrowUserError('dashboard_illegal_id');
     }
 
+    my $updates = _widget_from_params($params);
+
     my $widget  = retrieve($path);
-    my $updates = _widget_from_params();
-    $widget->{$_} = $updates->{$_} for keys %$updates;
+    while(my ($key, $value) = each(%$updates)) {
+        $widget->{$key} = $value;
+    }
     store $widget, $path;
+
+    return $widget;
 }
 
 # Delete all widget_id related files and return ajax to fade/slide/close the
