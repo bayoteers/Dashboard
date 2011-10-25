@@ -96,11 +96,15 @@ our @EXPORT_OK = qw(
     get_user_widget
     get_user_widgets
     get_user_overlays
+    get_widget_path
+    is_valid_widget_type
     load_user_overlay
     make_path
     scrub_string
     set_user_prefs
+    set_user_widgets
     to_bool
+    to_color
     to_int
 );
 
@@ -304,15 +308,33 @@ sub get_user_widget {
     }
 }
 
-sub to_int {
-    my ($s) = @_;
-    detaint_natural($s);
-    return $s || 0;
-}
-
 sub to_bool {
     my ($s) = @_;
     return (($s || '') eq 'true') ? 1 : 0;
+}
+
+sub to_color {
+    my ($s) = @_;
+    $s ||= '';
+
+    if($s =~ /^(?:color-)?(gray|yellow|red|blue|white|orange|green)$/) {
+        return $1;
+    }
+
+    return 'gray';
+    #ThrowUserError('dashboard_invalid_color');
+}
+
+sub to_int {
+    my ($s) = @_;
+    detaint_natural($s);
+    return int($s || 0);
+}
+
+sub is_valid_widget_type {
+    my ($s) = @_;
+    $s ||= '';
+    return grep($_ eq $s, WIDGET_TYPES) ? 1 : 0;
 }
 
 sub scrub_string {
