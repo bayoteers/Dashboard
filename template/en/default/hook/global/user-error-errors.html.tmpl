@@ -23,5 +23,11 @@
    Cannot create new widget, maximum number reached!
 [% ELSIF error == "dashboard_not_found" %]
    [% title = "Fatal Error" %]
-    Cannot load, preferences not found!
+   Cannot load, preferences not found!
+[% ELSIF error == "dashboard_invalid_type" %]
+   [% title = "Fatal Error" %]
+   Your request contained an invalid widget type.
+[% ELSIF error == "dashboard_invalid_color" %]
+   [% title = "Fatal Error" %]
+   Your request contained an invalid color name.
 [% END %]
