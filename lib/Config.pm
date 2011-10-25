@@ -32,12 +32,20 @@ our @EXPORT = qw(
     COLUMNS_DEFAULT
     COLUMNS_MAX
     WIDGETS_MAX
+    WIDGET_TYPES
 );
 
 use constant EXTENSION_DIR   => '/extensions/Dashboard';
 use constant COLUMNS_DEFAULT => 3;
 use constant COLUMNS_MAX     => 4;
 use constant WIDGETS_MAX     => 30;
+
+use constant WIDGET_TYPES => qw(
+    mybugs
+    rss
+    url
+    xeyes
+);
 
 our $sortkey = 5000;
 
