@@ -43,20 +43,23 @@ def format_overlay_list(overlays):
 
 
 WIDGET_FIELDS = [
-    ('widget_id', int, None, True),
-    ('widget_pos', int, None, False),
-    ('widget_col', int, None, False),
-    ('widget_height', int, None, False),
-    ('widget_refresh', int, None, False),
-    ('widget_movable', bool, True, False),
-    ('widget_removable', bool, True, False),
-    ('widget_collapsible', bool, True, False),
-    ('widget_editable', bool, True, False),
-    ('widget_resizable', bool, True, False),
-    ('widget_maximizable', bool, True, False),
-    ('widget_minimized', bool, False, False),
-    ('widget_controls', bool, True, False),
-    ('widget_refreshable', bool, True, False),
+    ('col', int, None, False),
+    ('collapsible', bool, True, False),
+    ('controls', bool, True, False),
+    ('editable', bool, True, False),
+    ('height', int, None, False),
+    ('id', int, None, True),
+    ('maximizable', bool, True, False),
+    ('minimized', bool, False, False),
+    ('movable', bool, True, False),
+    ('pos', int, None, False),
+    ('refreshable', bool, True, False),
+    ('refresh', int, None, False),
+    ('removable', bool, True, False),
+    ('resizable', bool, True, False),
+    ('title', str, None, False),
+    ('type', str, None, False),
+    ('URL', str, None, False),
 ]
 
 API = {
