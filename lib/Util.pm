@@ -90,6 +90,7 @@ our @EXPORT_OK = qw(
     clear_user_workspace
     dir_glob
     get_overlay_dir
+    get_user_dir
     get_user_overlay_dir
     get_user_prefs
     get_user_widget
@@ -97,7 +98,9 @@ our @EXPORT_OK = qw(
     get_user_overlays
     load_user_overlay
     make_path
+    scrub_string
     set_user_prefs
+    to_bool
     to_int
 );
 
@@ -309,7 +312,7 @@ sub to_int {
 
 sub to_bool {
     my ($s) = @_;
-    return ($s eq 'true') ? 1 : 0;
+    return (($s || '') eq 'true') ? 1 : 0;
 }
 
 sub scrub_string {

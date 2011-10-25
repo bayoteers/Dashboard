@@ -24,8 +24,10 @@ use warnings;
 use base qw(Bugzilla::WebService);
 
 use Data::Dumper;
+use Storable;
 
 use File::Basename;
+use File::Copy;
 use File::Path qw(remove_tree);
 use File::Spec;
 use List::Util;
@@ -35,10 +37,15 @@ use Bugzilla::Error;
 
 use Bugzilla::Extension::Dashboard::Util qw(
     clear_user_workspace
+    dir_glob
     get_user_overlays
     get_overlay_dir
+    get_user_dir
+    get_user_overlay_dir
     get_user_prefs
     get_user_widgets
+    scrub_string
+    to_bool
     to_int
     set_user_prefs
 );
@@ -242,7 +249,7 @@ sub save_overlay {
         $overlaydir = File::Spec->catdir($datatargetdir, $i++);
     } until (!-d $overlaydir);
 
-    make_path $overlaydir;
+    File::Path->make_path($overlaydir);
 
     foreach my $path (dir_glob(get_user_dir(), '*')) {
         if (-f $path) {
@@ -265,11 +272,11 @@ sub save_overlay {
 
     if ($overlay->{"shared"}
         && !Bugzilla->user->in_group('admin')) {
-        store $overlay, $overlaydir . "/overlay.pending";
+        store($overlay, $overlaydir . "/overlay.pending");
         return 'pending';
     }
     else {
-        store $overlay, $overlaydir . "/overlay";
+        store($overlay, $overlaydir . "/overlay");
         return 'ok';
     }
 }
