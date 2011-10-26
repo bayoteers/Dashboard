@@ -170,7 +170,8 @@ def make_option_parser():
     add('--http_password', help='Optional password for HTTP authentication.')
     add('--format', help='Output format; one of "json", "shell", or "pretty"',
         default='pretty', choices=('json', 'shell', 'pretty'))
-
+    add('--quiet', help='Don\'t print operation result.', action='store_true',
+        default=False)
     return parser
 
 
@@ -293,7 +294,9 @@ def main():
         print
         return 1
 
-    if options.format == 'pretty':
+    if options.quiet:
+        return
+    elif options.format == 'pretty':
         pretty_format(sys.stdout, action, result)
     elif options.format == 'json':
         json_format(sys.stdout, action, result)
