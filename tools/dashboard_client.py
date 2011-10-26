@@ -4,12 +4,12 @@
 Simplistic client for talking to BAYOT Dashboard via XML-RPC.
 """
 
-import commands
+import json
 import optparse
+import pprint
 import sys
 import urlparse
 import xmlrpclib
-import pprint
 
 
 class HttpAuthMixin(object):
@@ -53,7 +53,6 @@ def make_transport(url, username, password):
 def escape(s):
     """Return the string `s` escaped for use on a shell command line.
     """
-    return commands.mkarg(s).lstrip()
 
 
 def shell_format(out, name, obj):
@@ -76,9 +75,16 @@ def shell_format(out, name, obj):
         line('%s=%s', name, escape(str(obj)))
 
 
-def format_overlay_list(overlays):
-    #shell_format(sys.stdout, 'overlay', overlays)
-    pprint.pprint(overlays)
+def pretty_format(out, name, obj):
+    """Use Python pprint to output `obj` in a human-readable form to `out`.
+    """
+    pprint.pprint(obj, stream=out)
+
+
+def json_format(out, name, obj):
+    """Use Python json module to output `obj` as JSON to `out`.
+    """
+    json.dump(obj, out)
 
 
 WIDGET_FIELDS = [
@@ -137,15 +143,15 @@ API = {
         ]
     },
     'get_overlays': {
-        'formatter': format_overlay_list
     },
     'get_preferences': {
     }
 }
 
 
-def parse_options():
-    """Parse command-line arguments, printing a usage message on failure.
+def make_option_parser():
+    """Build an OptionParser, for printing a usage message or parsing the
+    command line.
     """
     parser = optparse.OptionParser()
 
@@ -159,7 +165,16 @@ def parse_options():
     add('--password', help='Password for Bugzilla account.')
     add('--http_username', help='Optional username for HTTP authentication.')
     add('--http_password', help='Optional password for HTTP authentication.')
+    add('--format', help='Output format; one of "json", "shell", or "pretty"',
+        default='pretty', choices=('json', 'shell', 'pretty'))
 
+    return parser
+
+
+def parse_options():
+    """Parse command-line arguments, printing a usage message on failure.
+    """
+    parser = make_option_parser()
     opts, args = parser.parse_args()
     if not opts.http_username:
         opts.http_username = opts.username
@@ -172,17 +187,16 @@ def usage(msg=None):
     """Print a program usage message, optionally appending `msg` as an error
     message.
     """
-    prog = sys.argv[0]
-    print 'Usage: %s [options] <action> [args...]' % prog
+    parser = make_option_parser()
+    parser.usage = '%prog [options] <action> [args...]'
+    parser.print_help()
+
+    print
     print 'An argument is a single key=value pair.'
     print
     print 'Example:'
-    print '     %s save_overlay overlay_shared=true overlay_name=test' % prog
-    print
-    print 'Options:'
-    print '     --url       URL to Bugzilla xmlrpc.cgi.'
-    print '     --username  Bugzilla username.'
-    print '     --password  Bugzilla password.'
+    print '     %s save_overlay overlay_shared=true overlay_name=test' %\
+        sys.argv[0]
     print
     print '<action> is one of:'
     print
@@ -276,8 +290,12 @@ def main():
         print
         return 1
 
-    formatter = API[action].get('formatter', pprint.pprint)
-    formatter(result)
+    if options.format == 'pretty':
+        pretty_format(sys.stdout, action, result)
+    elif options.format == 'json':
+        json_format(sys.stdout, action, result)
+    elif options.format == 'shell':
+        shell_format(sys.stdout, action, result)
 
 if __name__ == '__main__':
     main()
