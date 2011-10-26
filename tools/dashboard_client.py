@@ -7,8 +7,47 @@ Simplistic client for talking to BAYOT Dashboard via XML-RPC.
 import commands
 import optparse
 import sys
+import urlparse
 import xmlrpclib
 import pprint
+
+
+class HttpAuthMixin(object):
+    """Mix-in class that provides HTTP Authorization header for
+    xmlrpclib.Transport or xmlrpclib.SafeTransport. This is required since
+    urllib fails to properly parse credentials embedded in the URL in 2 cases:
+        * If the password contains a slash.
+        * If a proxy is configured (it passes the full URL through to the
+          proxy, rather than synthesizing an Authorization: header).
+    """
+    _use_datetime = False
+    USERNAME = None
+    PASSWORD = None
+
+    def send_request(self, connection, handler, request_body):
+        connection.putrequest("POST", handler)
+        if not (self.USERNAME and self.PASSWORD):
+            return
+
+        s = ('%s:%s' % (self.USERNAME, self.PASSWORD)).encode('base64').strip()
+        connection.putheader('Authorization', 'Basic %s' % s)
+
+
+def make_transport(url, username, password):
+    """Return an xmlrpclib Transport instance suitable for communicating with
+    `url`.
+    """
+    parsed = urlparse.urlparse(url)
+    if parsed.scheme == 'https':
+        base = xmlrpclib.SafeTransport
+    else:
+        base = xmlrpc.Transport
+
+    klass = type('Transport', (HttpAuthMixin, base), dict(
+        USERNAME=username,
+        PASSWORD=password
+    ))
+    return klass()
 
 
 def escape(s):
@@ -110,12 +149,23 @@ def parse_options():
     """
     parser = optparse.OptionParser()
 
-    parser.add_option('--url',
-        default='http://localhost:8011/xmlrpc.cgi')
-    parser.add_option('--username')
-    parser.add_option('--password')
+    def add(opt, help, default=None, **kwargs):
+        help += ' (default: %r)' % default
+        parser.add_option(opt, help=help, default=default, **kwargs)
 
-    return parser.parse_args()
+    add('--url', default='http://localhost:8011/xmlrpc.cgi',
+        help='URL to Bugzilla xmlrpc.cgi.')
+    add('--username', help='Username for Bugzilla account.')
+    add('--password', help='Password for Bugzilla account.')
+    add('--http_username', help='Optional username for HTTP authentication.')
+    add('--http_password', help='Optional password for HTTP authentication.')
+
+    opts, args = parser.parse_args()
+    if not opts.http_username:
+        opts.http_username = opts.username
+    if not opts.http_password:
+        opts.http_password = opts.password
+    return opts, args
 
 
 def usage(msg=None):
@@ -201,7 +251,11 @@ def main():
     """Main program implementation.
     """
     options, args = parse_options()
-    server = xmlrpclib.ServerProxy(options.url)
+
+    transport = make_transport(options.url,
+        options.http_username,
+        options.http_password)
+    server = xmlrpclib.ServerProxy(options.url, transport=transport)
 
     if len(args) < 1:
         usage('Must specify action')
