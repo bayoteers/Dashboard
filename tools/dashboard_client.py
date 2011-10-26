@@ -91,6 +91,7 @@ def json_format(out, name, obj):
 
 WIDGET_FIELDS = [
     ('col', int, None, False),
+    ('color', unicode, None, False),
     ('collapsible', bool, True, False),
     ('controls', bool, True, False),
     ('editable', bool, True, False),
@@ -104,9 +105,9 @@ WIDGET_FIELDS = [
     ('refresh', int, None, False),
     ('removable', bool, True, False),
     ('resizable', bool, True, False),
-    ('title', str, None, False),
-    ('type', str, None, False),
-    ('URL', str, None, False),
+    ('title', unicode, None, False),
+    ('type', unicode, None, False),
+    ('URL', unicode, None, False),
 ]
 
 API = {
@@ -115,21 +116,21 @@ API = {
     'delete_column': {},
     'load_overlay': {
         'params': [
-            ('overlay_user_id', int, None, True),
-            ('overlay_id', int, None, True)
+            ('user_id', int, None, True),
+            ('id', int, None, True)
         ]
     },
     'save_overlay': {
         'params': [
-            ('overlay_shared', bool, True, False),
-            ('overlay_name', unicode, None, True),
-            ('overlay_description', unicode, None, True)
+            ('shared', bool, True, False),
+            ('name', unicode, None, True),
+            ('description', unicode, None, False)
         ]
     },
     'publish_overlay': {
         'params': [
-            ('overlay_user_id', int, None, True),
-            ('overlay_id', int, None, True)
+            ('user_id', int, None, True),
+            ('id', int, None, True)
         ]
     },
     'new_widget': {
@@ -140,8 +141,8 @@ API = {
     },
     'delete_overlay': {
         'params': [
-            ('overlay_user_id', int, None, True),
-            ('overlay_id', int, None, True)
+            ('user_id', int, None, True),
+            ('id', int, None, True)
         ]
     },
     'get_overlays': {
@@ -202,7 +203,7 @@ def usage(msg=None):
     print
     print '<action> is one of:'
     print
-    for name, spec in API.iteritems():
+    for name, spec in sorted(API.iteritems()):
         print '  %s:' % name
         params = spec.get('params', [])
         if params:

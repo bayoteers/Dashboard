@@ -90,12 +90,13 @@ our @EXPORT_OK = qw(
     clear_user_workspace
     dir_glob
     get_overlay_dir
+    get_shared_overlay_dir
     get_user_dir
     get_user_overlay_dir
+    get_user_overlays
     get_user_prefs
     get_user_widget
     get_user_widgets
-    get_user_overlays
     get_widget_path
     is_valid_widget_type
     load_user_overlay

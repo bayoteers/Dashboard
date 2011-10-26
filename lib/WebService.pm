@@ -28,7 +28,7 @@ use Storable;
 
 use File::Basename;
 use File::Copy;
-use File::Path qw(remove_tree);
+use File::Path qw(make_path remove_tree);
 use File::Spec;
 use List::Util;
 
@@ -40,14 +40,15 @@ use Bugzilla::Extension::Dashboard::Util qw(
     clear_user_workspace
     dir_glob
     get_overlay_dir
+    get_shared_overlay_dir
     get_user_dir
     get_user_overlay_dir
     get_user_overlays
     get_user_prefs
     get_user_widgets
     get_widget_path
-    load_user_overlay
     is_valid_widget_type
+    load_user_overlay
     scrub_string
     set_user_prefs
     set_user_widgets
@@ -83,9 +84,15 @@ my $WIDGET_FIELD_DEFS = {
     resizable => { type => 'bool', default => 1, required => 1 },
     resized => { type => 'bool' },
     title => { type => 'text', required => 1 },
-    type => { type => 'text', required => 1 },
+    type => { type => 'text', required => 1, choices => [ WIDGET_TYPES ]},
     URL => { type => 'text' },
     username => { type => 'text' },
+};
+
+my $OVERLAY_FIELD_DEFS = {
+    description => { type => 'text', required => 1, default => '' },
+    name => { type => 'text', required => 1 },
+    shared => { type => 'bool', default => 0, required => 1 },
 };
 
 my $TYPE_CONVERTER_MAP = {
@@ -96,12 +103,12 @@ my $TYPE_CONVERTER_MAP = {
 };
 
 
-sub _widget_from_params {
-    my ($params, $check_required) = @_;
-    my $widget;
+sub _fields_from_params {
+    my ($defs, $params) = @_;
+    my $fields;
 
     while(my ($field, $value) = each(%$params)) {
-        my $def = $WIDGET_FIELD_DEFS->{$field};
+        my $def = $defs->{$field};
 
         if($field =~ /^Bugzilla_/) {
             # Skip authentication fields; appears to only be required on older
@@ -112,28 +119,28 @@ sub _widget_from_params {
         }
 
         my $converter = $TYPE_CONVERTER_MAP->{$def->{type}};
-        $widget->{$field} = &$converter($value);
+        $fields->{$field} = &$converter($value);
     }
 
-    if(defined($widget->{type})
-       && !is_valid_widget_type($widget->{type})) {
-        die 'Invalid widget type: ' . $widget->{type};
-    }
-
-    return $widget;
+    return $fields;
 }
 
 
-sub check_required_fields {
-    my ($widget) = @_;
+sub _validate_fields {
+    my ($defs, $fields, $check_required) = @_;
 
-    while(my ($field, $def) = each(%$WIDGET_FIELD_DEFS)) {
-        if(defined($widget->{$field}) || !$def->{required}) {
-            next;
-        } elsif($def->{default}) {
-            $widget->{$field} = $def->{default};
-        } else {
+    while(my ($field, $def) = each(%$defs)) {
+        my $value = $fields->{$field};
+
+        if(defined($def->{default}) && !defined($value)) {
+            $fields->{$field} = $def->{default};
+        } elsif($def->{required} && $check_required && !defined($value)) {
             die 'Missing required field: ' . $field;
+        } elsif($def->{choices} && defined($value)
+                && !grep($_ eq $value, @{$def->{choices}})) {
+            my $choices = join(', ', @{$def->{choices}});
+            die "Field $field invalid value '$value'; ".
+                "must be one of $choices";
         }
     }
 }
@@ -156,8 +163,8 @@ sub new_widget {
         ThrowUserError('dashboard_max_widgets');
     }
 
-    my $widget = _widget_from_params($params);
-    check_required_fields($widget);
+    my $widget = _fields_from_params($WIDGET_FIELD_DEFS, $params);
+    _validate_fields($WIDGET_FIELD_DEFS, $widget, 1);
 
     # Force the widget to be resized on load.
     $widget->{resized} = 1;
@@ -179,7 +186,8 @@ sub save_widget {
         ThrowUserError('dashboard_illegal_id');
     }
 
-    my $updates = _widget_from_params($params);
+    my $updates = _fields_from_params($WIDGET_FIELD_DEFS, $params);
+    _validate_fields($WIDGET_FIELD_DEFS, $updates, 0);
 
     my $widget  = retrieve($path);
     while(my ($key, $value) = each(%$updates)) {
@@ -220,8 +228,8 @@ sub delete_overlay {
     require_account;
     my ($self, $params) = @_;
 
-    my $user_id = to_int($params->{"overlay_user_id"});
-    my $id      = to_int($params->{"overlay_id"});
+    my $user_id = to_int($params->{"user_id"});
+    my $id      = to_int($params->{"id"});
     my $dir     = get_overlay_dir($user_id, $id);
 
     if (
@@ -254,8 +262,8 @@ sub publish_overlay {
     require_account;
     my ($self, $params) = @_;
 
-    my $id      = to_int($params->{"overlay_id"});
-    my $user_id = to_int($params->{"overlay_user_id"});
+    my $id      = to_int($params->{"id"});
+    my $user_id = to_int($params->{"user_id"});
 
     my $dir = get_overlay_dir($id, $user_id);
     my $overlay = File::Spec->catfile($dir, 'overlay');
@@ -273,35 +281,25 @@ sub save_overlay {
     require_account;
     my ($self, $params) = @_;
 
-    my $overlay = {
-                    owner   => Bugzilla->user->id,
-                    created => time
-                  };
+    my $overlay = _fields_from_params($OVERLAY_FIELD_DEFS, $params);
+    _validate_fields($OVERLAY_FIELD_DEFS, $overlay, 1);
 
-    my $datatargetdir = get_user_overlay_dir();
+    $overlay->{owner} = Bugzilla->user->id;
+    $overlay->{created} = time;
 
-    # true/false fields
-    my @fields = qw(shared);
-    foreach (@fields) {
-        $overlay->{$_} = to_bool($params->{ "overlay_" . $_ });
-    }
-    if ($overlay->{"shared"}) {
-        $datatargetdir = get_shared_overlay_dir();
+    my $dest_dir;
+    if($overlay->{shared}) {
+        $dest_dir = get_shared_overlay_dir();
+    } else {
+        $dest_dir = get_user_overlay_dir();
     }
 
-    # text fields
-    @fields = qw(name description);
-    foreach (@fields) {
-        $overlay->{$_} = scrub_string($params->{ "overlay_" . $_ });
-    }
-
-    my $i = 1;
     my $overlaydir;
     do {
-        $overlaydir = File::Spec->catdir($datatargetdir, $i++);
+        $overlaydir = File::Spec->catdir($dest_dir, ++$overlay->{id});
     } until (!-d $overlaydir);
 
-    File::Path->make_path($overlaydir);
+    make_path($overlaydir);
 
     foreach my $path (dir_glob(get_user_dir(), '*')) {
         if (-f $path) {
@@ -325,20 +323,21 @@ sub save_overlay {
     if ($overlay->{"shared"}
         && !Bugzilla->user->in_group('admin')) {
         store($overlay, $overlaydir . "/overlay.pending");
-        return 'pending';
+        $overlay->{state} = 'pending';
     }
     else {
         store($overlay, $overlaydir . "/overlay");
-        return 'ok';
     }
+
+    return $overlay;
 }
 
 sub load_overlay {
     require_account;
     my ($this, $params) = @_;
 
-    my $user_id = to_int($params->{"overlay_user_id"});
-    my $id      = to_int($params->{"overlay_id"});
+    my $user_id = to_int($params->{"user_id"});
+    my $id      = to_int($params->{"id"});
     my $dir     = get_overlay_dir($user_id, $id);
 
     if(!-d $dir) {
