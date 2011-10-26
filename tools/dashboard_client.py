@@ -41,7 +41,7 @@ def make_transport(url, username, password):
     if parsed.scheme == 'https':
         base = xmlrpclib.SafeTransport
     else:
-        base = xmlrpc.Transport
+        base = xmlrpclib.Transport
 
     klass = type('Transport', (HttpAuthMixin, base), dict(
         USERNAME=username,
