@@ -102,7 +102,12 @@ sub _widget_from_params {
 
     while(my ($field, $value) = each(%$params)) {
         my $def = $WIDGET_FIELD_DEFS->{$field};
-        if(! defined($def)) {
+
+        if($field =~ /^Bugzilla_/) {
+            # Skip authentication fields; appears to only be required on older
+            # versions of Bugzilla.
+            next;
+        } elsif(! defined($def)) {
             die 'Invalid field name: ' . $field;
         }
 
