@@ -4,6 +4,7 @@
 Simplistic client for talking to BAYOT Dashboard via XML-RPC.
 """
 
+import commands
 import json
 import optparse
 import pprint
@@ -53,6 +54,7 @@ def make_transport(url, username, password):
 def escape(s):
     """Return the string `s` escaped for use on a shell command line.
     """
+    return commands.mkarg(s).strip()
 
 
 def shell_format(out, name, obj):
