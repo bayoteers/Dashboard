@@ -310,7 +310,8 @@ sub get_user_widget {
 
 sub to_bool {
     my ($s) = @_;
-    return (($s || '') eq 'true') ? 1 : 0;
+    $s ||= '';
+    return int($s eq 'true' || $s == 1);
 }
 
 sub to_color {
