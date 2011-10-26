@@ -35,6 +35,7 @@ use List::Util;
 use Bugzilla::Util;
 use Bugzilla::Error;
 
+use Bugzilla::Extension::Dashboard::Config;
 use Bugzilla::Extension::Dashboard::Util qw(
     clear_user_workspace
     dir_glob
@@ -45,6 +46,7 @@ use Bugzilla::Extension::Dashboard::Util qw(
     get_user_prefs
     get_user_widgets
     get_widget_path
+    load_user_overlay
     is_valid_widget_type
     scrub_string
     set_user_prefs
@@ -53,7 +55,6 @@ use Bugzilla::Extension::Dashboard::Util qw(
     to_color
     to_int
 );
-use Bugzilla::Extension::Dashboard::Config;
 
 
 sub require_account {
@@ -87,6 +88,13 @@ my $WIDGET_FIELD_DEFS = {
     username => { type => 'text' },
 };
 
+my $TYPE_CONVERTER_MAP = {
+    int => \&to_int,
+    bool => \&to_bool,
+    text => \&scrub_string,
+    color => \&to_color
+};
+
 
 sub _widget_from_params {
     my ($params, $check_required) = @_;
@@ -98,30 +106,8 @@ sub _widget_from_params {
             die 'Invalid field name: ' . $field;
         }
 
-        # Integer fields. Each widget MUST have ID, column, row and height.
-        if($def->{type} eq 'int') {
-            $widget->{$field} = to_int($value);
-        } elsif($def->{type} eq 'bool') {
-            $widget->{$field} = to_bool($value);
-        } elsif($def->{type} eq 'text') {
-            $widget->{$field} = scrub_string($value);
-        } elsif($def->{type} eq 'color') {
-            $widget->{color} = to_color($value);
-        } else {
-            die 'Internal error';
-        }
-    }
-
-    if($check_required) {
-        while(my ($field, $def) = each(%$WIDGET_FIELD_DEFS)) {
-            if(defined($widget->{$field}) || !$def->{required}) {
-                next;
-            } elsif($def->{default}) {
-                $widget->{$field} = $def->{default};
-            } else {
-                die 'Missing required field: ' . $field;
-            }
-        }
+        my $converter = $TYPE_CONVERTER_MAP->{$def->{type}};
+        $widget->{$field} = &$converter($value);
     }
 
     if(defined($widget->{type})
@@ -131,6 +117,22 @@ sub _widget_from_params {
 
     return $widget;
 }
+
+
+sub check_required_fields {
+    my ($widget) = @_;
+
+    while(my ($field, $def) = each(%$WIDGET_FIELD_DEFS)) {
+        if(defined($widget->{$field}) || !$def->{required}) {
+            next;
+        } elsif($def->{default}) {
+            $widget->{$field} = $def->{default};
+        } else {
+            die 'Missing required field: ' . $field;
+        }
+    }
+}
+
 
 # create new widget and store all required preferences
 sub new_widget {
@@ -149,7 +151,9 @@ sub new_widget {
         ThrowUserError('dashboard_max_widgets');
     }
 
-    my $widget = _widget_from_params($params, 1);
+    my $widget = _widget_from_params($params);
+    check_required_fields($widget);
+
     # Force the widget to be resized on load.
     $widget->{resized} = 1;
 
