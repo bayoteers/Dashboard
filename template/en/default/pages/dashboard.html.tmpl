@@ -22,6 +22,10 @@
 
 [% USE Bugzilla %]
 
+[% header = BLOCK %]
+    <a href="#" id="dashboard-link">Dashboard</a> <img onclick="ReloadWidgets()" src='extensions/Dashboard/web/css/img/reload.png'>
+[% END %]
+
 [% PROCESS global/header.html.tmpl
     title = "Bugzilla Dashboard" 
     style_urls = ['extensions/Dashboard/web/css/smoothness/jquery-ui-1.8.5.custom.css','extensions/Dashboard/web/css/dashboard.css','extensions/Dashboard/web/css/colorbox.css']
@@ -55,8 +59,6 @@ var browser_quality = 1;
 <div id="ajax_message"></div>
 
 [% active_widgets = 0 %]
-
-<h1 align="center"><a href="#" id="dashboard-link">Dashboard</a> <img onclick="ReloadWidgets()" src='extensions/Dashboard/web/css/img/reload.png'></h1>
 
 <div id="dashboard">
 
