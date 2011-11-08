@@ -91,7 +91,7 @@ my $WIDGET_FIELD_DEFS = {
 
 my $OVERLAY_FIELD_DEFS = {
     description => { type => 'text', required => 1, default => '' },
-    name => { type => 'text', required => 1 },
+    name => { type => 'text', required => 1, min_length => 4 },
     shared => { type => 'bool', default => 0, required => 1 },
 };
 
@@ -132,7 +132,9 @@ sub _validate_fields {
     while(my ($field, $def) = each(%$defs)) {
         my $value = $fields->{$field};
 
-        if(defined($def->{default}) && !defined($value)) {
+        if(defined($def->{min_length}) && length($value) < $def->{min_length}) {
+            die "Field '$field' must be at least ${def->{min_length}} long.";
+        } elsif(defined($def->{default}) && !defined($value)) {
             $fields->{$field} = $def->{default};
         } elsif($def->{required} && $check_required && !defined($value)) {
             die 'Missing required field: ' . $field;
