@@ -35,25 +35,11 @@
   <script type="text/javascript" src="[% dashboard_jquery_path %]"></script>
 [% END %]
 
-<script src="extensions/Dashboard/web/js/Base.js"</script>
+<script src="extensions/Dashboard/web/js/Base.js"></script>
 <script src="extensions/Dashboard/web/js/jquery-ui-1.8.5.custom.min.js"></script>
 <script src="extensions/Dashboard/web/js/jquery.colorbox-min.js"></script>
 <script src="extensions/Dashboard/web/js/jquery.jfeed.js"></script>
-<script src="extensions/Dashboard/web/js/jquery.jsonrpc.js"</script>
-
-<script>
-var browser_quality = 1;
-[% IF Bugzilla.params.dashboard_browsers_warn %]
-	if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_warn %]/)) {
-		browser_quality = 0;
-	}
-[% END %]
-[% IF Bugzilla.params.dashboard_browsers_block %]
-	if (navigator.userAgent.match(/[% Bugzilla.params.dashboard_browsers_block %]/)) {
-		browser_quality = -1;
-	}
-[% END %]
-</script>
+<script src="extensions/Dashboard/web/js/jquery.jsonrpc.js"></script>
 
 <!--[if IE 7 ]><div id="ie7"><![endif]-->
 <!--[if IE 8 ]><div id="ie8"><![endif]-->
@@ -145,45 +131,20 @@ var browser_quality = 1;
 	</div>
 </div>
 
-<script>
-	var warning = false;
-	if (browser_quality==0)
-	{
-		warning = '<p style="color:red">Your current web browser is not compliant with the Dashboard, please use Firefox instead, thank you.</p>';
-		$('#dashboard_notify').append(warning);
-	}
-	if (browser_quality<0) {
-		$('#dashboard').html('<h2 style="text-align:center">Your current web browser is not currently supported to access the Dashboard, please use Firefox instead, thank you.</h2>');
-	}
-	else {
-		$('#dashboard-link').colorbox({width:"384px", inline:true, href:".dashboard-main"});
-		[% IF active_widgets==0 %]
-			$(document).ready(function(){
-				$.colorbox({width:"384px", inline:true, href:".dashboard-main"});
-			});
-		[% ELSE %]
-			if (warning) {
-				$(document).ready(function(){
-					$.colorbox({width:"384px", inline:true, href:".dashboard-main"});
-				});
-			}
-		[% END %]
-	}
-</script>
-
 [% IF widget_error %]
   <script>
     alert("[% widget_error | replace('\"','\\"') %]");
   </script>
 [% END %]
 
+[% INCLUDE "pages/dashboard_js_templates.html.tmpl" %]
+
 <script>
 var DASHBOARD_CONFIG = [% dashboard_config || 'null' %];
 </script>
-<script type="text/javascript" src="extensions/Dashboard/web/js/dashboard.js"></script>
+<script src="extensions/Dashboard/web/js/dashboard.js"></script>
 
 <!--[if IE 7 ]></div><![endif]-->
 <!--[if IE 8 ]></div><![endif]-->
 
-[% INCLUDE "pages/dashboard_js_templates.html.tmpl" %]
 [% PROCESS global/footer.html.tmpl %]

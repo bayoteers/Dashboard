@@ -8,6 +8,47 @@
  *   Allan Savolainen <ext-jari.a.savolainen@nokia.com>
  */
 
+
+/**
+ * Clone a template.
+ */
+function cloneTemplate(sel)
+{
+    var cloned = $(sel).clone();
+    cloned.removeAttr('id');
+    return cloned;
+}
+
+
+/**
+ * Replace DOM element's children with the loading animation.
+ */
+function setContent(elem, content)
+{
+    elem = $(elem);
+    elem.children().remove();
+    elem.append(content);
+}
+
+
+(function()
+{
+    var warn = DASHBOARD_CONFIG.browsers_warn;
+    var block = DASHBOARD_CONFIG.browsers_block;
+
+    if(warn && navigator.userAgent.match(RegExp(warn))) {
+        var template = cloneTemplate('#browser_warning_template');
+        setContent('#dashboard_notify', template);
+        throw "";
+    } else if(block && navigator.userAgent.match(RegExp(block))) {
+        template = cloneTemplate('#browser_block_template');
+        alert(template[0]);
+        setContent('#dashboard', template);
+        throw "";
+    }
+})();
+
+
 var Dashboard_folder = 'extensions/Dashboard/web/';
 
 var Dashboard = {
