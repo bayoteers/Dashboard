@@ -35,10 +35,12 @@ use Bugzilla::Extension::Dashboard::Util qw(
     cgi_no_cache
     dir_glob
     load_user_overlay
+    get_user_prefs
 );
 
 # For input sanitization
 use HTML::Scrubber;
+use JSON::PP;
 
 # For serialization
 use Storable;
@@ -289,7 +291,12 @@ sub page_before_template {
     my ($vars, $page) = @$args{qw(vars page_id)};
 
     if ($page =~ /^dashboard(_ajax|_overlay|_rss)?\.html$/) {
-
+        $vars->{dashboard_config} = encode_json {
+            user_login => Bugzilla->user->login,
+            preferences => get_user_prefs,
+            browsers_warn  => Bugzilla->params->{"dashboard_browsers_warn"},
+            browsers_block => Bugzilla->params->{"dashboard_browsers_block"}
+        };
         my $user_id = Bugzilla->user->id;
 
         if (Bugzilla->params->{"dashboard_jquery_path"}) {
