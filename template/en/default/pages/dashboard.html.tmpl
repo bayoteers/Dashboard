@@ -16,6 +16,7 @@
   # Canonical Ltd. All Rights Reserved.
   #
   # Contributor(s): 
+  #   David Wilson <ext-david.3.wilson@nokia.com>
   #   Stephen Jayna <ext-stephen.jayna@nokia.com>
   #   Allan Savolainen <ext-jari.a.savolainen@nokia.com>
   #%]
@@ -31,92 +32,159 @@
     style_urls = ['extensions/Dashboard/web/css/smoothness/jquery-ui-1.8.5.custom.css','extensions/Dashboard/web/css/dashboard.css','extensions/Dashboard/web/css/colorbox.css']
 %]
 
+<div id="ajax_message"></div>
+
+<div id="dashboard">
+    <div id="columns">
+        <ul id="column-1" class="column">
+        </ul>
+
+        <br clear="both">
+    </div>
+</div>
+
+<br clear="both">
+
+<div style="display: none;"> <!-- hide templates -->
+    <div align="center" id="loader_template">
+        <img class="loader"
+            src="extensions/Dashboard/web/css/img/ajax-loader.gif">
+    </div>
+
+    <div id="browser_warning_template">
+        <p style="color: red">
+        Your web browser is not fully tested with the Dashboard, please use
+        Firefox if you experience problems.
+        </p>
+    </div>
+
+    <div id="browser_block_template">
+        <h2 style="text-align: center">Your web browser is not compatible with
+        Dasboard; please use Firefox instead.</h2>
+    </div>
+
+    <li id="widget_template" class="widget">
+        <div class="widget-head">
+            <a href="#" class="maximize">MAXIMIZE</a>
+            <a href="#" class="collapse">COLLAPSE</a>
+            <h3 class="widget-title"></h3>
+            <a href="#" class="remove">REMOVE</a>
+            <a href="#" class="refresh">REFRESH</a>
+            <a href="#" class="edit">EDIT</a>
+        </div>
+        <ul class="edit-box" style="display: none">
+            <li class="item">
+                <label>Change the title?</label>
+                <input class="field-title">
+            </li>
+            <li class="item">
+                <label>Available colors:</label>
+                <ul class="colors"></ul>
+            </li>
+        </ul>
+        <div class="widget-content">
+            <div class="widget_inner">
+            </div>
+        </div>
+    </li>
+
+    <div id="base_widget_settings_template">
+        <li class="item">
+            <label>Reload:</label>
+            <select name="field-refresh">
+                <option value="0">no refresh</option>
+                <option value="15">every 15 seconds</option>
+                <option value="60">every minute</option>
+                <option value="300">every 5 minutes</option>
+                <option value="900">every 15 minutes</option>
+                <option value="1800">every 30 minutes</option>
+            </select>
+        </li>
+    </div>
+
+    <div id="url_widget_template">
+        <iframe class="widget_iframe" frameborder="0" scrolling="auto"></iframe>
+    </div>
+
+    <div id="url_widget_settings_template">
+        <li class="item">
+            <label>URL:</label>
+            <input class="field-URL">
+        </li>
+
+        <li class="item">
+            <label>Load:</label>
+            <input type="button" class="field-load-url" value="Load URL">
+        </li>
+    </div>
+
+    <div id="mybugs_widget_settings_template">
+    </div>
+
+    <div id="mybugs_widget_template" class="rss">
+        <h2><a></a></h2>
+    </div>
+
+    <div id="mybugs_item_template">
+        <div class="rss_title">
+            <a title="open in popup" class="open_popup"></a>
+            <a title="open link" class="open_link"></a>
+            <h3></h3>
+        </div>
+        <div class="updated">
+            <p>
+            Updated: <span class="updated-text"></span>
+            </p>
+        </div>
+        <div class="description-text">
+        </div>
+    </div>
+
+    <div id="xeyes_widget_template"
+            style="width: 1px; height: 1px; position: relative;">
+        <img id="_eye_l_b" src="extensions/Dashboard/web/xeyes/img/circle_black.gif">
+        <img id="_eye_r_b" src="extensions/Dashboard/web/xeyes/img/circle_black.gif">
+        <img id="_eye_l_w" src="extensions/Dashboard/web/xeyes/img/circle_white.gif">
+        <img id="_eye_r_w" src="extensions/Dashboard/web/xeyes/img/circle_white.gif">
+        <img id="_eye_l_p" src="extensions/Dashboard/web/xeyes/img/circle_black.gif">
+        <img id="_eye_r_p" src="extensions/Dashboard/web/xeyes/img/circle_black.gif">
+    </div>
+
+    <div id="rss_widget_error">
+        <p class="error">
+        Feed returned error: <span class="error-text"></span>
+        </p>
+    </div>
+
+    <div id="dashboard" class="dashboard-main">
+        <h3>Dashboard</h3>
+        <ul id="widget-buttons">
+            <li id="button-overlay"><a id="openOverlayButton">Open overlay</a></li>
+            <li id="button-add-column"><a id="addColumnButton">Add column</a></li>
+            <li id="button-save-widgets"><a id="savePrefsButton">Save prefs</a></li>
+            <li id="button-del-column"><a id="deleteColumnButton">Delete column</a></li>
+        </ul>
+        <div class="widget-divider"></div>
+        <ul id="widget-buttons">
+            <li id="button-new-widget"><a id="newUrlButton">New URL</a></li>
+            <li id="button-new-widget"><a id="newMyBugsButton">New My Bugs</a></li>
+            <li id="button-new-rss"><a id="newRssButton">New RSS</a></li>
+            <li id="button-new-xeyes"><a id="newXeyesButton">New Xeyes</a></li>
+        </ul>
+        <div class="widget-divider"></div>
+        <p id="dashboard_notify">Welcome to Dashboard!</p>
+    </div>
+</div> <!-- /hide templates -->
+
+<script>
+var DASHBOARD_CONFIG = [% dashboard_config || 'null' %];
+</script>
 <script src="extensions/Dashboard/web/js/Base.js"></script>
 <script src="extensions/Dashboard/web/js/jquery-1.7.min.js"></script>
 <script src="extensions/Dashboard/web/js/jquery-ui-1.8.5.custom.min.js"></script>
 <script src="extensions/Dashboard/web/js/jquery.colorbox-min.js"></script>
 <script src="extensions/Dashboard/web/js/jquery.jfeed.js"></script>
 <script src="extensions/Dashboard/web/js/jquery.jsonrpc.js"></script>
-
-<div id="ajax_message"></div>
-
-[% active_widgets = 0 %]
-
-<div id="dashboard">
-
-  <div id="columns">
-
-    <ul id="column-1" class="column">
-      [% FOREACH widget IN top_column %]
-      	[% IF widget.id && widget.id > 0 %]
-	      	[% active_widgets = active_widgets + 1 %]
-      	  <li class="widget color-[% widget.color %]" id="widget[% widget.id %]">
-      	    <div class="widget-head">
-      	      <h3>[% widget.title %]</h3>
-      	    </div>
-      	    <div class="widget-content">
-      	      <div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>
-      	    </div>
-       	  </li>
-      	[% END %]
-      [% END %]
-    </ul>
-  
-  <br clear="both"> 
-  
-    <ul id="column0" class="column" style="width:[% column.shift %]%">
-      [% cur_column = columns.shift %]
-      [% FOREACH widget IN cur_column %]
-      	[% IF widget.id && widget.id > 0 %]
-	      	[% active_widgets = active_widgets + 1 %]
-      	  <li class="widget color-[% widget.color %]" id="widget[% widget.id %]">
-      	    <div class="widget-head">
-      	      <h3>[% widget.title %]</h3>
-      	    </div>
-      	    <div class="widget-content">
-      	      <div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>
-      	    </div>
-       	  </li>
-      	[% END %]
-      [% END %]
-    </ul>
-    
-    [% FOREACH i IN [1 .. preferences.columns] %]
-      [% cur_column = columns.shift %]
-      <ul id="column[% i %]" class="column" style="width:[% column.shift %]%">
-        [% FOREACH widget IN cur_column %]
-          [% IF widget.id && widget.id > 0 %]
-	      	[% active_widgets = active_widgets + 1 %]
-            <li class="widget color-[% widget.color %]" id="widget[% widget.id %]">
-              <div class="widget-head">
-                <h3>[% widget.title %]</h3>
-              </div>
-              <div class="widget-content">
-                <div align='center'><img class='loader' src='extensions/Dashboard/web/css/img/ajax-loader.gif'></div>
-              </div>
-            </li>
-          [% END %]
-        [% END %]
-      </ul>
-    [% END %]
-  </div>
-</div>
-
-<br clear="both"><br>
-
-[% IF widget_error %]
-  <script>
-    alert("[% widget_error | replace('\"','\\"') %]");
-  </script>
-[% END %]
-
-<div style="display: none"> <!-- hide templates -->
-[% INCLUDE "pages/dashboard_js_templates.html.tmpl" %]
-</div> <!-- /hide templates -->
-
-<script>
-var DASHBOARD_CONFIG = [% dashboard_config || 'null' %];
-</script>
 <script src="extensions/Dashboard/web/js/dashboard.js"></script>
 
 [% PROCESS global/footer.html.tmpl %]
