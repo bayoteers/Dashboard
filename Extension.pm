@@ -37,6 +37,7 @@ use Bugzilla::Extension::Dashboard::Util qw(
     load_user_overlay
     get_user_prefs
 );
+use Bugzilla::Extension::Dashboard::WebService;
 
 # For input sanitization
 use HTML::Scrubber;
@@ -293,9 +294,11 @@ sub page_before_template {
     if ($page =~ /^dashboard(_ajax|_overlay|_rss)?\.html$/) {
         $vars->{dashboard_config} = encode_json {
             user_login => Bugzilla->user->login,
+            is_admin => Bugzilla->user->in_group('admin'),
             preferences => get_user_prefs,
-            browsers_warn  => Bugzilla->params->{"dashboard_browsers_warn"},
-            browsers_block => Bugzilla->params->{"dashboard_browsers_block"}
+            browsers_warn => Bugzilla->params->{"dashboard_browsers_warn"},
+            browsers_block => Bugzilla->params->{"dashboard_browsers_block"},
+            overlays => Bugzilla::Extension::Dashboard::WebService::get_overlays()
         };
         my $user_id = Bugzilla->user->id;
 
