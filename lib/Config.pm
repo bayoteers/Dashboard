@@ -57,7 +57,7 @@ sub get_param_list {
                          name => 'dashboard_jquery_path',
                          desc => 'Path to JQuery, empty if Bugzilla already uses JQuery',
                          type => 't',
-                         default => 'extensions/Dashboard/web/js/jquery-1.4.2.min.js',
+                         default => 'extensions/Dashboard/web/js/jquery-1.7.min.js',
                       },
                       {
                          name => 'dashboard_browsers_warn',
