@@ -1,15 +1,26 @@
-/*
+/**
+ * The contents of this file are subject to the Mozilla Public
+ * License Version 1.1 (the "License"); you may not use this file
+ * except in compliance with the License. You may obtain a copy of
+ * the License at http://www.mozilla.org/MPL/
+ *
+ * Software distributed under the License is distributed on an "AS
+ * IS" basis, WITHOUT WARRANTY OF ANY KIND, either express or
+ * implied. See the License for the specific language governing
+ * rights and limitations under the License.
+ *
+ * The Original Code is the Unified Dashboard Bugzilla Extension.
+ *
+ * The Initial Developer of the Original Code is "Nokia Corporation"
+ * Portions created by the Initial Developer are Copyright (C) 2011 the
+ * Initial Developer. All Rights Reserved.
+ *
+ * Contributor(s):
+ *      David Wilson <ext-david.3.wilson@nokia.com>
+ *      Jari Savolainen <ext-jari.a.savolainen@nokia.com>
+ *
  * @requires jQuery($), jQuery UI & sortable/draggable UI modules
  */
-
-
-/**
- * Fetch a jQuery selector's width in percent.
- */
-function widthPct(sel)
-{
-    return parseInt($(sel).css('width'));
-}
 
 
 /**
@@ -32,7 +43,7 @@ function cloneTemplate(sel)
  * Make a GET URL from a dictionary of parametrrs.
  *
  * @param path
- *      Base URL or script path (e.g. "buglist.cgi").
+ *      Base URL (e.g. "buglist.cgi").
  * @param params
  *      Object whose property names and values become URL parameters.
  *      List-valued properties are repeated in the query string
@@ -50,43 +61,18 @@ function makeUrl(path, params)
 
 
 /**
- * Replace DOM element's children with the loading animation.
+ * RPC object. Wraps the parameters of a Bugzilla RPC up along with callbacks
+ * indicating completion state.
  */
-function setContent(elem, content)
-{
-    elem = $(elem);
-    elem.children().remove();
-    elem.append(content);
-}
-
-
-/**
- * Set the visibility of some jQuery selector (helper wrapper around
- * .show()/.hide()).
- *
- * @param sel
- *      jQuery object, selector, or DOM element.
- */
-function setVisible(sel, visible)
-{
-    if(visible) {
-        $(sel).show();
-    } else {
-        $(sel).hide();
-    }
-}
-
-
-/**
- * Return true if the given element is currently visible.
- */
-function isVisible(jq)
-{
-    return $(jq).css('display') !== 'none';
-}
-
-
 var Rpc = Base.extend({
+    /**
+     * Create an instance.
+     *
+     * @param method
+     *      Method name.
+     * @param params
+     *      Object containing method parameters.
+     */
     constructor: function(method, params)
     {
         this.method = method;
@@ -108,6 +94,9 @@ var Rpc = Base.extend({
         this._start();
     },
 
+    /**
+     * Start the RPC.
+     */
     _start: function()
     {
         $.jsonRPC.setup({
@@ -122,33 +111,65 @@ var Rpc = Base.extend({
         });
     },
 
+    /**
+     * Fired on success; records the RPC result and fires any callbacks.
+     */
     _onSuccess: function(response)
     {
-        this.response = response;
+        this.response = response.result;
         this.doneCb.fire(response.result);
     },
 
-    _onError: function(error)
+    /**
+     * Fired on failure; records the error and fires any callbacks.
+     */
+    _onError: function(response)
     {
-        this.error = error;
-        this.failCb.fire(error);
+        this.error = response.error;
+        if(typeof console !== 'undefined') {
+            console.log('jsonRPC error: %o', this.error);
+        }
+        this.failCb.fire(response.error);
     }
 });
 
 
 /**
- * Widget base class. Responsible for 
+ * Base widget. To keep things simple, currently combines state and visual
+ * rendering. Manages constructing a widget's DOM, cloning any templates,
+ * refresh timer, and rendering the widget's settings.
+ *
+ * The default render() prepopulates the widget's element with a
+ * "#<type>_widget_template" template, if one exists. The default
+ * renderSettings() prepopulates "#<type>_widget_settings_template". Both
+ * templates are expected to be defined in dashboard.html.tmpl. Subclasses are
+ * expected to at least override render() and provide some behaviours for these
+ * templates.
  */
 var Widget = Base.extend({
+    /**
+     * Create an instance.
+     *
+     * @param dashboard
+     *      Dashboard object.
+     * @param state
+     *      Initial widget state.
+     */
     constructor: function(dashboard, state)
     {
         // Shorthand.
         this._dashboard = dashboard;
         this.TYPE = this.constructor.TYPE;
 
+        // "outer" element; contains the title bar, controls, the settings box,
+        // and the widget content area.
         this.element = null;
-        this.innerElement = null;
+        // "content" element; contains the inner element (from the original
+        // design, not sure why this exists).
         this.contentElement = null;
+        // "inner" element; contains the actual widget content.
+        this.innerElement = null;
+
         this.refreshIntervalId = null;
 
         this.render();
@@ -180,6 +201,11 @@ var Widget = Base.extend({
         this.innerElement.append(cloneTemplate(sel));
     },
 
+    /**
+     * Override in subclass. Called when the widget's height or width changes.
+     * The default implementation just adjuests the inner element's height to
+     * match.
+     */
     _onResize: function() {
         this.innerElement.height(this.element.height());
     },
@@ -193,7 +219,7 @@ var Widget = Base.extend({
 
     /**
      * Extend in subclass; default implementation just appends the default
-     * refresh interval options.
+     * name, title, color, and refresh interval options.
      */
     renderSettings: function()
     {
@@ -242,9 +268,7 @@ var Widget = Base.extend({
         elem.css('position', '');
 
         $('.widget').not(this.element).hide();
-        if(! isVisible(elem)) {
-            elem.show();
-        }
+        elem.show();
 
         var windowY = $(window).height() - 10;
         elem.height(windowY);
@@ -256,8 +280,7 @@ var Widget = Base.extend({
      */
     updateState: function(state)
     {
-        var newState = $.extend({}, this.state, state);
-        this.setState(state);
+        this.setState($.extend({}, this.state, state));
     },
 
     /**
@@ -269,12 +292,12 @@ var Widget = Base.extend({
         state = $.extend({}, Widget.DEFAULT_STATE, state);
         this.state = state;
 
-        setVisible(this._child('.remove'), state.removable);
-        setVisible(this._child('.refresh'), state.refreshable);
-        setVisible(this._child('.collapse'), state.collapsible);
-        setVisible(this._child('.maximize'), state.maximizable);
-        setVisible(this._child('.edit'), state.editable);
-        setVisible(this._child('.widget-content'), !state.collapsed);
+        this._child('.remove').toggle(state.removable);
+        this._child('.refresh').toggle(state.refreshable);
+        this._child('.collapse').toggle(state.collapsible);
+        this._child('.maximize').toggle(state.maximizable);
+        this._child('.edit').toggle(state.editable);
+        this._child('.widget-content').toggle(!state.collapsed);
 
         this._setColor(state.color);
         this._setRefreshSecs(state.refresh);
@@ -303,8 +326,15 @@ var Widget = Base.extend({
         if(oldColor) {
             this.element.removeClass('color-' + oldColor);
         }
+        this.element.data('color', color);
     },
 
+    /**
+     * Arrange for reload() to be called periodically.
+     *
+     * @param secs
+     *      Seconds between reload() calls. If 0, cancels any existing timer.
+     */
     _setRefreshSecs: function(secs)
     {
         clearTimeout(this.refreshIntervalId);
@@ -315,6 +345,14 @@ var Widget = Base.extend({
         }
     },
 
+    /**
+     * Return any matching child elements.
+     *
+     * @param sel
+     *      jQuery selector.
+     * @returns
+     *      jQuery object.
+     */
     _child: function(sel)
     {
         return $(sel, this.element);
@@ -388,6 +426,7 @@ var Widget = Base.extend({
  * URL widget implementation.
  */
 Widget.addClass('url', Widget.extend({
+    // See Widget.renderSettings().
     renderSettings: function()
     {
         this.base();
@@ -401,12 +440,14 @@ Widget.addClass('url', Widget.extend({
         });
     },
 
+    // See Widget._onResize().
     _onResize: function()
     {
         this.base();
         this._child('iframe').height(this.innerElement.innerHeight());
     },
 
+    // See Widget.reload().
     reload: function()
     {
         var iframe = this._child('iframe');
@@ -448,7 +489,7 @@ Widget.addClass('rss', Widget.extend({
 
     reload: function()
     {
-        setContent(this.innerElement, cloneTemplate('#loader_template'));
+        this.innerElement.html(cloneTemplate('#loader_template'));
         jQuery.getFeed({
             url: this.state.URL,
             error: this._onLoadError.bind(this),
@@ -460,7 +501,7 @@ Widget.addClass('rss', Widget.extend({
     {
         var clone = cloneTemplate('#rss_widget_error');
         $('.error-text', clone).text(error);
-        setContent(this.innerElement, clone);
+        this.innerElement.html(clone);
     },
 
     _onLinkClick: function(openPopup, event)
@@ -527,7 +568,7 @@ Widget.addClass('rss', Widget.extend({
             template.append(this._formatItem(feed.items[i]));
         }
 
-        setContent(this.innerElement, template);
+        this.innerElement.html(template);
         this.innerElement.trigger('vertical_resize');
     }
 }));
@@ -542,7 +583,7 @@ Widget.addClass('mybugs', Widget.extend({
         return makeUrl('buglist.cgi', {
             bug_status: ['NEW', 'ASSIGNED', 'NEED_INFO', 'REOPENED', 'WAITING',
                 'RESOLVED', 'RELEASED'],
-            email1: this._dashboard.login(),
+            email1: this._dashboard.login,
             emailassigned_to1: 1,
             email_reporter1: 1,
             emailtype1: 'exact',
@@ -552,7 +593,7 @@ Widget.addClass('mybugs', Widget.extend({
             'type0-0-0': 'notequals',
             'type0-0-1': 'equals',
             'value0-0-0': 'UNCONFIRMED',
-            'value0-0-1': this._dashboard.login(),
+            'value0-0-1': this._dashboard.login,
             title: 'Bug List',
             ctype: 'atom'
         });
@@ -596,7 +637,6 @@ var Dashboard = Base.extend({
      */
     constructor: function(config)
     {
-        this.config = config
         this.stateChangeCb = new jQuery.Callbacks();
         this.columnsChangeCb = new jQuery.Callbacks();
         this.widgetAddedCb = new jQuery.Callbacks();
@@ -611,6 +651,11 @@ var Dashboard = Base.extend({
         // Columns existing in thte user's workspace; always reflects the state
         // of backend store.
         this.columns = [];
+
+        // String user's login name.
+        this.login = config.user_login;
+        // Bool is user an admin.
+        this.isAdmin = config.is_admin;
     },
 
     /**
@@ -662,55 +707,20 @@ var Dashboard = Base.extend({
     },
 
     /**
-     * Return the user's Bugzilla login name.
-     */
-    login: function()
-    {
-        return this.config.user_login;
-    },
-
-    /**
-     * Return true if user is an administrator.
-     */
-    isAdmin: function()
-    {
-        return this.config.is_admin;
-    },
-
-    /**
      * Start an RPC to the Dashboard web service.
      *
      * @param method
      *      Method name.
      * @param params
      *      Object containing key/value pairs to send to method.
-     * @param cb
-     *      Optional callback to invoke with RPC result on completion.
      * @returns
      *      RPC object.
      */
     rpc: function(method, params, cb)
     {
         var rpc = new Rpc(method, params);
-        rpc.fail(this._onRpcFail.bind(this));
-        if(cb) {
-            rpc.done(cb);
-        }
+        rpc.fail(this.notifyCb.fire.bind(this.notifyCb));
         return rpc;
-    },
-
-    /**
-     * Handle RPC failure by reporting the error.
-     *
-     * @param error
-     *      RPC error description.
-     */
-    _onRpcFail: function(error)
-    {
-        if(typeof console !== 'undefined') {
-            console.log('jsonRPC error: %o', error);
-        }
-        this.notify(error);
     },
 
     /**
@@ -1115,7 +1125,7 @@ var WidgetView = Base.extend({
         var colId = widget.state.col;
         var col = $('#column' + colId);
         var colWidthPx = col.width();
-        var colWidthPct = widthPct(col);
+        var colWidthPct = parseInt(col.css('width'));
 
         widget.contentElement.css('width', '');
 
@@ -1182,8 +1192,8 @@ var WidgetView = Base.extend({
             var column = this._columns[i];
             var helper = $('.column_helper', column);
 
-            setVisible($('.arrow_left', helper), i != 0);
-            setVisible($('.arrow_right', helper), notLast);
+            $('.arrow_left', helper).toggle(i != 0);
+            $('.arrow_right', helper).toggle(notLast);
 
             var info = this._dashboard.columns[i];
             column.width(info.width + '%');
@@ -1289,7 +1299,7 @@ var OverlayView = Base.extend({
         this._saveSpinner.hide();
         saveButton.after(this._saveSpinner);
 
-        if(this._dashboard.isAdmin()) {
+        if(this._dashboard.isAdmin) {
             // Hide "requires approval labels" for admins.
             $('.requires-admin', this._element).remove();
         } else {
@@ -1347,8 +1357,8 @@ var OverlayView = Base.extend({
         published.children().remove();
         pending.children().remove();
 
-        var login = this._dashboard.login();
-        var isAdmin = this._dashboard.isAdmin();
+        var login = this._dashboard.login;
+        var isAdmin = this._dashboard.isAdmin;
 
         for(var i = 0; i < overlays.length; i++) {
             var overlay = overlays[i];
