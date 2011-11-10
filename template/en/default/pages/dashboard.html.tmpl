@@ -25,12 +25,14 @@
 
 [% header = BLOCK %]
     <a id="settingsLink">Dashboard</a>
-    <img id="reloadButton" src="extensions/Dashboard/web/css/img/reload.png">
+    <a id="reloadLink"><img src="extensions/Dashboard/web/css/img/reload.png"></a>
 [% END %]
 
 [% PROCESS global/header.html.tmpl
-    title = "Bugzilla Dashboard" 
-    style_urls = ['extensions/Dashboard/web/css/smoothness/jquery-ui-1.8.5.custom.css','extensions/Dashboard/web/css/dashboard.css','extensions/Dashboard/web/css/colorbox.css']
+    title = "Bugzilla Dashboard"
+    style_urls = ['extensions/Dashboard/web/css/smoothness/jquery-ui-1.8.5.custom.css',
+                  'extensions/Dashboard/web/css/dashboard.css',
+                  'extensions/Dashboard/web/css/colorbox.css']
 %]
 
 <div id="ajax_message"></div>
@@ -52,6 +54,11 @@
             src="extensions/Dashboard/web/css/img/ajax-loader.gif">
     </div>
 
+    <div id="in_progress_template"
+            style="position: absolute; top: 32px; right: 32px; width: 220px; background: white; padding: 10px;">
+        <img src="extensions/Dashboard/web/css/img/ajax-loader.gif">
+    </div>
+
     <div id="browser_warning_template">
         <p style="color: red">
         Your web browser is not fully tested with the Dashboard, please use
@@ -70,10 +77,13 @@
         </p>
     </div>
 
-    <li id="column_helper_template" class="column_helper">
-        <div class="arrow_right"></div>
-        <br clear="both">
-    </li>
+    <ul class="column" id="column_template">
+        <li class="column_helper">
+            <div class="arrow_left"></div>
+            <div class="arrow_right"></div>
+            <br clear="both">
+        </li>
+    </ul>
 
     <li id="widget_template" class="widget">
         <div class="widget-head">
@@ -187,6 +197,7 @@
         <p id="dashboard_notify">Welcome to Dashboard!</p>
     </div>
 
+    <table> <!-- required to satisfy HTML parser. -->
     <tr id="overlay_template">
         <th align="right" valign="top">
             <a class="overlay_load_link"><span class="overlay-name"></span></a>
@@ -201,6 +212,7 @@
             </span>
         </td>
     </tr>
+    </table>
 
     <div id="overlay_page">
         <h1>Dashboard overlay</h1>
@@ -226,7 +238,7 @@
                     <small><br>requires<br>admin<br>approval</small>
                 </div>
             <td align="right" valign="top">
-                <input id="overlay_save_button" type="submit" value="save">
+                <button id="overlay_save_button">Save</button>
             </table>
         </div>
 
