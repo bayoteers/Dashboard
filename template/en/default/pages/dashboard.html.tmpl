@@ -24,7 +24,8 @@
 [% USE Bugzilla %]
 
 [% header = BLOCK %]
-    <a href="#" id="dashboard-link">Dashboard</a> <img onclick="ReloadWidgets()" src='extensions/Dashboard/web/css/img/reload.png'>
+    <a id="settingsLink">Dashboard</a>
+    <img id="reloadButton" src="extensions/Dashboard/web/css/img/reload.png">
 [% END %]
 
 [% PROCESS global/header.html.tmpl
@@ -62,6 +63,17 @@
         <h2 style="text-align: center">Your web browser is not compatible with
         Dasboard; please use Firefox instead.</h2>
     </div>
+
+    <div id="widget_maximized_hint" class="maximized-hint"> <!-- id="maximized" -->
+        <p>
+        Press ESC or click here to return to the Dashboard.
+        </p>
+    </div>
+
+    <li id="column_helper_template" class="column_helper">
+        <div class="arrow_right"></div>
+        <br clear="both">
+    </li>
 
     <li id="widget_template" class="widget">
         <div class="widget-head">
@@ -173,6 +185,60 @@
         </ul>
         <div class="widget-divider"></div>
         <p id="dashboard_notify">Welcome to Dashboard!</p>
+    </div>
+
+    <tr id="overlay_template">
+        <th align="right" valign="top">
+            <a class="overlay_load_link"><span class="overlay-name"></span></a>
+            <span class="can-publish">[<a class="overlay_publish_link">ok</a>]</span>
+            <span class="can-delete">[<a class="overlay_delete_link">x</a>]</span>
+            &nbsp;
+        </th>
+        <td valign="top">
+            <span class="overlay-description"></span>
+            <span class="is-pending">
+                <small>(<span class="overlay-login"></small>
+            </span>
+        </td>
+    </tr>
+
+    <div id="overlay_page">
+        <h1>Dashboard overlay</h1>
+
+        <div class="overlay_box" id="overlay_save_box">
+            <h2>Save current overlay:</h2>
+            <table>
+            <tr>
+            <th align="right" valign="top">
+                Overlay name:
+            <td valign="top">
+                <input class="overlay_field" id="overlay_name" size="32">
+
+            <tr>
+            <th align="right" valign="top">
+                Description:
+            <td valign="top">
+                <input class="overlay_field" id="overlay_description" size="32">
+            <tr>
+            <th align="right" valign="top">
+                <input id="overlay_shared" type="checkbox"> Shared
+                <div class="requires-admin">
+                    <small><br>requires<br>admin<br>approval</small>
+                </div>
+            <td align="right" valign="top">
+                <input id="overlay_save_button" type="submit" value="save">
+            </table>
+        </div>
+
+        <div class="overlay_box" id="overlay_load_box">
+            <h2>Select overlay to load:</h2>
+            <table><tbody></tbody></table>
+        </div>
+
+        <div class="overlay_box" id="overlay_pending_box">
+            <h2>Pending overlays:</h2>
+            <table><tbody></tbody></table>
+        </div>
     </div>
 </div> <!-- /hide templates -->
 
