@@ -352,7 +352,7 @@ sub load_overlay {
     }
 
     load_user_overlay(undef, $user_id, $id);
-    return 1;
+    return get_user_prefs;
 }
 
 
@@ -399,6 +399,8 @@ sub delete_column {
     else {
         ThrowUserError('dashboard_last_column');
     }
+
+    return get_columns();
 }
 
 
