@@ -133,7 +133,8 @@ sub _validate_fields {
         my $value = $fields->{$field};
 
         if(defined($def->{min_length}) && length($value) < $def->{min_length}) {
-            die "Field '$field' must be at least ${def->{min_length}} long.";
+            my $min = $def->{min_length};
+            die "Field '$field' must be at least $min long.";
         } elsif(defined($def->{default}) && !defined($value)) {
             $fields->{$field} = $def->{default};
         } elsif($def->{required} && $check_required && !defined($value)) {
