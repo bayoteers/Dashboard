@@ -408,42 +408,28 @@ sub clear_workspace {
     clear_user_workspace();
 }
 
-
-sub handle_dashboard {
+sub get_columns {
     require_account;
     my ($self, $params) = @_;
-
-    my $column_total_width = 0;
-    my $column_width       = 0;
-
     my $prefs = get_user_prefs(@_);
-    my $out;
 
-    # Generate column->widgets structure and populate it with widget
-    # preferences.
-    for (my $i = 0 ; $i <= $prefs->{columns} ; $i++) {
-        if (!$prefs->{ "column" . $i }) {
-            $out->{"column"}->[$i] = int(100 / ($prefs->{columns} + 1));
-        }
-        else {
-            $column_width = int($prefs->{ "column" . $i });
-            $out->{"column"}->[$i] = ($column_width > 10) ? $column_width : 10;
-        }
-        $column_total_width += $out->{"column"}->[$i];
-        my $widget;
-        $widget->{'id'} = 0;
-        $out->{"columns"}->[$i]->[0] = $widget;
+    my @columns;
+    for (my $i = 0; $i <= $prefs->{columns}; $i++) {
+        my $key = "column" . $i;
+        my $width;
+        if (! $prefs->{$key}) {
+            $width = int(100 / ($prefs->{columns} + 1));
+        } else {
+            $width = ($prefs->{$key} > 10) ? int($prefs->{$key}) : 10;
+        };
+
+        push @columns, {
+            width => $width
+        };
     }
 
-    if ($column_total_width != 100) {
-        for (my $i = 0 ; $i <= $prefs->{columns} ; $i++) {
-            $out->{"column"}->[$i] = int(100 / ($prefs->{columns} + 1));
-        }
-    }
-
-    return $out;
+    return \@columns;
 }
-
 
 
 sub get_preferences {
