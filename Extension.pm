@@ -69,24 +69,21 @@ sub page_before_template {
     my ($self, $args) = @_;
     my ($vars, $page) = @$args{qw(vars page_id)};
     my $cgi = Bugzilla->cgi;
-    my $user_id = Bugzilla->user->id;
 
     if ($page !~ /^dashboard(_rss)?\.html$/) {
         return;
-    } elsif ($user_id < 0) {
+    } elsif (! Bugzilla->user->id) {
         ThrowUserError('login_required');
     }
 
     $vars->{dashboard_config} = encode_json {
         user_login => Bugzilla->user->login,
         is_admin => Bugzilla->user->in_group('admin'),
-        preferences => get_user_prefs,
+        workspace => get_user_prefs,
         browsers_warn => Bugzilla->params->{"dashboard_browsers_warn"},
         browsers_block => Bugzilla->params->{"dashboard_browsers_block"},
         overlays => Bugzilla::Extension::Dashboard::WebService::get_overlays(),
-        columns => Bugzilla::Extension::Dashboard::WebService::get_columns()
     };
-    $vars->{cgi_variables} = { Bugzilla->cgi->Vars };
 
     if (Bugzilla->params->{"dashboard_jquery_path"}) {
         $vars->{dashboard_jquery_path} = Bugzilla->params->{"dashboard_jquery_path"};

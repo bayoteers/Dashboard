@@ -110,12 +110,13 @@ our @EXPORT_OK = qw(
 );
 
 use Data::Dumper;
+use List::Util qw(sum);
 
 use File::Basename;
 use File::Copy;
 use File::Path;
 use File::Spec;
-use POSIX qw(strftime isdigit);
+use POSIX qw(floor strftime isdigit);
 use Storable qw(store retrieve);
 
 use Bugzilla::Constants;
@@ -143,14 +144,11 @@ sub cgi_no_cache {
 sub make_path {
     my ($path) = @_;
 
-    mkpath(
-           $path,
-           {
-              verbose => 0,
-              mode    => 0755,
-              error   => \my $err
-           }
-          );
+    mkpath($path, {
+        verbose => 0,
+        mode    => 0755,
+        error   => \my $err
+    });
 
     if (@$err) {
         for my $diag (@$err) {
@@ -204,7 +202,7 @@ sub get_overlay {
     foreach my $path (($active, $pending)) {
         if (-f $path) {
             my $overlay = retrieve($path);
-            $overlay->{"overlay_id"} = int(basename dirname $path);
+            $overlay->{"id"} = int(basename dirname $path);
             $overlay->{"user_id"}    = $user_id;
             $overlay->{"user_login"} = user_id_to_login($overlay->{"owner"});
             $overlay->{"pending"}    = int($path eq $pending);
@@ -237,6 +235,21 @@ sub get_user_pref_path {
     return File::Spec->catfile(get_user_dir($user_id), 'preferences');
 }
 
+# create default preferences
+sub make_empty_prefs {
+    my $prefs = {
+        widgets => [],
+        columns => []
+    };
+
+    foreach(1..COLUMNS_DEFAULT) {
+        my $column = { width => int(100 / COLUMNS_DEFAULT) };
+        push @{$prefs->{columns}}, $column;
+    }
+
+    return $prefs;
+}
+
 sub get_user_prefs {
     my ($user_id) = @_;
     my $path = get_user_pref_path($user_id);
@@ -245,21 +258,34 @@ sub get_user_prefs {
     if (-f $path) {
         $prefs = retrieve($path);
         $prefs->{widgets} = [ get_user_widgets($user_id) ];
-    }
-    else {
-        # create default preferences
-        $prefs = {
-                   widgets => [],
-                   columns => COLUMNS_DEFAULT
-                 };
-
-        for (my $i = 0 ; $i < COLUMNS_DEFAULT ; $i++) {
-            $prefs->{ "column" . $i } = int(100 / COLUMNS_DEFAULT);
-        }
+    } else {
+        $prefs = make_empty_prefs();
     }
 
+    normalize_columns($prefs);
     return $prefs;
 }
+
+# The new-style column structure is an array named "columns", with each element
+# a hashref with a single key, "width". The old structure was the keys
+# column0..columnN, with the width as their value, along with a "columns"
+# integer, which was never set correctly. If the old structure is detected
+# here, convert it to the new structure.
+sub normalize_columns {
+    my ($prefs) = @_;
+
+    if(! UNIVERSAL::isa($prefs->{columns}, "ARRAY")) {
+        my @keys = sort grep { /^column[0-9]/ } keys %{$prefs};
+        $prefs->{columns} = [ map { { width => $prefs->{$_} } } @keys ];
+        map { delete $prefs->{$_} } @keys;
+    }
+
+    # If column totals don't add up to 100%, spread the difference out.
+    my $total = sum map { $_->{width} } @{$prefs->{columns}};
+    my $delta = int((100 - $total) / @{$prefs->{columns}});
+    map { $_->{width} += $delta } @{$prefs->{columns}};
+}
+
 
 sub set_user_prefs {
     my ($user_id, $prefs) = @_;
@@ -270,6 +296,7 @@ sub set_user_prefs {
         make_path dirname $path;
     }
 
+    normalize_columns($prefs);
     set_user_widgets($user_id, $prefs->{widgets});
     delete $prefs->{widgets};
 
@@ -353,19 +380,7 @@ sub scrub_string {
 # Clear the user's workspace and load a new overlay.
 sub clear_user_workspace {
     my ($user_id) = @_;
-
-    my $prefs = get_user_prefs($user_id);
-    for (my $i = 0; $i <  $prefs->{columns}; $i++) {
-        delete $prefs->{"column$i"};
-    }
-
-    $prefs->{widgets} = [];
-    $prefs->{columns} = 3;
-    for (my $i = 0; $i <  $prefs->{columns}; $i++) {
-        $prefs->{"column$i"} = 33; # percent
-    }
-
-    set_user_prefs($user_id, $prefs);
+    set_user_prefs($user_id, make_empty_prefs());
 }
 
 

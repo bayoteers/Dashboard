@@ -60,7 +60,7 @@ use Bugzilla::Extension::Dashboard::Util qw(
 
 sub require_account {
     if(! Bugzilla->user->id) {
-        die 'You must provide Bugzilla_login and Bugzilla_password parameters.';
+        ThrowUserError('login_required');
     }
 }
 
@@ -93,6 +93,10 @@ my $OVERLAY_FIELD_DEFS = {
     description => { type => 'text', required => 1, default => '' },
     name => { type => 'text', required => 1, min_length => 4 },
     shared => { type => 'bool', default => 0, required => 1 },
+};
+
+my $COLUMN_FIELD_DEFS = {
+    width => { type => 'int', required => 1 }
 };
 
 my $TYPE_CONVERTER_MAP = {
@@ -208,8 +212,8 @@ sub delete_widget {
     my ($self, $params) = @_;
 
     my $id       = to_int($params->{id});
-    my $widgets  = get_user_widgets();
-    my $filtered = grep { $_->{id} != $id } @$widgets;
+    my @widgets  = get_user_widgets();
+    my $filtered = [ grep { $_->{id} != $id } @widgets ];
     set_user_widgets(undef, $filtered);
     return $filtered;
 }
@@ -218,12 +222,20 @@ sub delete_widget {
 sub save_columns {
     require_account;
     my ($self, $params) = @_;
-
     my $prefs = get_user_prefs();
-    foreach my $i (0 .. $prefs->{columns}) {
-        my $key = "column" . $i;
-        $prefs->{$key} = to_int($params->{$key});
+
+    my $columns = $params->{columns};
+    if(@$columns >= COLUMNS_MAX) {
+        ThrowUserError('dashboard_max_columns');
     }
+
+    foreach my $col (@$columns) {
+        if(! to_int($col->{width})) {
+            ThrowUserError('dashboard_illegal_id'); # TODO
+        }
+    }
+
+    $prefs->{columns} = $columns;
     set_user_prefs(undef, $prefs);
 }
 
@@ -246,7 +258,7 @@ sub delete_overlay {
         ThrowUserError('dashboard_illegal_id');
     }
 
-    return 1;
+    return get_overlays();
 }
 
 sub get_overlays {
@@ -361,46 +373,37 @@ sub add_column {
     require_account;
     my ($self, $params) = @_;
 
-    my $prefs    = get_user_prefs();
-    my $last_col = $prefs->{columns};
-    $last_col++;
-
-    # if new column can be added, tell jquery to create new UL element for the
-    # column and call makeSortable() to re-init the Sortable UI elements
-    if ($last_col < COLUMNS_MAX) {
-        $prefs->{columns} = $last_col;
-        set_user_prefs(undef, $prefs);
-    }
-    else {
+    my $prefs = get_user_prefs();
+    if(@{$prefs->{columns}} >= COLUMNS_MAX) {
         ThrowUserError('dashboard_max_columns');
     }
+
+    push @{$prefs->{columns}}, {
+        width => (@{$prefs->{columns}} + 1) / 100
+    };
+
+    set_user_prefs(undef, $prefs);
+    return $prefs->{columns};
 }
 
-# delete last column if it is empty and re-init the Sortable UI on success
+
+# Delete last column if it is empty.
 sub delete_column {
     require_account;
     my ($self, $params) = @_;
 
     my $prefs    = get_user_prefs();
-    my $widgets  = get_user_widgets();
-    my $last_col = List::Util::max(1, map { $_->{col} } @{$widgets});
 
-    # If column can be deleted, decrease and save the column setting and tell
-    # jQuery to remove the last column, resize widgets and call makeSortable()
-    # to re-init the Sortable UI elements
-    if ($last_col < $prefs->{columns}) {
-        $last_col = $prefs->{columns};
-        $prefs->{columns}--;
-        set_user_prefs(undef, $prefs);
-    }
-    elsif ($last_col > 1) {
+    my $idx = @{$prefs->{columns}} - 1;
+    if($idx == 0) {
+        ThrowUserError('dashboard_last_column');
+    } elsif(grep { $_->{col} >= $idx } @{$prefs->{widgets}}) {
         ThrowUserError('dashboard_column_nonempty');
     }
-    else {
-        ThrowUserError('dashboard_last_column');
-    }
 
-    return get_columns();
+    pop @{$prefs->{columns}};
+    set_user_prefs(undef, $prefs);
+    return $prefs->{columns};
 }
 
 
@@ -408,29 +411,35 @@ sub delete_column {
 sub clear_workspace {
     require_account;
     clear_user_workspace();
+    return get_user_prefs();
 }
 
-sub get_columns {
+
+sub save_workspace {
     require_account;
     my ($self, $params) = @_;
-    my $prefs = get_user_prefs(@_);
 
-    my @columns;
-    for (my $i = 0; $i <= $prefs->{columns}; $i++) {
-        my $key = "column" . $i;
-        my $width;
-        if (! $prefs->{$key}) {
-            $width = int(100 / ($prefs->{columns} + 1));
-        } else {
-            $width = ($prefs->{$key} > 10) ? int($prefs->{$key}) : 10;
-        };
-
-        push @columns, {
-            width => $width
-        };
+    if(! UNIVERSAL::isa($params->{widgets}, 'ARRAY')) {
+        die "'widgets' field must be an array.";
     }
 
-    return \@columns;
+    foreach my $widget (@{$params->{widgets}}) {
+        _validate_fields($WIDGET_FIELD_DEFS, $widget, 1);
+    }
+
+    if(! UNIVERSAL::isa($params->{columns}, 'ARRAY')) {
+        die "'widgets' field must be an array.";
+    }
+
+    foreach my $column (@{$params->{columns}}) {
+        _validate_fields($COLUMN_FIELD_DEFS, $column, 1);
+    }
+
+    my $prefs = get_user_prefs();
+    $prefs->{widgets} = $params->{widgets};
+    $prefs->{columns} = $params->{columns};
+    set_user_prefs(undef, $prefs);
+    return $prefs;
 }
 
 
