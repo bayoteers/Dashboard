@@ -30,10 +30,11 @@
 
 [% PROCESS global/header.html.tmpl
     title = "Bugzilla Dashboard"
-    style_urls = ['extensions/Dashboard/web/css/smoothness/jquery-ui-1.8.5.custom.css',
-                  'extensions/Dashboard/web/css/dashboard.css',
-                  'extensions/Dashboard/web/css/colorbox.css']
 %]
+
+<link rel="stylesheet" href="extensions/Dashboard/web/css/smoothness/jquery-ui-1.8.5.custom.css">
+<link rel="stylesheet" href="extensions/Dashboard/web/css/dashboard.css">
+<link rel="stylesheet" href="extensions/Dashboard/web/css/colorbox.css">
 
 <div id="ajax_message"></div>
 
@@ -68,7 +69,7 @@
 
     <div id="browser_block_template">
         <h2 style="text-align: center">Your web browser is not compatible with
-        Dasboard; please use Firefox instead.</h2>
+        Dashboard; please use Firefox instead.</h2>
     </div>
 
     <div id="widget_maximized_hint" class="maximized-hint"> <!-- id="maximized" -->
@@ -185,6 +186,7 @@
             <li id="button-add-column"><a id="addColumnButton">Add column</a></li>
             <li id="button-save-widgets"><a id="savePrefsButton">Save prefs</a></li>
             <li id="button-del-column"><a id="deleteColumnButton">Delete column</a></li>
+            <li id="button-clear-workspace"><a id="clearWorkspaceButton">Clear workspace</a></li>
         </ul>
         <div class="widget-divider"></div>
         <ul id="widget-buttons">
