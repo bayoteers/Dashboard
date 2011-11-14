@@ -42,6 +42,9 @@ use Bugzilla::Extension::Dashboard::Util qw(
     get_overlay_dir
     get_shared_overlay_dir
     get_user_dir
+    fields_from_params
+    validate_fields
+    fixup_types
     get_user_overlay_dir
     get_user_overlays
     get_user_prefs
@@ -52,6 +55,9 @@ use Bugzilla::Extension::Dashboard::Util qw(
     scrub_string
     set_user_prefs
     set_user_widgets
+    $WIDGET_FIELD_DEFS
+    $COLUMN_FIELD_DEFS
+    $OVERLAY_FIELD_DEFS
     to_bool
     to_color
     to_int
@@ -61,94 +67,6 @@ use Bugzilla::Extension::Dashboard::Util qw(
 sub require_account {
     if(! Bugzilla->user->id) {
         ThrowUserError('login_required');
-    }
-}
-
-
-my $WIDGET_FIELD_DEFS = {
-    collapsible => { type => 'bool' },
-    color => { type => 'color', required => 1, default => 'gray' },
-    col => { type => 'int', required => 1 },
-    controls => { type => 'bool', default => 1, required => 1 },
-    editable => { type => 'bool', default => 1, required => 1 },
-    height => { type => 'int' },
-    id => { type => 'int', required => 1 },
-    maximizable => { type => 'bool' },
-    minimized => { type => 'bool' },
-    movable => { type => 'bool' },
-    password => { type => 'text' },
-    pos => { type => 'int', required => 1 },
-    refreshable => { type => 'bool', default => 1, required => 1 },
-    refresh => { type => 'int', default => 600, required => 1 },
-    removable => { type => 'bool' },
-    resizable => { type => 'bool', default => 1, required => 1 },
-    resized => { type => 'bool' },
-    title => { type => 'text', required => 1 },
-    type => { type => 'text', required => 1, choices => [ WIDGET_TYPES ]},
-    URL => { type => 'text' },
-    username => { type => 'text' },
-};
-
-my $OVERLAY_FIELD_DEFS = {
-    description => { type => 'text', required => 1, default => '' },
-    name => { type => 'text', required => 1, min_length => 4 },
-    shared => { type => 'bool', default => 0, required => 1 },
-};
-
-my $COLUMN_FIELD_DEFS = {
-    width => { type => 'int', required => 1 }
-};
-
-my $TYPE_CONVERTER_MAP = {
-    int => \&to_int,
-    bool => \&to_bool,
-    text => \&scrub_string,
-    color => \&to_color
-};
-
-
-sub _fields_from_params {
-    my ($defs, $params) = @_;
-    my $fields;
-
-    while(my ($field, $value) = each(%$params)) {
-        my $def = $defs->{$field};
-
-        if($field =~ /^Bugzilla_/) {
-            # Skip authentication fields; appears to only be required on older
-            # versions of Bugzilla.
-            next;
-        } elsif(! defined($def)) {
-            die 'Invalid field name: ' . $field;
-        }
-
-        my $converter = $TYPE_CONVERTER_MAP->{$def->{type}};
-        $fields->{$field} = &$converter($value);
-    }
-
-    return $fields;
-}
-
-
-sub _validate_fields {
-    my ($defs, $fields, $check_required) = @_;
-
-    while(my ($field, $def) = each(%$defs)) {
-        my $value = $fields->{$field};
-
-        if(defined($def->{min_length}) && length($value) < $def->{min_length}) {
-            my $min = $def->{min_length};
-            die "Field '$field' must be at least $min long.";
-        } elsif(defined($def->{default}) && !defined($value)) {
-            $fields->{$field} = $def->{default};
-        } elsif($def->{required} && $check_required && !defined($value)) {
-            die 'Missing required field: ' . $field;
-        } elsif($def->{choices} && defined($value)
-                && !grep($_ eq $value, @{$def->{choices}})) {
-            my $choices = join(', ', @{$def->{choices}});
-            die "Field $field invalid value '$value'; ".
-                "must be one of $choices";
-        }
     }
 }
 
@@ -237,6 +155,7 @@ sub save_columns {
 
     $prefs->{columns} = $columns;
     set_user_prefs(undef, $prefs);
+    return $columns;
 }
 
 sub delete_overlay {
@@ -372,7 +291,6 @@ sub load_overlay {
 sub add_column {
     require_account;
     my ($self, $params) = @_;
-
     my $prefs = get_user_prefs();
     if(@{$prefs->{columns}} >= COLUMNS_MAX) {
         ThrowUserError('dashboard_max_columns');
@@ -424,7 +342,7 @@ sub save_workspace {
     }
 
     foreach my $widget (@{$params->{widgets}}) {
-        _validate_fields($WIDGET_FIELD_DEFS, $widget, 1);
+        validate_fields($WIDGET_FIELD_DEFS, $widget, 1);
     }
 
     if(! UNIVERSAL::isa($params->{columns}, 'ARRAY')) {
@@ -432,7 +350,7 @@ sub save_workspace {
     }
 
     foreach my $column (@{$params->{columns}}) {
-        _validate_fields($COLUMN_FIELD_DEFS, $column, 1);
+        validate_fields($COLUMN_FIELD_DEFS, $column, 1);
     }
 
     my $prefs = get_user_prefs();

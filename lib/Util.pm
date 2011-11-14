@@ -17,8 +17,8 @@
 # Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
+#   David Wilson <ext-david.3.wilson@nokia.com>
 #   Jari Savolainen <ext-jari.a.savolainen@nokia.com>
-
 #
 # General notes:
 #
@@ -91,12 +91,18 @@ our @EXPORT_OK = qw(
     dir_glob
     get_overlay_dir
     get_shared_overlay_dir
+    $WIDGET_FIELD_DEFS
+    $COLUMN_FIELD_DEFS
+    $OVERLAY_FIELD_DEFS
     get_user_dir
     get_user_overlay_dir
     get_user_overlays
     get_user_prefs
     get_user_widget
     get_user_widgets
+    fields_from_params
+    fixup_types
+    validate_fields
     get_widget_path
     is_valid_widget_type
     load_user_overlay
@@ -123,6 +129,107 @@ use Bugzilla::Constants;
 use Bugzilla::Extension::Dashboard::Config;
 use Bugzilla::User;
 use Bugzilla::Util;
+
+
+my $WIDGET_FIELD_DEFS = {
+    collapsible => { type => 'bool' },
+    color => { type => 'color', required => 1, default => 'gray' },
+    col => { type => 'int', required => 1 },
+    controls => { type => 'bool', default => 1, required => 1 },
+    editable => { type => 'bool', default => 1, required => 1 },
+    height => { type => 'int' },
+    id => { type => 'int', required => 1, min => 1 },
+    maximizable => { type => 'bool' },
+    minimized => { type => 'bool' },
+    movable => { type => 'bool' },
+    password => { type => 'text' },
+    pos => { type => 'int', required => 1 },
+    refreshable => { type => 'bool', default => 1, required => 1 },
+    refresh => { type => 'int', default => 600, required => 1 },
+    removable => { type => 'bool' },
+    resizable => { type => 'bool', default => 1, required => 1 },
+    resized => { type => 'bool' },
+    title => { type => 'text', required => 1 },
+    type => { type => 'text', required => 1, choices => [ WIDGET_TYPES ]},
+    URL => { type => 'text' },
+    username => { type => 'text' },
+};
+
+my $OVERLAY_FIELD_DEFS = {
+    description => { type => 'text', required => 1, default => '' },
+    name => { type => 'text', required => 1, min_length => 4 },
+    shared => { type => 'bool', default => 0, required => 1 },
+};
+
+my $COLUMN_FIELD_DEFS = {
+    width => { type => 'int', required => 1 }
+};
+
+my $TYPE_CONVERTER_MAP = {
+    int => \&to_int,
+    bool => \&to_bool,
+    text => \&scrub_string,
+    color => \&to_color
+};
+
+
+sub fields_from_params {
+    my ($defs, $params) = @_;
+    my $fields;
+
+    while(my ($field, $value) = each(%$params)) {
+        my $def = $defs->{$field};
+
+        if($field =~ /^Bugzilla_/) {
+            # Skip authentication fields; appears to only be required on older
+            # versions of Bugzilla.
+            next;
+        } elsif(! defined($def)) {
+            die 'Invalid field name: ' . $field;
+        }
+
+        my $converter = $TYPE_CONVERTER_MAP->{$def->{type}};
+        $fields->{$field} = &$converter($value);
+    }
+
+    return $fields;
+}
+
+
+sub validate_fields {
+    my ($defs, $fields, $check_required) = @_;
+
+    while(my ($field, $def) = each(%$defs)) {
+        my $value = $fields->{$field};
+
+        if(defined($def->{min}) && $value < $def->{min}) {
+            my $min = $def->{min};
+            die "Field '$field' must be at least $min.";
+        } elsif(defined($def->{min_length}) && length($value) < $def->{min_length}) {
+            my $min = $def->{min_length};
+            die "Field '$field' must be at least $min long.";
+        } elsif(defined($def->{default}) && !defined($value)) {
+            $fields->{$field} = $def->{default};
+        } elsif($def->{required} && $check_required && !defined($value)) {
+            die 'Missing required field: ' . $field;
+        } elsif($def->{choices} && defined($value)
+                && !grep($_ eq $value, @{$def->{choices}})) {
+            my $choices = join(', ', @{$def->{choices}});
+            die "Field $field invalid value '$value'; ".
+                "must be one of $choices";
+        }
+    }
+}
+
+
+sub fixup_types {
+    my ($defs, $fields) = @_;
+    while(my ($field, $def) = each(%$defs)) {
+        my $converter = $TYPE_CONVERTER_MAP->{$def->{type}};
+        my $value = $fields->{$field};
+        $fields->{$field} = &$converter($value);
+    }
+}
 
 sub cgi_no_cache {
     my $headers = {
@@ -304,8 +411,11 @@ sub set_user_prefs {
 }
 
 sub get_user_widgets {
-    my $user_dir = get_user_dir(@_);
-    return map { retrieve($_) } dir_glob($user_dir, '*.widget');
+    my ($user_id) = @_;
+    my @paths = dir_glob(get_user_dir($user_id), '*.widget');
+    my @widgets = map { retrieve $_; } @paths;
+    map { fixup_types $WIDGET_FIELD_DEFS, $_ } @widgets;
+    return @widgets;
 }
 
 sub set_user_widgets {
@@ -331,15 +441,19 @@ sub get_widget_path {
 sub get_user_widget {
     my ($user_id, $widget_id) = @_;
     my $path = get_widget_path($user_id, $widget_id);
-    if (-f $path) {
-        return retrieve($path);
+    if (!-f $path) {
+        return undef;
     }
+
+    my $widget = retrieve($path);
+    fixup_types $WIDGET_FIELD_DEFS, $widget;
+    return $widget;
 }
 
 sub to_bool {
     my ($s) = @_;
     $s ||= '';
-    return int($s eq 'true' || $s == 1);
+    return int($s eq 'true' || ($s =~ /\d+/ && $s == 1));
 }
 
 sub to_color {
