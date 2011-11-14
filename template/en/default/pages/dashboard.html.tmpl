@@ -88,12 +88,12 @@
 
     <li id="widget_template" class="widget">
         <div class="widget-head">
-            <a href="#" class="maximize">MAXIMIZE</a>
-            <a href="#" class="collapse">COLLAPSE</a>
-            <h3 class="widget-title"></h3>
-            <a href="#" class="remove">REMOVE</a>
-            <a href="#" class="refresh">REFRESH</a>
-            <a href="#" class="edit">EDIT</a>
+            <a class="maximize">MAXIMIZE</a>
+            <a class="collapse">COLLAPSE</a>
+            <div class="widget-title"></div>
+            <a class="remove">REMOVE</a>
+            <a class="refresh">REFRESH</a>
+            <a class="edit">EDIT</a>
         </div>
         <ul class="edit-box" style="display: none">
             <li class="item">
@@ -104,26 +104,23 @@
                 <label>Available colors:</label>
                 <ul class="colors"></ul>
             </li>
+            <li class="item">
+                <label>Reload:</label>
+                <select name="field-refresh">
+                    <option value="0">no refresh</option>
+                    <option value="15">every 15 seconds</option>
+                    <option value="60">every minute</option>
+                    <option value="300">every 5 minutes</option>
+                    <option value="900">every 15 minutes</option>
+                    <option value="1800">every 30 minutes</option>
+                </select>
+            </li>
         </ul>
         <div class="widget-content">
             <div class="widget_inner">
             </div>
         </div>
     </li>
-
-    <div id="base_widget_settings_template">
-        <li class="item">
-            <label>Reload:</label>
-            <select name="field-refresh">
-                <option value="0">no refresh</option>
-                <option value="15">every 15 seconds</option>
-                <option value="60">every minute</option>
-                <option value="300">every 5 minutes</option>
-                <option value="900">every 15 minutes</option>
-                <option value="1800">every 30 minutes</option>
-            </select>
-        </li>
-    </div>
 
     <div id="url_widget_template">
         <iframe class="widget_iframe" frameborder="0" scrolling="auto"></iframe>

@@ -173,6 +173,7 @@ var Widget = Base.extend({
         this.refreshIntervalId = null;
 
         this.render();
+        this.renderSettings();
         this.setState(state);
         this.reload();
     },
@@ -223,11 +224,7 @@ var Widget = Base.extend({
      */
     renderSettings: function()
     {
-        var clone = $('#base_widget_settings_template').clone();
-        clone.removeAttr('id');
-        clone.append
-
-        var list = $('.colors', clone);
+        var list = this._child('.edit-box .colors');
         for(var i = 0; i < Widget.COLORS.length; i++) {
             var color = Widget.COLORS[i];
             var item = $('<li>');
@@ -238,7 +235,7 @@ var Widget = Base.extend({
 
         var sel = '#' + this.TYPE + '_widget_settings_template';
         var template = cloneTemplate(sel);
-        template.children().appendto(this._child('.edit-box'));
+        template.children().appendTo(this._child('.edit-box'));
     },
 
     _onEditClick: function(event)
@@ -404,8 +401,7 @@ var Widget = Base.extend({
         refreshable: true,
         controls: true,
         width: 0,
-        height: 100, // from initWidget.
-        refresh_id: 0,
+        height: 100 // from initWidget.
     },
 
     COLORS: ['gray', 'yellow', 'red', 'blue', 'white', 'orange', 'green'],
@@ -672,7 +668,7 @@ var Dashboard = Base.extend({
             this.widgetRemovedCb.fire(widget);
         }
 
-        this.columns = [];
+        this.columns = workspace.columns;
         this.columnsChangeCb.fire(this.columns);
 
         for(var i = 0; i < workspace.widgets.length; i++) {
@@ -680,6 +676,24 @@ var Dashboard = Base.extend({
             this.widgets.push(widget);
             this.widgetAddedCb.fire(widget);
         }
+    },
+
+    /**
+     * Ask the server to delete an overlay.
+     */
+    deleteOverlay: function(overlay)
+    {
+        var rpc = this.rpc('delete_overlay', {
+            user_id: overlay.user_id,
+            id: overlay.id
+        });
+        rpc.done(this._onDeleteOverlayDone.bind(this, overlay));
+    },
+
+    _onDeleteOverlayDone: function(overlay, overlays)
+    {
+        this.setOverlays(overlays);
+        this.notifyCb.fire('Deleted overlay: ' + overlay.name);
     },
 
     /**
@@ -719,8 +733,24 @@ var Dashboard = Base.extend({
     rpc: function(method, params, cb)
     {
         var rpc = new Rpc(method, params);
+        rpc.fail(function(e) { alert(e.message); });
         rpc.fail(this.notifyCb.fire.bind(this.notifyCb));
         return rpc;
+    },
+
+    /**
+     * Ask the server to clear the user's workspace.
+     */
+    clearWorkspace: function()
+    {
+        var rpc = this.rpc('clear_workspace');
+        rpc.done(this._onClearWorkspaceDone.bind(this));
+        return rpc;
+    },
+
+    _onClearWorkspaceDone: function(workspace)
+    {
+        this.setWorkspace(workspace);
     },
 
     /**
@@ -841,7 +871,7 @@ var Dashboard = Base.extend({
     loadOverlay: function(overlay)
     {
         var rpc = this.rpc('load_overlay', {
-            id: overlay.overlay_id,
+            id: overlay.id,
             user_id: overlay.user_id
         });
         rpc.done(this._onLoadOverlayDone.bind(this, overlay));
@@ -870,7 +900,7 @@ var Dashboard = Base.extend({
 
     _onSaveOverlayDone: function(overlay, response)
     {
-        this.notifyCb.fire('Saved overlay: ' + overlay.title);
+        this.notifyCb.fire('Saved overlay: ' + overlay.name);
     },
 
     /**
@@ -916,9 +946,7 @@ var Dashboard = Base.extend({
      */
     saveColumns: function(columns)
     {
-        this.setColumns(columns);
-        return; // TODO
-        var rpc = this.rpc('save_columns', columns);
+        var rpc = this.rpc('save_columns', { columns: columns });
         rpc.done(this._onSaveColumnsDone.bind(this));
         return rpc;
     },
@@ -1328,7 +1356,7 @@ var OverlayView = Base.extend({
             this._onPublishClick.bind(this, overlay));
         $('.overlay_load_link', tr).click(
             this._onLoadClick.bind(this, overlay));
-        $('#overlay_delete_link', tr).click(
+        $('.overlay_delete_link', tr).click(
             this._onDeleteClick.bind(this, overlay));
 
         $('a', tr).attr('href', 'javascript:;');
@@ -1400,7 +1428,13 @@ var OverlayView = Base.extend({
 
     _onLoadClick: function(overlay)
     {
-        this._dashboard.loadOverlay(overlay);
+        var rpc = this._dashboard.loadOverlay(overlay);
+        rpc.done(this._onLoadDone.bind(this));
+    },
+
+    _onLoadDone: function()
+    {
+        $.colorbox.close();
     }
 });
 
@@ -1453,7 +1487,7 @@ var DashboardView = Base.extend({
 
     _setupUi: function()
     {
-        $('a[id]:not([href]):').attr('href', 'javascript:;');
+        $('a[id,class]:not([href]):').attr('href', 'javascript:;');
 
         var dash = this._dashboard;
 
@@ -1462,6 +1496,7 @@ var DashboardView = Base.extend({
         $('#addColumnButton').click(dash.addColumn.bind(dash));
         $('#savePrefsButton').click(dash.save.bind(dash));
         $('#deleteColumnButton').click(dash.deleteColumn.bind(dash));
+        $('#clearWorkspaceButton').click(dash.clearWorkspace.bind(dash));
 
         $('#reloadLink').click(
             window.location.reload.bind(window.location));
@@ -1480,7 +1515,7 @@ var DashboardView = Base.extend({
     openSettings: function()
     {
         $.colorbox({
-            width: '384px',
+            width: '600px',
             inline: true,
             href: '.dashboard-main'
         });
@@ -1493,17 +1528,19 @@ var DashboardView = Base.extend({
 });
 
 
+/**
+ * Display a warning if the user's browser doesn't match the configured regex.
+ * Block loading entirely if the browser is far too old.
+ */
 function checkBrowserQuality()
 {
     var warn = DASHBOARD_CONFIG.browsers_warn;
     var block = DASHBOARD_CONFIG.browsers_block;
 
     if(warn && navigator.userAgent.match(RegExp(warn))) {
-        var template = cloneTemplate('#browser_warning_template');
-        setBoxContent('#dashboard_notify', template);
+        $('#dashboard_notify').html($('#browser_warning_template'));
     } else if(block && navigator.userAgent.match(RegExp(block))) {
-        template = cloneTemplate('#browser_block_template');
-        setBoxContent('#dashboard', template);
+        $('#dashboard').html($('#browser_block_template'));
         throw ''; // Prevent further execution.
     }
 }
@@ -1520,10 +1557,6 @@ function checkBrowserQuality()
 function main()
 {
     checkBrowserQuality();
-
-    if(DASHBOARD_CONFIG.widget_error) {
-        alert(DASHBOARD_CONFIG.widget_error);
-    }
 
     var progress = new RpcProgressView();
     dashboard = new Dashboard(DASHBOARD_CONFIG);
