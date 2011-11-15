@@ -91,13 +91,14 @@ our @EXPORT_OK = qw(
     dir_glob
     get_overlay_dir
     get_shared_overlay_dir
-    $WIDGET_FIELD_DEFS
-    $COLUMN_FIELD_DEFS
-    $OVERLAY_FIELD_DEFS
+    WIDGET_FIELD_DEFS
+    COLUMN_FIELD_DEFS
+    OVERLAY_FIELD_DEFS
     get_user_dir
     get_user_overlay_dir
     get_user_overlays
     get_user_prefs
+    merge
     get_user_widget
     get_user_widgets
     fields_from_params
@@ -131,45 +132,55 @@ use Bugzilla::User;
 use Bugzilla::Util;
 
 
-my $WIDGET_FIELD_DEFS = {
-    collapsible => { type => 'bool' },
+use constant WIDGET_FIELD_DEFS => {
     color => { type => 'color', required => 1, default => 'gray' },
     col => { type => 'int', required => 1 },
-    controls => { type => 'bool', default => 1, required => 1 },
-    editable => { type => 'bool', default => 1, required => 1 },
     height => { type => 'int' },
     id => { type => 'int', required => 1, min => 1 },
-    maximizable => { type => 'bool' },
     minimized => { type => 'bool' },
-    movable => { type => 'bool' },
     password => { type => 'text' },
     pos => { type => 'int', required => 1 },
-    refreshable => { type => 'bool', default => 1, required => 1 },
     refresh => { type => 'int', default => 600, required => 1 },
-    removable => { type => 'bool' },
-    resizable => { type => 'bool', default => 1, required => 1 },
-    resized => { type => 'bool' },
     title => { type => 'text', required => 1 },
     type => { type => 'text', required => 1, choices => [ WIDGET_TYPES ]},
     URL => { type => 'text' },
     username => { type => 'text' },
+    width => { type => 'int' },
 };
 
-my $OVERLAY_FIELD_DEFS = {
+use constant OVERLAY_FIELD_DEFS => {
     description => { type => 'text', required => 1, default => '' },
     name => { type => 'text', required => 1, min_length => 4 },
     shared => { type => 'bool', default => 0, required => 1 },
 };
 
-my $COLUMN_FIELD_DEFS = {
+use constant COLUMN_FIELD_DEFS => {
     width => { type => 'int', required => 1 }
 };
 
-my $TYPE_CONVERTER_MAP = {
+use constant TYPE_CONVERTER_MAP => {
     int => \&to_int,
     bool => \&to_bool,
     text => \&scrub_string,
     color => \&to_color
+};
+
+
+# Given a list of hashrefs, return a new hashref which is the result of
+# assigning the elements from each hash in order to an empty hash. Skips list
+# items that aren't hashrefs.
+sub merge {
+    my $out = {};
+    for my $hash (@_) {
+        if(! UNIVERSAL::isa($hash, 'HASH')) {
+            next;
+        }
+
+        while(my ($key, $value) = each(%$hash)) {
+            $out->{$key} = $value;
+        }
+    }
+    return $out;
 };
 
 
@@ -179,17 +190,10 @@ sub fields_from_params {
 
     while(my ($field, $value) = each(%$params)) {
         my $def = $defs->{$field};
-
-        if($field =~ /^Bugzilla_/) {
-            # Skip authentication fields; appears to only be required on older
-            # versions of Bugzilla.
-            next;
-        } elsif(! defined($def)) {
-            die 'Invalid field name: ' . $field;
+        if(defined($def)) {
+            my $converter = TYPE_CONVERTER_MAP->{$def->{type}};
+            $fields->{$field} = &$converter($value);
         }
-
-        my $converter = $TYPE_CONVERTER_MAP->{$def->{type}};
-        $fields->{$field} = &$converter($value);
     }
 
     return $fields;
@@ -225,7 +229,7 @@ sub validate_fields {
 sub fixup_types {
     my ($defs, $fields) = @_;
     while(my ($field, $def) = each(%$defs)) {
-        my $converter = $TYPE_CONVERTER_MAP->{$def->{type}};
+        my $converter = TYPE_CONVERTER_MAP->{$def->{type}};
         my $value = $fields->{$field};
         $fields->{$field} = &$converter($value);
     }
@@ -405,16 +409,19 @@ sub set_user_prefs {
 
     normalize_columns($prefs);
     set_user_widgets($user_id, $prefs->{widgets});
-    delete $prefs->{widgets};
 
-    store $prefs, $path;
+    # Widgets are stored separately for now; copy $prefs to preserve the hash
+    # for any callers.
+    my $to_save = merge($prefs);
+    delete $to_save->{widgets};
+    store $to_save, $path;
 }
 
 sub get_user_widgets {
     my ($user_id) = @_;
     my @paths = dir_glob(get_user_dir($user_id), '*.widget');
     my @widgets = map { retrieve $_; } @paths;
-    map { fixup_types $WIDGET_FIELD_DEFS, $_ } @widgets;
+    map { fixup_types WIDGET_FIELD_DEFS, $_ } @widgets;
     return @widgets;
 }
 
@@ -446,7 +453,7 @@ sub get_user_widget {
     }
 
     my $widget = retrieve($path);
-    fixup_types $WIDGET_FIELD_DEFS, $widget;
+    fixup_types WIDGET_FIELD_DEFS, $widget;
     return $widget;
 }
 
@@ -470,7 +477,7 @@ sub to_color {
 
 sub to_int {
     my ($s) = @_;
-    detaint_natural($s);
+    detaint_signed($s);
     return int($s || 0);
 }
 
