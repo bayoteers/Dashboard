@@ -148,6 +148,11 @@ API = {
     'get_overlays': {
     },
     'get_preferences': {
+    },
+    'get_feed': {
+        'params': [
+            ('url', str, None, True)
+        ]
     }
 }
 
