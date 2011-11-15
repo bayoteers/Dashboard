@@ -36,6 +36,11 @@ use constant REQUIRED_MODULES => [
                                       module  => 'HTML::Scrubber',
                                       version => 0.08,
                                    },
+                                   {
+                                      package => 'libxml-feed-perl',
+                                      module => 'XML::Feed',
+                                      version => 0.40
+                                   }
                                  ];
 
 use constant OPTIONAL_MODULES => [];
