@@ -29,7 +29,6 @@ use Bugzilla::Error;
 use Bugzilla::Util;
 use Bugzilla::User;
 
-# This code for this is in ./extensions/Dashboard/lib/Util.pm
 use Bugzilla::Extension::Dashboard::Config;
 use Bugzilla::Extension::Dashboard::Util qw(
     cgi_no_cache
@@ -39,22 +38,7 @@ use Bugzilla::Extension::Dashboard::Util qw(
 );
 use Bugzilla::Extension::Dashboard::WebService;
 
-# For input sanitization
-use HTML::Scrubber;
 use JSON::PP;
-
-# For serialization
-use Storable;
-
-# For RSS proxy
-use LWP;
-
-# Core modules
-use File::Path;
-use File::Basename;
-use File::Copy;
-use List::Util;
-use POSIX qw(strftime);
 
 our $VERSION = '0.01';
 
@@ -67,51 +51,28 @@ sub install_update_db {
 # Hook for page.cgi and dashboard
 sub page_before_template {
     my ($self, $args) = @_;
-    my ($vars, $page) = @$args{qw(vars page_id)};
-    my $cgi = Bugzilla->cgi;
 
-    if ($page !~ /^dashboard(_rss)?\.html$/) {
+    if ($args->{page_id} !~ /^dashboard\.html$/) {
         return;
     } elsif (! Bugzilla->user->id) {
         ThrowUserError('login_required');
     }
 
-    $vars->{dashboard_config} = encode_json {
+    cgi_no_cache;
+
+    $args->{vars}->{dashboard_config} = JSON->new->utf8->pretty->encode({
+    #$args->{vars}->{dashboard_config} = encode_json({
+        rss_max_items => int(Bugzilla->params->{dashboard_rss_max_items}),
         user_login => Bugzilla->user->login,
         is_admin => Bugzilla->user->in_group('admin'),
         workspace => get_user_prefs,
         browsers_warn => Bugzilla->params->{"dashboard_browsers_warn"},
         browsers_block => Bugzilla->params->{"dashboard_browsers_block"},
         overlays => Bugzilla::Extension::Dashboard::WebService::get_overlays(),
-    };
+    });
 
     if (Bugzilla->params->{"dashboard_jquery_path"}) {
         $vars->{dashboard_jquery_path} = Bugzilla->params->{"dashboard_jquery_path"};
-    }
-
-    # force http cache to be expired
-    cgi_no_cache;
-
-    if ($page eq "dashboard_rss.html") {
-        # JQuery requires proper content-type for rss
-        print $cgi->header(-type => "text/xml");
-        my $browser   = LWP::UserAgent->new();
-        my $proxy_url = Bugzilla->params->{'proxy_url'};
-        if ($proxy_url) {
-            $browser->proxy(['http'], $proxy_url);
-        }
-        else {
-            $browser->env_proxy();
-        }
-        $browser->timeout(10);
-        my $response = $browser->get($cgi->param('rss_url'));
-        if ($response->is_success) {
-            $vars->{"dashboard_external_rss"} = $response->content;
-        }
-        else {
-            $vars->{"dashboard_external_rss"} =
-              '<?xml version="1.0" encoding="UTF-8" ?><rss version="2.0"><channel><title>Couldn\'t load RSS feed</title></channel></rss>';
-        }
     }
 }
 

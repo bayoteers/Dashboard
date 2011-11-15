@@ -26,6 +26,8 @@ use base qw(Bugzilla::WebService);
 use Data::Dumper;
 use Storable;
 
+
+use XML::Feed;
 use File::Basename;
 use File::Copy;
 use File::Path qw(make_path remove_tree);
@@ -38,13 +40,13 @@ use Bugzilla::Error;
 use Bugzilla::Extension::Dashboard::Config;
 use Bugzilla::Extension::Dashboard::Util qw(
     clear_user_workspace
+    COLUMN_FIELD_DEFS
     dir_glob
+    fields_from_params
+    fixup_types
     get_overlay_dir
     get_shared_overlay_dir
     get_user_dir
-    fields_from_params
-    validate_fields
-    fixup_types
     get_user_overlay_dir
     get_user_overlays
     get_user_prefs
@@ -52,15 +54,16 @@ use Bugzilla::Extension::Dashboard::Util qw(
     get_widget_path
     is_valid_widget_type
     load_user_overlay
+    merge
+    OVERLAY_FIELD_DEFS
     scrub_string
     set_user_prefs
     set_user_widgets
-    $WIDGET_FIELD_DEFS
-    $COLUMN_FIELD_DEFS
-    $OVERLAY_FIELD_DEFS
     to_bool
     to_color
     to_int
+    validate_fields
+    WIDGET_FIELD_DEFS
 );
 
 
@@ -88,11 +91,8 @@ sub new_widget {
         ThrowUserError('dashboard_max_widgets');
     }
 
-    my $widget = _fields_from_params($WIDGET_FIELD_DEFS, $params);
-    _validate_fields($WIDGET_FIELD_DEFS, $widget, 1);
-
-    # Force the widget to be resized on load.
-    $widget->{resized} = 1;
+    my $widget = fields_from_params(WIDGET_FIELD_DEFS, $params);
+    validate_fields(WIDGET_FIELD_DEFS, $widget, 1);
 
     push @widgets, $widget;
     set_user_widgets(undef, \@widgets);
@@ -102,23 +102,18 @@ sub new_widget {
 # get and store all extended widget preferences
 sub save_widget {
     require_account;
+
     my ($self, $params) = @_;
+    my @widgets = get_user_widgets();
 
-    my $widget_id = to_int($params->{'id'});
+    my ($widget) = grep { $_->{d} == $params->{id} } @widgets;
+    $widget = merge($widget, fields_from_params(WIDGET_FIELD_DEFS, $params));
 
-    my $path = get_widget_path(undef, $widget_id);
-    if ($widget_id <= 0 || !-e $path) {
-        ThrowUserError('dashboard_illegal_id');
-    }
+    validate_fields(WIDGET_FIELD_DEFS, $widget, 1);
 
-    my $updates = _fields_from_params($WIDGET_FIELD_DEFS, $params);
-    _validate_fields($WIDGET_FIELD_DEFS, $updates, 0);
-
-    my $widget  = retrieve($path);
-    while(my ($key, $value) = each(%$updates)) {
-        $widget->{$key} = $value;
-    }
-    store $widget, $path;
+    @widgets = grep { $_->{id} != $params->{id} } @widgets;
+    push @widgets, $widget;
+    set_user_widgets(undef, \@widgets);
 
     return $widget;
 }
@@ -143,14 +138,16 @@ sub save_columns {
     my $prefs = get_user_prefs();
 
     my $columns = $params->{columns};
+    if(! UNIVERSAL::isa($columns, 'ARRAY')) {
+        die "'columns' field must be an array.";
+    }
+
     if(@$columns >= COLUMNS_MAX) {
         ThrowUserError('dashboard_max_columns');
     }
 
     foreach my $col (@$columns) {
-        if(! to_int($col->{width})) {
-            ThrowUserError('dashboard_illegal_id'); # TODO
-        }
+        validate_fields(COLUMN_FIELD_DEFS, $col, 1);
     }
 
     $prefs->{columns} = $columns;
@@ -215,8 +212,8 @@ sub save_overlay {
     require_account;
     my ($self, $params) = @_;
 
-    my $overlay = _fields_from_params($OVERLAY_FIELD_DEFS, $params);
-    _validate_fields($OVERLAY_FIELD_DEFS, $overlay, 1);
+    my $overlay = fields_from_params(OVERLAY_FIELD_DEFS, $params);
+    validate_fields(OVERLAY_FIELD_DEFS, $overlay, 1);
 
     $overlay->{owner} = Bugzilla->user->id;
     $overlay->{created} = time;
@@ -341,23 +338,69 @@ sub save_workspace {
         die "'widgets' field must be an array.";
     }
 
-    foreach my $widget (@{$params->{widgets}}) {
-        validate_fields($WIDGET_FIELD_DEFS, $widget, 1);
-    }
-
     if(! UNIVERSAL::isa($params->{columns}, 'ARRAY')) {
-        die "'widgets' field must be an array.";
+        die "'columns' field must be an array.";
     }
 
-    foreach my $column (@{$params->{columns}}) {
-        validate_fields($COLUMN_FIELD_DEFS, $column, 1);
-    }
-
+    # Pass through fields_from_params in order to detaint.
     my $prefs = get_user_prefs();
-    $prefs->{widgets} = $params->{widgets};
-    $prefs->{columns} = $params->{columns};
+
+    $prefs->{columns} = [ map {
+        validate_fields(COLUMN_FIELD_DEFS, $_, 1);
+        fields_from_params(COLUMN_FIELD_DEFS, $_);
+    } @{$params->{columns}} ];
+
+    $prefs->{widgets} = [ map {
+        validate_fields(WIDGET_FIELD_DEFS, $_, 1);
+        fields_from_params(WIDGET_FIELD_DEFS, $_);
+    } @{$params->{widgets}} ];
+
     set_user_prefs(undef, $prefs);
     return $prefs;
+}
+
+
+sub get_feed {
+    require_account;
+    my ($self, $params) = @_;
+
+    my $browser = LWP::UserAgent->new();
+    my $proxy_url = Bugzilla->params->{'proxy_url'};
+    if ($proxy_url) {
+        $browser->proxy(['http'], $proxy_url);
+    } else {
+        $browser->env_proxy();
+    }
+
+    $browser->timeout(10);
+    my $response = $browser->get($params->{url});
+    if($response->code != 200) {
+        die $response->status_line;
+    }
+
+    my $feed = XML::Feed->parse(\($response->decoded_content))
+        or die XML::Feed->errstr;
+
+    sub format_time {
+        my ($dt) = @_;
+        if($dt) {
+            return $dt->datetime;
+        }
+        return '';
+    }
+
+    return {
+        title => $feed->title,
+        link => $feed->link,
+        description => $feed->description,
+        tagline => $feed->tagline,
+        items => [ map { {
+            title => $_->title,
+            link => $_->link,
+            description => $_->content->body,
+            modified => format_time($_->modified)
+        } } $feed->items ]
+    };
 }
 
 
