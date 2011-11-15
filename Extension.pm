@@ -60,8 +60,9 @@ sub page_before_template {
 
     cgi_no_cache;
 
-    $args->{vars}->{dashboard_config} = JSON->new->utf8->pretty->encode({
-    #$args->{vars}->{dashboard_config} = encode_json({
+    my $vars = $args->{vars};
+    $vars->{dashboard_config} = JSON->new->utf8->pretty->encode({
+    #$vars->{dashboard_config} = encode_json({
         rss_max_items => int(Bugzilla->params->{dashboard_rss_max_items}),
         user_login => Bugzilla->user->login,
         is_admin => Bugzilla->user->in_group('admin'),

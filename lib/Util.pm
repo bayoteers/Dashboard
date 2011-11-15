@@ -125,6 +125,7 @@ use File::Path;
 use File::Spec;
 use POSIX qw(floor strftime isdigit);
 use Storable qw(store retrieve);
+use HTML::Scrubber;
 
 use Bugzilla::Constants;
 use Bugzilla::Extension::Dashboard::Config;
