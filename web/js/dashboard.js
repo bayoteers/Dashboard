@@ -356,7 +356,8 @@ var Widget = Base.extend({
         if(state.height == 1) {
             state.height = 70; // From old RSS widget. TODO
         }
-        this.innerElement.height(state.height);
+        this.contentElement.height(state.height);
+        this._onResize();
 
         // Temporarily needed for drag'n'drop code below.
         this.element.data('widgetId', state.id);
@@ -476,7 +477,7 @@ Widget.addClass('url', Widget.extend({
      */
     _onIframeLoad: function()
     {
-        if(! this.state.selector) {
+        if(this.state.maximized || !this.state.selector) {
             return;
         }
 
@@ -961,7 +962,7 @@ var Dashboard = Base.extend({
 
     _onDeleteWidgetDone: function(widget, response) {
         this.widgetRemovedCb.fire(widget);
-        this.notifyCb.fire('Removed widget ' + widget.state.title);
+        this.notifyCb.fire('Deleted widget: ' + widget.state.title);
     },
 
     /**
@@ -1245,55 +1246,83 @@ var WidgetView = Base.extend({
             handles: 'e, s, se',
             minWidth: 75,
             helper: 'widget-state-highlight',
+            start: this._disableIframes,
             stop: this._onWidgetResizeStop.bind(this, widget)
         });
     },
 
+    /**
+     * Set a column's width to a new value, adjusting other columns to
+     * compensate for the size change.
+     *
+     * @param idx
+     *      Column index (0..Dashborad.columns.length).
+     * @param newPct
+     *      Integer width in percent.
+     */
+    _setColumnWidth: function(idx, newPct)
+    {
+        // Make a new column information structure and save it on the server.
+        // saveColumns() will fire columnsChangeCb on success, which will cause
+        // the actual resize to occur.
+        var deltaPct = this._dashboard.columns[idx].width - newPct;
+        var cols = $.extend(true, [], this._dashboard.columns);
+        cols[idx].width -= deltaPct;
+        cols[cols.length - 1].width += deltaPct;
+        this._dashboard.saveColumns(cols);
+    },
+
+    /**
+     * On Firefox/Windows, cross-domain iframes will swallow mousemove events,
+     * making sortable() feel horrible. So hide the IFRAMEs while dragging.
+     */
+    _disableIframes: function()
+    {
+        $('iframe').css('visibility', 'hidden');
+    },
+
+    /**
+     * Undo _onWidgetResizeStart() IFRAME hide.
+     */
+    _enableIframes: function()
+    {
+        $('iframe').css('visibility', '');
+    },
+
+    /**
+     * Handle a widget's content area being resized by updating the width of
+     * the widget's column and storing the height of the widget itself.
+     *
+     * @param widget
+     *      Widget object passed from _makeWidgetResizable().
+     */
     _onWidgetResizeStop: function(widget)
     {
-        var resizedWidth = widget.contentElement.width() + 55;
-        var colId = widget.state.col;
-        var col = $('#column' + colId);
-        var colWidthPx = col.width();
-        var colWidthPct = parseInt(col.css('width'));
+        this._enableIframes();
 
-        widget.contentElement.css('width', '');
+        var content = widget.contentElement;
+        var newPct = Math.floor(100 * (content.width() / (55 + this._element.width())));
+        content.css('width', '');
 
-        var newWidthPct = Math.max(10, Math.round(colWidthPct / colWidthPx * resizedWidth));
-        var deltaWidthPct = Math.round((colWidthPct - newWidthPct) / ($('.column').length - 1));
-
-        $('.column:not(#' + colId + ',#column-1)').each(function(index) {
-            var curWidthPct = Math.max(10, deltaWidthPct + widget.contentElement.css('width'));
-            $(this).css('width', curWidthPct + '%');
-        });
-
-        this._updateColumnWidths();
-        widget.update({ height: widget.contentElement.height() });
-        widget.element.trigger('vertical_resize');
-        widget.update();
+        widget.update({ height: content.height() });
+        this._setColumnWidth(widget.state.col, newPct);
         this._dashboard.save();
     },
 
     /**
-     * 
+     * Handle a column's element being resized by updating the stored width.
+     *
+     * @param idx
+     *      Column index, passed from _updateColumnWidths().
      */
     _onColumnResizeStop: function(idx)
     {
+        this._enableIframes();
+
         var helper = $('.column_helper', this._columns[idx]);
-
-        var oldPct = this._dashboard.columns[idx].width;
         var newPct = Math.floor(100 * (helper.width() / this._element.width()));
-        var deltaPct = oldPct - newPct;
         helper.css('width', '100%');
-
-        // Make a new column information structure and save it on the server.
-        // saveColumns() will fire columnsChangeCb on success, which will cause
-        // the actual resize to occur.
-        var cols = $.extend(true, [], this._dashboard.columns);
-        cols[idx].width -= deltaPct;
-        cols[cols.length - 1].width += deltaPct;
-
-        this._dashboard.saveColumns(cols);
+        this._setColumnWidth(idx, newPct);
     },
 
     MIN_WIDTH: 100,
@@ -1335,6 +1364,7 @@ var WidgetView = Base.extend({
                     minWidth: this.MIN_WIDTH,
                     maxWidth: (info.width * pct) + maxGrowth,
                     helper: 'column-state-highlight',
+                    start: this._disableIframes,
                     stop: this._onColumnResizeStop.bind(this, i)
                 });
             }
@@ -1350,21 +1380,19 @@ var WidgetView = Base.extend({
         var sortable = $();
         for(var i = 0; i < this._dashboard.widgets.length; i++) {
             var widget = this._dashboard.widgets[i];
-            if(widget.state.movable) {
-                sortable.push(widget.element);
-            }
+            sortable.push(widget.element);
         }
         return sortable;
     },
 
-    // make the columns Sortable
+    /**
+     * Configure jQuery UI sortable() on all the column elements. Called when
+     * the set of widgets or columns changes.
+     */
     _makeSortable: function()
     {
         var sortable = this._getSortableWidgetElements();
         var heads = $('.widget-head', sortable);
-
-        //heads.mousedown(this._onHeadMouseDown);
-        //heads.mouseup(this._onHeadMouseUp);
 
         $('.column').sortable({
             connectWith: $('.column'),
@@ -1382,14 +1410,24 @@ var WidgetView = Base.extend({
         });
     },
 
+    /**
+     * When a 'sort' (aka. widget move) starts, set the moved widget's width to
+     * a rough approximation of the column size; to improve usability for
+     * widgets being moved from the top column.
+     */
     _onSortStart: function(e, ui) {
-        // Set widget width to a rough approximation of the column size;
-        // simplifies dragging from the top column.
+        this._disableIframes();
         var width = this._element.width() / this._columns.length;
         ui.item.css('width', Math.min(300, width));
     },
 
+    /**
+     * When a widget mode ends, reset the moved widget's width to inherit from
+     * the CSS rules, and update its state to reflect the column it was dragged
+     * to.
+     */
     _onSortStop: function(e, ui) {
+        this._enableIframes();
         ui.item.css('width', '');
         var columnId = ui.item.parent('.column').data('column_id');
         var widgetId = ui.item.data('widgetId');
@@ -1429,9 +1467,6 @@ var OverlayView = Base.extend({
         if(this._dashboard.isAdmin) {
             // Hide "requires approval labels" for admins.
             $('.requires-admin', this._element).remove();
-        } else {
-            // Hide pending box for non-admin users.
-            $('#overlay_pending_box').remove();
         }
     },
 
@@ -1448,15 +1483,12 @@ var OverlayView = Base.extend({
     _makeTr: function(overlay)
     {
         var tr = cloneTemplate('#overlay_template');
-        $('.overlay-name', tr).text(overlay.name);
-        $('.overlay-description', tr).text(overlay.description);
-        $('.overlay-login', tr).text(overlay.user_login);
-        $('.overlay_publish_link', tr).click(
-            this._onPublishClick.bind(this, overlay));
-        $('.overlay_load_link', tr).click(
-            this._onLoadClick.bind(this, overlay));
-        $('.overlay_delete_link', tr).click(
-            this._onDeleteClick.bind(this, overlay));
+        $('.name', tr).text(overlay.name);
+        $('.description', tr).text(overlay.description);
+        $('.login', tr).text(overlay.user_login || 'unknown author');
+        $('.publish_link', tr).click(this._onPublishClick.bind(this, overlay));
+        $('.load_link', tr).click(this._onLoadClick.bind(this, overlay));
+        $('.delete_link', tr).click(this._onDeleteClick.bind(this, overlay));
 
         $('a', tr).attr('href', 'javascript:;');
         return tr;
@@ -1464,12 +1496,16 @@ var OverlayView = Base.extend({
 
     _onPublishClick: function(overlay)
     {
-        this._dashboard.publishOverlay(overlay);
+        if(confirm('Are you sure you want to publish "' + overlay.name + '"?')) {
+            this._dashboard.publishOverlay(overlay);
+        }
     },
 
     _onDeleteClick: function(overlay)
     {
-        this._dashboard.deleteOverlay(overlay);
+        if(confirm('Are you sure you want to delete "' + overlay.name + '"?')) {
+            this._dashboard.deleteOverlay(overlay);
+        }
     },
 
     /**
@@ -1478,11 +1514,8 @@ var OverlayView = Base.extend({
      */
     _onOverlaysChange: function(overlays)
     {
-        var published = $('#overlay_load_box tbody', this._element);
-        var pending = $('#overlay_pending_box tbody', this._element);
-
-        published.children().remove();
-        pending.children().remove();
+        var tbody = $('#overlay_load_box tbody', this._element);
+        tbody.children().remove();
 
         var login = this._dashboard.login;
         var isAdmin = this._dashboard.isAdmin;
@@ -1495,12 +1528,10 @@ var OverlayView = Base.extend({
                 $('.can-delete', tr).remove();
             }
 
-            if(overlay.pending) {
-                tr.appendTo(pending);
-            } else {
+            if(! overlay.pending) {
                 $('.can-publish', tr).remove();
-                tr.appendTo(published);
             }
+            tr.appendTo(tbody);
         }
     },
 
@@ -1538,6 +1569,10 @@ var OverlayView = Base.extend({
 });
 
 
+/**
+ * Display a small progress indicator at the top of the document while any
+ * jQuery XMLHTTPRequest is in progress.
+ */
 var RpcProgressView = Base.extend({
     constructor: function()
     {
@@ -1549,12 +1584,19 @@ var RpcProgressView = Base.extend({
         $(document).ajaxComplete(this._onAjaxComplete.bind(this));
     },
 
+    /**
+     * Handle request start by incrementing the active count.
+     */
     _onAjaxSend: function()
     {
         this._active++;
         this._progress.show();
     },
 
+    /**
+     * Handle request copmletion by decrementing the active count, and hiding
+     * the progress indicator if there are no more active requests.
+     */
     _onAjaxComplete: function()
     {
         this._active--;
@@ -1563,6 +1605,7 @@ var RpcProgressView = Base.extend({
         }
     }
 });
+
 
 /**
  * Manages the general Dashboard user interface, including buttons and links
@@ -1637,10 +1680,10 @@ function main()
 {
     checkBrowserQuality();
 
-    var progress = new RpcProgressView();
+    progress = new RpcProgressView();
     dashboard = new Dashboard(DASHBOARD_CONFIG);
-    var view = new DashboardView(dashboard);
-    var widgetView = new WidgetView(dashboard);
+    view = new DashboardView(dashboard);
+    widgetView = new WidgetView(dashboard);
 
     dashboard.setWorkspace(DASHBOARD_CONFIG.workspace);
     dashboard.setOverlays(DASHBOARD_CONFIG.overlays);
