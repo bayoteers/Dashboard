@@ -85,8 +85,8 @@
     padding-top: 5px;
 }
 
-#widget-buttons ul,
-.dashboard-main ul {
+#widget-buttons ul
+{
     list-style: none;
     padding: 0;
     margin: 0;
@@ -119,54 +119,71 @@
     text-decoration: none;
 }
 
-#button-overlay a {
+#buttons a {
+    display: inline-block;
+    vertical-align: middle;
+    width: 21px;
+    height: 21px;
+}
+
+#dashboard_notify {
+    font-weight: normal;
+}
+
+#button-overlay {
     background: url(img/icon_overlay.png) center left no-repeat;
 }
-#button-overlay a:hover {
+#button-overlay:hover {
     background: url(img/icon_overlay_b.png) center left no-repeat;
 }
-#button-new-widget a {
+#button-new-url {
     background: url(img/icon_new_widget.png) center left no-repeat;
 }
-#button-new-widget a:hover {
+#button-new-url:hover {
     background: url(img/icon_new_widget_b.png) center left no-repeat;
 }
-#button-add-column a {
+#button-new-mybugs {
+    background: url(img/icon_new_widget.png) center left no-repeat;
+}
+#button-new-mybugs:hover {
+    background: url(img/icon_new_widget_b.png) center left no-repeat;
+}
+#button-add-column {
     background: url(img/icon_add_column.png) center left no-repeat;
 }
-#button-add-column a:hover {
+#button-add-column:hover {
     background: url(img/icon_add_column_b.png) center left no-repeat;
 }
-#dashboard #button-del-column a {
+#button-del-column {
     background: url(img/icon_del_column.png) center left no-repeat;
 }
-#dashboard #button-del-column a:hover {
+#button-del-column:hover {
     background: url(img/icon_del_column_b.png) center left no-repeat;
 }
-#dashboard #button-clear-workspace a {
+#button-clear-workspace {
     background: url(img/icon_clear_workspace.png) center left no-repeat;
 }
-#dashboard #button-clear-workspace a:hover {
+#button-clear-workspace:hover {
     background: url(img/icon_clear_workspace_b.png) center left no-repeat;
 }
 
-#dashboard #button-new-xeyes a {
+#button-new-xeyes {
     background: url(img/icon_new_xeyes.png) center left no-repeat;
 }
-#dashboard #button-new-xeyes a:hover {
+#button-new-xeyes:hover {
     background: url(img/icon_new_xeyes_b.png) center left no-repeat;
 }
 
-#dashboard #button-new-rss a {
+#button-new-rss {
     background: url(img/icon_new_rss.png) center left no-repeat;
 }
-#dashboard #button-new-rss a:hover {
+#button-new-rss:hover {
     background: url(img/icon_new_rss_b.png) center left no-repeat;
 }
-#dashboard #button-save-widgets a {
+#button-save-widgets {
         background: url(img/icon_save.png) center left no-repeat;
 }
-#dashboard #button-save-widgets a:hover {
+#button-save-widgets:hover {
         background: url(img/icon_save_b.png) center left no-repeat;
 }
 
@@ -415,7 +432,7 @@
     background: url(img/sizer_right_b.png) center right no-repeat #fff;
 }
 
-#dashboard .column_helper {
+.column_helper {
     height: 16px;
     background: url(img/sizer_mid.png) repeat-x;
 }

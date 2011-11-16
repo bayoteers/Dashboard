@@ -1439,8 +1439,8 @@ var OverlayView = Base.extend({
     {
         $.colorbox({
             inline: true,
-            width: '450px',
-            height: '400px',
+            width: '665px',
+            height: '562px',
             href: '#overlay_page'
         });
     },
@@ -1584,17 +1584,14 @@ var DashboardView = Base.extend({
 
         var dash = this._dashboard;
 
-        $('#settingsLink').click(this.openSettings.bind(this));
-        $('#openOverlayButton').click(this._onOpenOverlayClick.bind(this));
-        $('#addColumnButton').click(dash.addColumn.bind(dash));
-        $('#savePrefsButton').click(dash.save.bind(dash));
-        $('#deleteColumnButton').click(dash.deleteColumn.bind(dash));
-        $('#clearWorkspaceButton').click(dash.clearWorkspace.bind(dash));
-
-        $('#newUrlButton').click(dash.addWidget.bind(dash, 'url'));
-        $('#newMyBugsButton').click(dash.addWidget.bind(dash, 'mybugs'));
-        $('#newRssButton').click(dash.addWidget.bind(dash, 'rss'));
-        $('#newXeyesButton').click(dash.addWidget.bind(dash, 'xeyes'));
+        $('#button-overlay').click(this._onOpenOverlayClick.bind(this));
+        $('#button-save-widgets').click(dash.save.bind(dash));
+        $('#button-clear-workspace').click(dash.clearWorkspace.bind(dash));
+        $('#button-add-column').click(dash.addColumn.bind(dash));
+        $('#button-del-column').click(dash.deleteColumn.bind(dash));
+        $('#button-new-url').click(dash.addWidget.bind(dash, 'url'));
+        $('#button-new-mybugs').click(dash.addWidget.bind(dash, 'mybugs'));
+        $('#button-new-rss').click(dash.addWidget.bind(dash, 'rss'));
     },
 
     notify: function(message)
@@ -1602,17 +1599,9 @@ var DashboardView = Base.extend({
         $('#dashboard_notify').text(message);
     },
 
-    openSettings: function()
-    {
-        $.colorbox({
-            width: '600px',
-            inline: true,
-            href: '.dashboard-main'
-        });
-    },
-
     _onOpenOverlayClick: function()
     {
+        this._dashboard.getOverlays();
         this._overlayView.open();
     }
 });
@@ -1657,7 +1646,7 @@ function main()
     dashboard.setOverlays(DASHBOARD_CONFIG.overlays);
 
     if(! dashboard.widgets.length) {
-        //view.openSettings();
+        view._overlayView.open();
     }
 }
 

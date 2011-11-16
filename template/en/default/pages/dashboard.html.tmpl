@@ -24,7 +24,23 @@
 [% USE Bugzilla %]
 
 [% header = BLOCK %]
-    <a id="settingsLink">Dashboard</a>
+    Dashboard
+    <span id="buttons">
+        &nbsp;
+        <a id="button-overlay" title="Overlays"></a>
+        <a id="button-save-widgets" title="Save prefs"></a>
+        <a id="button-clear-workspace" title="Clear workspace"></a>
+        &nbsp;&nbsp;
+        <a id="button-add-column" title="Add column"></a>
+        <a id="button-del-column" title="Delete column"></a>
+        &nbsp;&nbsp;
+        <a id="button-new-url" title="New URL"></a>
+        <a id="button-new-mybugs" title="New My Bugs"></a>
+        <a id="button-new-rss" title="New RSS"></a>
+    </span>
+
+    &nbsp;
+    <span id="dashboard_notify">Welcome</p>
 [% END %]
 
 [% PROCESS global/header.html.tmpl
@@ -34,8 +50,6 @@
 <link rel="stylesheet" href="extensions/Dashboard/web/css/smoothness/jquery-ui-1.8.5.custom.css">
 <link rel="stylesheet" href="extensions/Dashboard/web/css/dashboard.css">
 <link rel="stylesheet" href="extensions/Dashboard/web/css/colorbox.css">
-
-<div id="ajax_message"></div>
 
 <div id="dashboard">
     <div id="columns">
@@ -185,26 +199,6 @@
         </p>
     </div>
 
-    <div id="dashboard" class="dashboard-main">
-        <h3>Dashboard</h3>
-        <ul id="widget-buttons">
-            <li id="button-overlay"><a id="openOverlayButton">Open overlay</a></li>
-            <li id="button-add-column"><a id="addColumnButton">Add column</a></li>
-            <li id="button-save-widgets"><a id="savePrefsButton">Save prefs</a></li>
-            <li id="button-del-column"><a id="deleteColumnButton">Delete column</a></li>
-            <li id="button-clear-workspace"><a id="clearWorkspaceButton">Clear workspace</a></li>
-        </ul>
-        <div class="widget-divider"></div>
-        <ul id="widget-buttons">
-            <li id="button-new-widget"><a id="newUrlButton">New URL</a></li>
-            <li id="button-new-widget"><a id="newMyBugsButton">New My Bugs</a></li>
-            <li id="button-new-rss"><a id="newRssButton">New RSS</a></li>
-            <li id="button-new-xeyes"><a id="newXeyesButton">New Xeyes</a></li>
-        </ul>
-        <div class="widget-divider"></div>
-        <p id="dashboard_notify">Welcome to Dashboard!</p>
-    </div>
-
     <table> <!-- required to satisfy HTML parser. -->
     <tr id="overlay_template">
         <th align="right" valign="top">
@@ -223,10 +217,18 @@
     </table>
 
     <div id="overlay_page">
-        <h1>Dashboard overlay</h1>
+        <h2>Load Overlay</h2>
+        <div class="overlay_box" id="overlay_load_box">
+            <table><tbody></tbody></table>
+        </div>
 
+        <h2>Pending Overlays</h2>
+        <div class="overlay_box" id="overlay_pending_box">
+            <table><tbody></tbody></table>
+        </div>
+
+        <h2>Save Overlay</h2>
         <div class="overlay_box" id="overlay_save_box">
-            <h2>Save current overlay:</h2>
             <table>
             <tr>
             <th align="right" valign="top">
@@ -248,16 +250,6 @@
             <td align="right" valign="top">
                 <button id="overlay_save_button">Save</button>
             </table>
-        </div>
-
-        <div class="overlay_box" id="overlay_load_box">
-            <h2>Select overlay to load:</h2>
-            <table><tbody></tbody></table>
-        </div>
-
-        <div class="overlay_box" id="overlay_pending_box">
-            <h2>Pending overlays:</h2>
-            <table><tbody></tbody></table>
         </div>
     </div>
 
