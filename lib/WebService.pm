@@ -142,17 +142,17 @@ sub save_columns {
         die "'columns' field must be an array.";
     }
 
-    if(@$columns >= COLUMNS_MAX) {
+    if(@$columns > COLUMNS_MAX) {
         ThrowUserError('dashboard_max_columns');
     }
 
-    foreach my $col (@$columns) {
-        validate_fields(COLUMN_FIELD_DEFS, $col, 1);
-    }
+    $prefs->{columns} = [ map {
+        validate_fields(COLUMN_FIELD_DEFS, $_, 1);
+        fields_from_params(COLUMN_FIELD_DEFS, $_);
+    } @$columns ];
 
-    $prefs->{columns} = $columns;
     set_user_prefs(undef, $prefs);
-    return $columns;
+    return $prefs->{columns};
 }
 
 sub delete_overlay {
@@ -294,7 +294,7 @@ sub add_column {
     }
 
     push @{$prefs->{columns}}, {
-        width => (@{$prefs->{columns}} + 1) / 100
+        width => 100 * ((@{$prefs->{columns}} + 1) / 100)
     };
 
     set_user_prefs(undef, $prefs);
@@ -378,7 +378,7 @@ sub get_feed {
         die $response->status_line;
     }
 
-    my $feed = XML::Feed->parse(\($response->decoded_content))
+    my $feed = XML::Feed->parse(\($response->content))
         or die XML::Feed->errstr;
 
     sub _format_time {
