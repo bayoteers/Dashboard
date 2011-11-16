@@ -381,7 +381,7 @@ sub get_feed {
     my $feed = XML::Feed->parse(\($response->decoded_content))
         or die XML::Feed->errstr;
 
-    sub format_time {
+    sub _format_time {
         my ($dt) = @_;
         if($dt) {
             return $dt->datetime;
@@ -398,7 +398,7 @@ sub get_feed {
             title => $_->title,
             link => $_->link,
             description => $_->content->body,
-            modified => format_time($_->modified)
+            modified => _format_time($_->modified)
         } } $feed->items ]
     };
 }
