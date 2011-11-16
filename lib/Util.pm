@@ -142,6 +142,7 @@ use constant WIDGET_FIELD_DEFS => {
     password => { type => 'text' },
     pos => { type => 'int', required => 1 },
     refresh => { type => 'int', default => 600, required => 1 },
+    selector => { type => 'text' },
     title => { type => 'text', required => 1 },
     type => { type => 'text', required => 1, choices => [ WIDGET_TYPES ]},
     URL => { type => 'text' },
@@ -493,9 +494,9 @@ sub scrub_string {
     if ($s) {
         my $scrubber = HTML::Scrubber->new;
         $scrubber->default(0);
-        return $scrubber->scrub($s);
+        return trim($scrubber->scrub($s));
     }
-    return $default || ' ';
+    return trim($default || '');
 }
 
 
