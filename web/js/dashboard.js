@@ -889,6 +889,27 @@ var Dashboard = Base.extend({
     },
 
     /**
+     * Reset column widths to be even.
+     */
+    resetColumns: function()
+    {
+        var width = Math.floor(100 / this.columns.length);
+        var columns = [];
+        for(var i = 0; i < this.columns.length; i++) {
+            columns.push({ width: width });
+        }
+
+        var rpc = this.rpc('save_columns', { columns: columns });
+        rpc.done(this._onResetColumnsDone.bind(this));
+    },
+
+    _onResetColumnsDone: function(columns)
+    {
+        this.setColumns(columns);
+        this.notifyCb.fire('Column widths reset.');
+    },
+
+    /**
      * Find the first unused widget ID by examining our list of widgets.
      */
     _getFreeWidgetId: function()
@@ -1632,6 +1653,7 @@ var DashboardView = Base.extend({
         $('#button-clear-workspace').click(dash.clearWorkspace.bind(dash));
         $('#button-add-column').click(dash.addColumn.bind(dash));
         $('#button-del-column').click(dash.deleteColumn.bind(dash));
+        $('#button-reset-columns').click(dash.resetColumns.bind(dash));
         $('#button-new-url').click(dash.addWidget.bind(dash, 'url'));
         $('#button-new-mybugs').click(dash.addWidget.bind(dash, 'mybugs'));
         $('#button-new-rss').click(dash.addWidget.bind(dash, 'rss'));

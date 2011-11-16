@@ -154,6 +154,12 @@
 #button-add-column:hover {
     background: url(img/icon_add_column_b.png) center left no-repeat;
 }
+#button-reset-columns {
+    background: url(img/icon_reset_columns.png) center left no-repeat;
+}
+#button-reset-columns:hover {
+    background: url(img/icon_reset_columns_b.png) center left no-repeat;
+}
 #button-del-column {
     background: url(img/icon_del_column.png) center left no-repeat;
 }
