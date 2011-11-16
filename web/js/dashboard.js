@@ -137,6 +137,7 @@ var Rpc = Base.extend({
         absorb(function()
         {
             that.doneCb.fire(response.result);
+            that.completeCb.fire(that);
         });
     },
 
@@ -153,6 +154,7 @@ var Rpc = Base.extend({
         absorb(function()
         {
             that.failCb.fire(response.error);
+            that.completeCb.fire(that);
         });
     }
 });
@@ -222,7 +224,7 @@ var Widget = Base.extend({
         this._child('.collapse').click(this._onMinimizeClick.bind(this));
         this._child('.maximize').click(this._onMaximizeClick.bind(this));
 
-        this._child('.edit').click(this._onEditClick.bind(this));
+        this._child('.edit').click(this.edit.bind(this));
         this._child('.save').click(this._onSaveClick.bind(this));
         this._child('.save').hide();
 
@@ -297,7 +299,10 @@ var Widget = Base.extend({
         }
     },
 
-    _onEditClick: function(event)
+    /**
+     * Request the editing controls be shown.
+     */
+    edit: function(event)
     {
         this._restore();
         this._child('.edit').hide();
@@ -308,6 +313,7 @@ var Widget = Base.extend({
     _onSaveClick: function()
     {
         this._apply();
+        this.reload();
         this._dashboard.save();
         this._child('.edit').show();
         this._child('.save').hide();
@@ -588,8 +594,13 @@ Widget.addClass('rss', Widget.extend({
     // See Widget.reload().
     reload: function()
     {
+        if(! this.state.URL) {
+            this.innerElement.text('Please set a feed URL.');
+            return;
+        }
+
         this.innerElement.html(cloneTemplate('#loader_template'));
-        var rpc = this._dashboard.getFeed(this.state.URL);
+        var rpc = new Rpc('get_feed', { url: this.state.URL });
         rpc.fail(this._onReloadFail.bind(this));
         rpc.done(this._onReloadDone.bind(this));
         this._onResize();
@@ -709,18 +720,14 @@ Widget.addClass('mybugs', Widget.extend({
  *
  * 'View' classes are expected to subscribe to the various *Cb callbacks, and
  * update their visual presentation based on, and *only* based on, the state
- * reflected by this model when the callback fires.
- *
- * This means visual changes associated with a mutation (e.g. resizing a
- * column) should not apply until after the callback. This only occurs after
- * the server has successfully stored the change, therefore the user can always
- * be sure what state their workspace will be in after a page reload.
+ * reflected by this model when the callback fires. This means visual changes
+ * associated with a mutation (e.g. resizing a column) should not apply until
+ * after the callback.
  *
  * Methods are provided for saving state; they return Rpc objects. If some
  * visual update is required following a mutation (e.g. closing a dialog after
  * a saving an overlay), this should be done by subscribing to the ".done()"
- * event provided by the Rpc. This again ensures there are no illusions about
- * the success of an operation that actually failed.
+ * event provided by the Rpc.
  */
 var Dashboard = Base.extend({
     /**
@@ -739,14 +746,10 @@ var Dashboard = Base.extend({
         this.notifyCb = new jQuery.Callbacks();
         this.overlaysChangeCb = new jQuery.Callbacks();
 
-        // Widgets existing in the user's workspace; always reflects the state
-        // of backend store.
+        // Widgets existing in the user's workspace.
         this.widgets = [];
-
-        // Columns existing in thte user's workspace; always reflects the state
-        // of backend store.
+        // Columns existing in thte user's workspace.
         this.columns = [];
-
         // String user's login name.
         this.login = config.user_login;
         // Bool is user an admin.
@@ -789,11 +792,6 @@ var Dashboard = Base.extend({
             this.widgets.push(widget);
             this.widgetAddedCb.fire(widget);
         }
-    },
-
-    getFeed: function(url)
-    {
-        return this.rpc('get_feed', { url: url });
     },
 
     /**
@@ -851,9 +849,20 @@ var Dashboard = Base.extend({
     rpc: function(method, params, cb)
     {
         var rpc = new Rpc(method, params);
-        rpc.fail(function(e) { alert(e.message); });
+        rpc.fail(function(e) { alert(e.message ? e.message : e); });
         rpc.fail(this.notifyCb.fire.bind(this.notifyCb));
         return rpc;
+    },
+
+    _makeNewColumns: function(count)
+    {
+        var cols = [];
+        for(var i = 0; i < count; i++) {
+            cols.push({
+                width: Math.floor(100 / count)
+            });
+        }
+        return cols;
     },
 
     /**
@@ -861,14 +870,11 @@ var Dashboard = Base.extend({
      */
     clearWorkspace: function()
     {
-        var rpc = this.rpc('clear_workspace');
-        rpc.done(this._onClearWorkspaceDone.bind(this));
-        return rpc;
-    },
-
-    _onClearWorkspaceDone: function(workspace)
-    {
-        this.setWorkspace(workspace);
+        this.setWorkspace({
+            widgets: [],
+            columns: this._makeNewColumns(3)
+        });
+        this.save();
         this.notifyCb.fire('Workspace cleared.');
     },
 
@@ -877,15 +883,12 @@ var Dashboard = Base.extend({
      */
     addColumn: function()
     {
-        var rpc = this.rpc('add_column');
-        rpc.done(this._onAddColumnDone.bind(this));
-        return rpc;
-    },
-
-    _onAddColumnDone: function(columns)
-    {
-        this.setColumns(columns);
+        if(this.columns.length == 4) {
+            return alert("Can't add new column, maximum reached.");
+        }
+        this.setColumns(this._makeNewColumns(this.columns.length + 1));
         this.notifyCb.fire('Added a new column.');
+        this.save();
     },
 
     /**
@@ -893,20 +896,9 @@ var Dashboard = Base.extend({
      */
     resetColumns: function()
     {
-        var width = Math.floor(100 / this.columns.length);
-        var columns = [];
-        for(var i = 0; i < this.columns.length; i++) {
-            columns.push({ width: width });
-        }
-
-        var rpc = this.rpc('save_columns', { columns: columns });
-        rpc.done(this._onResetColumnsDone.bind(this));
-    },
-
-    _onResetColumnsDone: function(columns)
-    {
-        this.setColumns(columns);
+        this.setColumns(this._makeNewColumns(this.columns.length));
         this.notifyCb.fire('Column widths reset.');
+        this.save();
     },
 
     /**
@@ -929,43 +921,19 @@ var Dashboard = Base.extend({
      */
     addWidget: function(type)
     {
-        var id = this._getFreeWidgetId();
         var widget = Widget.createInstance(this, {
-            id: id,
-            title: 'Widget ' + id,
+            id: this._getFreeWidgetId(),
+            title: 'Unnamed widget',
             type: type,
-            col: 1, // wtf?
+            col: 0, // wtf?
             pos: 99, // wtf?
         });
 
-        var rpc = this.rpc('save_widget', widget.state);
-        rpc.done(this._onAddWidgetDone.bind(this, widget));
-        return rpc;
-    },
-
-    _onAddWidgetDone: function(widget, response)
-    {
         this.widgets.push(widget);
         this.notifyCb.fire('Created ' + widget.state.type + ' widget.');
         this.widgetAddedCb.fire(widget);
-    },
-
-    /**
-     * Ask the server to save a widget's state.
-     *
-     * @param widget
-     *      Widget object.
-     */
-    saveWidget: function(widget)
-    {
-        var rpc = this.rpc('save_widget', widget.state);
-        rpc.done(this._onSaveWidgetDone.bind(this, widget));
-        return rpc;
-    },
-
-    _onSaveWidgetDone: function(widget, response)
-    {
-        this.notifyCb.fire('Saved settings for ' + widget.state.title + '!');
+        this.save();
+        widget.edit();
     },
 
     /**
@@ -976,14 +944,14 @@ var Dashboard = Base.extend({
      */
     deleteWidget: function(widget)
     {
-        var rpc = this.rpc('delete_widget', { id: widget.state.id });
-        rpc.done(this._onDeleteWidgetDone.bind(this, widget));
-        return rpc;
-    },
+        this.widgets = $.grep(this.widgets, function(widget_)
+        {
+            return widget_ !== widget;
+        });
 
-    _onDeleteWidgetDone: function(widget, response) {
         this.widgetRemovedCb.fire(widget);
         this.notifyCb.fire('Deleted widget: ' + widget.state.title);
+        this.save();
     },
 
     /**
@@ -1063,19 +1031,26 @@ var Dashboard = Base.extend({
     },
 
     /**
-     * Ask the server to delete a trailing empty column.
+     * Ask the server to delete a trailing column and its widgets.
      */
     deleteColumn: function()
     {
-        var rpc = this.rpc('delete_column');
-        rpc.done(this._onDeleteColumnDone.bind(this));
-        return rpc;
-    },
+        var deleteId = this.columns.length - 1;
+        if(deleteId == 0) {
+            return alert('Cannot delete the last column.');
+        }
 
-    _onDeleteColumnDone: function(columns)
-    {
-        this.setColumns(columns);
-        this.notifyCb.fire('Removed column!');
+        var that = this;
+        $.each(this.widgets, function(_, widget)
+        {
+            if(widget.state.col == deleteId) {
+                that.deleteWidget(widget);
+            }
+        });
+
+        this.setColumns(this._makeNewColumns(this.columns.length - 1));
+        this.notifyCb.fire('Column removed.');
+        this.save();
     },
 
     /**
@@ -1086,15 +1061,8 @@ var Dashboard = Base.extend({
      */
     saveColumns: function(columns)
     {
-        var rpc = this.rpc('save_columns', { columns: columns });
-        rpc.done(this._onSaveColumnsDone.bind(this));
-        return rpc;
-    },
-
-    _onSaveColumnsDone: function(columns)
-    {
         this.setColumns(columns);
-        this.notifyCb.fire('Columns saved.');
+        this.save();
     },
 
     /**
@@ -1113,15 +1081,50 @@ var Dashboard = Base.extend({
     },
 
     /**
-     * Save the current workspace state.
+     * Save the current workspace state. If a save is already in progress, just
+     * set a flag telling the completion handler to start another one. This
+     * avoids races in two places:
+     *      1. Lack of locking in Bugzilla extension code.
+     *      2. An earlier request completes before a later request, which hangs
+     *         indefinitely, resulting in stale state being saved.
      */
     save: function()
     {
-        var rpc = this.rpc('save_workspace', {
+        this._saveAgain = true;
+        if(this._lastSaveRpc) {
+            return;
+        }
+
+        this._saveAgain = false;
+        this._lastSaveRpc = this.rpc('save_workspace', {
             columns: this.columns,
             widgets: this._getWidgetStates()
         });
-        return rpc;
+
+        this._lastSaveRpc.done(this._onSaveDone.bind(this));
+        this._lastSaveRpc.complete(this._onSaveComplete.bind(this));
+        return this._lastSaveRpc;
+    },
+
+    /**
+     * Handle save completion by clearing _lastSaveRpc. Note this must be done
+     * for success *and* failure.
+     */
+    _onSaveComplete: function()
+    {
+        this._lastSaveRpc = null;
+    },
+
+    /**
+     * Handle successful save by checking to see if there were any more
+     * attempts to save while the last RPC was in progress. If so, save again.
+     */
+    _onSaveDone: function()
+    {
+        this._lastSaveRpc = null;
+        if(this._saveAgain) {
+            this.save();
+        }
     }
 });
 
@@ -1210,8 +1213,8 @@ var WidgetView = Base.extend({
 
         this._insertWidget(widget);
         widget.element.trigger('vertical_resize');
-        this._makeWidgetResizable(widget);
         this._makeSortable();
+        this._updateColumnWidths();
     },
 
     /**
@@ -1266,6 +1269,7 @@ var WidgetView = Base.extend({
         widget.contentElement.resizable({
             handles: 'e, s, se',
             minWidth: 75,
+            maxWidth: this._getMaxWidth(widget.state.col),
             helper: 'widget-state-highlight',
             start: this._disableIframes,
             stop: this._onWidgetResizeStop.bind(this, widget)
@@ -1352,10 +1356,12 @@ var WidgetView = Base.extend({
      * Compute the maximum any column but the last may grow by. This is the
      * difference between the last column's current size and its minimum size.
      */
-    _getMaxGrowth: function()
+    _getMaxWidth: function(idx)
     {
         var last = this._columns[this._columns.length - 1];
-        return Math.max(0, last.width() - this.MIN_WIDTH);
+        var maxGrowth = Math.max(0, last.width() - this.MIN_WIDTH);
+        var pct = (this._element.width() - 4) / 100;
+        return (this._dashboard.columns[idx].width * pct) + maxGrowth;
     },
 
     /**
@@ -1364,8 +1370,11 @@ var WidgetView = Base.extend({
      */
     _updateColumnWidths: function()
     {
-        var pct = (this._element.width() - 4) / 100;
-        var maxGrowth = this._getMaxGrowth();
+        var that = this;
+        $.each(this._dashboard.widgets, function(_, widget)
+        {
+            that._makeWidgetResizable(widget);
+        });
 
         for(var i = 0; i < this._columns.length; i++) {
             var notLast = (i + 1) != this._columns.length;
@@ -1383,7 +1392,7 @@ var WidgetView = Base.extend({
                 helper.resizable({
                     handles: 'e',
                     minWidth: this.MIN_WIDTH,
-                    maxWidth: (info.width * pct) + maxGrowth,
+                    maxWidth: this._getMaxWidth(i),
                     helper: 'column-state-highlight',
                     start: this._disableIframes,
                     stop: this._onColumnResizeStop.bind(this, i)
@@ -1592,7 +1601,7 @@ var OverlayView = Base.extend({
 
 /**
  * Display a small progress indicator at the top of the document while any
- * jQuery XMLHTTPRequest is in progress.
+ * jQuery XMLHttpRequest is in progress.
  */
 var RpcProgressView = Base.extend({
     constructor: function()
@@ -1650,13 +1659,20 @@ var DashboardView = Base.extend({
 
         $('#button-overlay').click(this._onOpenOverlayClick.bind(this));
         $('#button-save-widgets').click(dash.save.bind(dash));
-        $('#button-clear-workspace').click(dash.clearWorkspace.bind(dash));
+        $('#button-clear-workspace').click(this._onClearWorkspaceClick.bind(this));
         $('#button-add-column').click(dash.addColumn.bind(dash));
         $('#button-del-column').click(dash.deleteColumn.bind(dash));
         $('#button-reset-columns').click(dash.resetColumns.bind(dash));
         $('#button-new-url').click(dash.addWidget.bind(dash, 'url'));
         $('#button-new-mybugs').click(dash.addWidget.bind(dash, 'mybugs'));
         $('#button-new-rss').click(dash.addWidget.bind(dash, 'rss'));
+    },
+
+    _onClearWorkspaceClick: function()
+    {
+        if(confirm('Are you sure you want to clear your workspace?')) {
+            this._dashboard.clearWorkspace();
+        }
     },
 
     notify: function(message)
