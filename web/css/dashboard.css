@@ -143,6 +143,12 @@
 #dashboard #button-del-column a:hover {
     background: url(img/icon_del_column_b.png) center left no-repeat;
 }
+#dashboard #button-clear-workspace a {
+    background: url(img/icon_clear_workspace.png) center left no-repeat;
+}
+#dashboard #button-clear-workspace a:hover {
+    background: url(img/icon_clear_workspace_b.png) center left no-repeat;
+}
 
 #dashboard #button-new-xeyes a {
     background: url(img/icon_new_xeyes.png) center left no-repeat;
