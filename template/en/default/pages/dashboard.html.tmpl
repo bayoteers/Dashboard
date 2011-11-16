@@ -31,12 +31,12 @@
         <a id="button-save-widgets" title="Save prefs"></a>
         <a id="button-clear-workspace" title="Clear workspace"></a>
         &nbsp;&nbsp;
-        <a id="button-add-column" title="Add column"></a>
-        <a id="button-del-column" title="Delete column"></a>
-        &nbsp;&nbsp;
         <a id="button-new-url" title="New URL"></a>
         <a id="button-new-mybugs" title="New My Bugs"></a>
         <a id="button-new-rss" title="New RSS"></a>
+        &nbsp;&nbsp;
+        <a id="button-add-column" title="Add column"></a>
+        <a id="button-del-column" title="Delete column"></a>
     </span>
 
     &nbsp;
@@ -202,28 +202,22 @@
     <table> <!-- required to satisfy HTML parser. -->
     <tr id="overlay_template">
         <th align="right" valign="top">
-            <a class="overlay_load_link"><span class="overlay-name"></span></a>
-            <span class="can-publish">[<a class="overlay_publish_link">ok</a>]</span>
-            <span class="can-delete">[<a class="overlay_delete_link">x</a>]</span>
-            &nbsp;
+            <a class="load_link"><span class="name"></span></a>
+            <span class="can-publish">[<a class="publish_link">ok</a>]</span>
+            <span class="can-delete">[<a class="delete_link">x</a>]:</span>
         </th>
         <td valign="top">
-            <span class="overlay-description"></span>
+            <span class="description"></span>
             <span class="is-pending">
-                <small>(<span class="overlay-login"></small>
+                <small>(<span class="login"></small>)
             </span>
         </td>
     </tr>
     </table>
 
     <div id="overlay_page">
-        <h2>Load Overlay</h2>
+        <h2>Overlays</h2>
         <div class="overlay_box" id="overlay_load_box">
-            <table><tbody></tbody></table>
-        </div>
-
-        <h2>Pending Overlays</h2>
-        <div class="overlay_box" id="overlay_pending_box">
             <table><tbody></tbody></table>
         </div>
 
