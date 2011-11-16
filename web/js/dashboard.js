@@ -40,6 +40,22 @@ function cloneTemplate(sel)
 
 
 /**
+ * Run a function, logging any exception thrown to the console. Used for
+ * debugging XMLHTTPRequest event handlers, whose exceptions are silently
+ * discarded.
+ */
+function absorb(fn)
+{
+    try {
+        return fn();
+    } catch(e) {
+        console.error('absorb(): %o', e);
+        throw e;
+    }
+}
+
+
+/**
  * Make a GET URL from a dictionary of parametrrs.
  *
  * @param path
@@ -117,7 +133,11 @@ var Rpc = Base.extend({
     _onSuccess: function(response)
     {
         this.response = response.result;
-        this.doneCb.fire(response.result);
+        var that = this;
+        absorb(function()
+        {
+            that.doneCb.fire(response.result);
+        });
     },
 
     /**
@@ -129,7 +149,11 @@ var Rpc = Base.extend({
         if(typeof console !== 'undefined') {
             console.log('jsonRPC error: %o', this.error);
         }
-        this.failCb.fire(response.error);
+        var that = this;
+        absorb(function()
+        {
+            that.failCb.fire(response.error);
+        });
     }
 });
 
@@ -159,7 +183,12 @@ var Widget = Base.extend({
     {
         // Shorthand.
         this._dashboard = dashboard;
-        this.TYPE = this.constructor.TYPE;
+        if(! this.TYPE) {
+            this.TYPE = this.constructor.TYPE;
+        }
+        if(! this.TEMPLATE_TYPE) {
+            this.TEMPLATE_TYPE = this.TYPE;
+        }
 
         // "outer" element; contains the title bar, controls, the settings box,
         // and the widget content area.
@@ -190,15 +219,18 @@ var Widget = Base.extend({
 
         this._child('.remove').click(this._onRemoveClick.bind(this));
         this._child('.refresh').click(this.reload.bind(this));
-        this._child('.collapse').click(this._onCollapseClick.bind(this));
-        this._child('.edit').click(this._onEditClick.bind(this));
+        this._child('.collapse').click(this._onMinimizeClick.bind(this));
         this._child('.maximize').click(this._onMaximizeClick.bind(this));
+
+        this._child('.edit').click(this._onEditClick.bind(this));
+        this._child('.save').click(this._onSaveClick.bind(this));
+        this._child('.save').hide();
 
         //this.element.bind('resize', this._onResize.bind(this));
         this.element.bind('vertical_resize', this._onResize.bind(this));
 
         // Populate inner element with widget's template, if one exists.
-        var sel = '#' + this.TYPE + '_widget_template';
+        var sel = '#' + this.TEMPLATE_TYPE + '_widget_template';
         this.innerElement.append(cloneTemplate(sel));
     },
 
@@ -209,13 +241,6 @@ var Widget = Base.extend({
      */
     _onResize: function() {
         this.innerElement.height(this.element.height());
-    },
-
-    _onColorClick: function(color)
-    {
-        this.updateState({
-            color: color
-        });
     },
 
     /**
@@ -229,40 +254,73 @@ var Widget = Base.extend({
             var color = Widget.COLORS[i];
             var item = $('<li>');
             item.addClass('color-' + color);
-            item.click(this._onColorClick.bind(this, color));
+            item.click(this.update.bind(this, { color: color }));
             item.appendTo(list);
         }
 
-        var sel = '#' + this.TYPE + '_widget_settings_template';
+        var sel = '#' + this.TEMPLATE_TYPE + '_widget_settings_template';
         var template = cloneTemplate(sel);
         template.children().appendTo(this._child('.edit-box'));
     },
 
-    _onEditClick: function(event)
+    _onTitleKeyup: function()
     {
-        var editBox = this._child('.edit-box');
-        if(event.target.className == 'edit') {
-            editBox.show();
-            event.target.className = 'save';
-        } else {
-            editBox.hide();
-            this._dashboard.save();
-            event.target.className = 'edit';
+        var value = this._child('.field-title').val();
+        this._child('.widget-title').text(value);
+    },
+
+    /**
+     * Update the state from the settings dialog fields. Called during save,
+     * override in subclass to include your fields.
+     */
+    _apply: function()
+    {
+        this.update({
+            title: this._child('.field-title').val(),
+            refresh: +this._child('.field-refresh').val()
+        });
+    },
+
+    /**
+     * Update the state of the settings dialog; Called on display of settings,
+     * override in subclass to include your fields.
+     */
+    _restore: function()
+    {
+        for(var key in this.state) {
+            if(! this.state.hasOwnProperty(key)) {
+                continue;
+            }
+
+            var value = this.state[key];
+            this._child('.field-' + key).val(value);
         }
     },
 
+    _onEditClick: function(event)
+    {
+        this._restore();
+        this._child('.edit').hide();
+        this._child('.save').show();
+        this._child('.edit-box').show();
+    },
+
+    _onSaveClick: function()
+    {
+        this._apply();
+        this._dashboard.save();
+        this._child('.edit').show();
+        this._child('.save').hide();
+        this._child('.edit-box').hide();
+    },
+
     _onMaximizeClick: function() {
-        var elem = this._contentElement;
-
-        //settings.height = elem.height();
-
         var clone = cloneTemplate('#widget_maximized_hint')
         clone.click(closeMaximizedWidget.bind(this, this));
-        elem.prepend(clone);
-
-        elem.resizable('destroy');
-        elem.addClass('widget-max');
-        elem.css('position', '');
+        this.contentElement.prepend(clone);
+        this.contentElement.resizable('destroy');
+        this.contentElement.addClass('widget-max');
+        this.contentElement.css('position', '');
 
         $('.widget').not(this.element).hide();
         elem.show();
@@ -275,7 +333,7 @@ var Widget = Base.extend({
     /**
      * Update just a few widget parameters.
      */
-    updateState: function(state)
+    update: function(state)
     {
         this.setState($.extend({}, this.state, state));
     },
@@ -289,12 +347,8 @@ var Widget = Base.extend({
         state = $.extend({}, Widget.DEFAULT_STATE, state);
         this.state = state;
 
-        this._child('.remove').toggle(state.removable);
-        this._child('.refresh').toggle(state.refreshable);
-        this._child('.collapse').toggle(state.collapsible);
-        this._child('.maximize').toggle(state.maximizable);
-        this._child('.edit').toggle(state.editable);
-        this._child('.widget-content').toggle(!state.collapsed);
+        // toggle() insists on bool.
+        this._child('.widget-content').toggle(!state.minimized);
 
         this._setColor(state.color);
         this._setRefreshSecs(state.refresh);
@@ -304,10 +358,11 @@ var Widget = Base.extend({
         }
         this.innerElement.height(state.height);
 
+        // Temporarily needed for drag'n'drop code below.
+        this.element.data('widgetId', state.id);
+
         this._child('.widget-title').text(state.title);
         this._child('.widget-title').keyup(this._onTitleKeyup.bind(this));
-
-        this.reload();
     },
 
     /**
@@ -315,14 +370,15 @@ var Widget = Base.extend({
      */
     _setColor: function(color)
     {
-        if(color) {
-            this.element.addClass('color-' + color);
-        }
-
         var oldColor = this.element.data('color');
         if(oldColor) {
             this.element.removeClass('color-' + oldColor);
         }
+
+        if(color) {
+            this.element.addClass('color-' + color);
+        }
+
         this.element.data('color', color);
     },
 
@@ -344,21 +400,16 @@ var Widget = Base.extend({
 
     /**
      * Return any matching child elements.
-     *
-     * @param sel
-     *      jQuery selector.
-     * @returns
-     *      jQuery object.
      */
     _child: function(sel)
     {
         return $(sel, this.element);
     },
 
-    _onCollapseClick: function()
+    _onMinimizeClick: function()
     {
-        this.updateState({
-            collapsed: !this.state.collapesd
+        this.update({
+            minimized: !this.state.minimized
         });
         Dashboard.save();
     },
@@ -377,12 +428,6 @@ var Widget = Base.extend({
         clearTimeout(this.refreshIntervalId);
     },
 
-    _onTitleKeyup: function()
-    {
-        var value = this._child('.field-title').val();
-        this._child('.widget-title').text(value);
-    },
-
     reload: function()
     {
         // Override in subclass.
@@ -392,14 +437,7 @@ var Widget = Base.extend({
 
     DEFAULT_STATE: {
         color: 'gray',
-        movable: true,
-        removable: true,
-        collapsible: true,
-        editable: true,
-        resizable: true,
-        maximizable: true,
-        refreshable: true,
-        controls: true,
+        minimized: false,
         width: 0,
         height: 100 // from initWidget.
     },
@@ -422,6 +460,42 @@ var Widget = Base.extend({
  * URL widget implementation.
  */
 Widget.addClass('url', Widget.extend({
+    // See Widget.render().
+    render: function()
+    {
+        this.base();
+        this._iframe = this._child('iframe')
+        this._iframe.load(this._onIframeLoad.bind(this));
+    },
+
+    /**
+     * Handle completion of IFRAME load by attempting to modify (and replace)
+     * the child document using the elements matched by the configured CSS
+     * selector, if any. This may fail due to browser same-origin policy (e.g.
+     * different domain).
+     */
+    _onIframeLoad: function()
+    {
+        if(! this.state.selector) {
+            return;
+        }
+
+        try {
+            // Any property access will throw if same origin policy in effect.
+            var location = this._iframe[0].contentDocument.location;
+        } catch(e) {
+            if(window.console) {
+                console.error('_onIframeLoad: can\'t apply CSS: %o', e);
+            }
+            return;
+        }
+
+        var body = $('body', this._iframe[0].contentDocument);
+        var matched = $(this.state.selector, body);
+        body.children().remove();
+        matched.appendTo(body);
+    },
+
     // See Widget.renderSettings().
     renderSettings: function()
     {
@@ -429,11 +503,30 @@ Widget.addClass('url', Widget.extend({
         this._child('.field-load-url').click(this._onLoadUrlClick.bind(this));
     },
 
+    // See Widget._restore().
+    _restore: function()
+    {
+        this.base();
+        this._child('.field-URL').val(this.state.URL);
+        this._child('.field-selector').val(this.state.selector);
+    },
+
+    // See Widget._apply().
+    _apply: function()
+    {
+        this.base()
+        this.update({
+            URL: this._child('.field-URL').val(),
+            selector: this._child('.field-selector').val()
+        });
+    },
+
     _onLoadUrlClick: function()
     {
-        this._widget.setState({
+        this.update({
             URL: this._child('.field-URL').val()
         });
+        this.reload();
     },
 
     // See Widget._onResize().
@@ -441,6 +534,17 @@ Widget.addClass('url', Widget.extend({
     {
         this.base();
         this._child('iframe').height(this.innerElement.innerHeight());
+    },
+
+    // See Widget.setState().
+    setState: function(state)
+    {
+        this.base(state);
+
+        var iframe = this._child('iframe');
+        if(iframe.attr('src') != this.state.URL) {
+            iframe.attr('src', this.state.URL);
+        }
     },
 
     // See Widget.reload().
@@ -453,22 +557,10 @@ Widget.addClass('url', Widget.extend({
 
 
 /**
- * Xeyes widget implementation.
- */
-Widget.addClass('xeyes', Widget.extend({
-
-    destroy: function()
-    {
-        document.unbind('mousemove.' + this.state.id);
-        this.base();
-    }
-}));
-
-
-/**
  * RSS widget implementation.
  */
 Widget.addClass('rss', Widget.extend({
+    // See Widget.renderSettings().
     renderSettings: function()
     {
         this.base();
@@ -483,89 +575,93 @@ Widget.addClass('rss', Widget.extend({
         this.reload();
     },
 
-    reload: function()
+    // See Widget._apply().
+    _apply: function()
     {
-        this.innerElement.html(cloneTemplate('#loader_template'));
-        jQuery.getFeed({
-            url: this.state.URL,
-            error: this._onLoadError.bind(this),
-            success: this._onLoadSuccess.bind(this)
+        this.base();
+        this.update({
+            URL: this._child('.field-URL').val()
         });
     },
 
-    _onLoadError: function(error)
+    // See Widget.reload().
+    reload: function()
+    {
+        this.innerElement.html(cloneTemplate('#loader_template'));
+        var rpc = this._dashboard.getFeed(this.state.URL);
+        rpc.fail(this._onReloadFail.bind(this));
+        rpc.done(this._onReloadDone.bind(this));
+        this._onResize();
+    },
+
+    /**
+     * Display an error message when the feed cannot be fetched.
+     *
+     * @param error
+     *      String error from backend.
+     */
+    _onReloadFail: function(error)
     {
         var clone = cloneTemplate('#rss_widget_error');
         $('.error-text', clone).text(error);
         this.innerElement.html(clone);
     },
 
-    _onLinkClick: function(openPopup, event)
+    /**
+     * Populate our template with the feed contents.
+     *
+     * @param feed
+     *      Feed JSON object, as returned by get_feed RPC.
+     */
+    _onReloadDone: function(feed)
     {
-        event.preventDefault();
-        if(openPopup) {
-            $(this).colorbox({
-                width: "80%",
-                height: "80%",
-                iframe: true
-            });
-        } else {
-            window.open(event.target.href);
-        }
-    },
+        var template = cloneTemplate('#rss_widget_template');
 
-    _sanitize: function(html)
-    {
-        // TODO
-        var s = html.replace(/^<.+>/,'');
-        return s.replace(/<.+/g,'');
-    },
-
-    _formatItem: function(item)
-    {
-        var template = cloneTemplate('#mybugs_item_template');
-        var item = feed.items[i];
-
-        $('h3', template).text(item.title);
-        $('.updated-text', template).text(item.updated);
-        $('.description-text', template).text(this._sanitize(item.description));
-        template.appendTo(clone);
-
-        var links;
-        links = $('.open_popup', template);
-        links.attr('href', item.link);
-        links.click(this._onLinkClick.bind(this, true));
-
-        links = $('.open_link', template);
-        links.attr('href', item.link);
-        links.click(this._onLinkClick.bind(this, false));
-        return template;
-    },
-
-    _onResize: function()
-    {
-        var y = this.innerElement.height() - 3;
-        this._child('.rss').height(y);
-    },
-
-    _onLoadSuccess: function(feed)
-    {
-        var template = cloneTemplate('#mybugs_widget_template');
-
-        if(feed.link.length) {
+        if(feed.link) {
             $('h2 a', template).attr('href', feed.link);
             $('h2 a', template).text(feed.title);
         } else {
             $('h2', template).text(feed.title);
         }
 
-        var length = Math.min(feed.items.length, this.MAX_ITEMS); // TODO
+        var length = Math.min(feed.items.length,
+            DASHBOARD_CONFIG.rss_max_items);
         for(var i = 0; i < length; i++) {
             template.append(this._formatItem(feed.items[i]));
         }
 
         this.innerElement.html(template);
         this.innerElement.trigger('vertical_resize');
+    },
+
+    /**
+     * Format a single item.
+     *
+     * @param item
+     *      Item JSON object as returned by get_feed RPC.
+     */
+    _formatItem: function(item)
+    {
+        var template = cloneTemplate('#rss_item_template');
+        $('h3 a', template).text(item.title);
+        $('h3 a', template).attr('href', item.link);
+        $('.updated-text', template).text(item.modified);
+        $('.description-text', template).text(this._sanitize(item.description));
+        return template;
+    },
+
+    _sanitize: function(html)
+    {
+        // TODO
+        html = html || '';
+        var s = html.replace(/^<.+>/,'');
+        return s.replace(/<.+/g,'');
+    },
+
+    _onResize: function()
+    {
+        var y = this.innerElement.height();
+        this._child('.rss').height(this.innerElement.height());
     }
 }));
 
@@ -574,6 +670,8 @@ Widget.addClass('rss', Widget.extend({
  * My Bugs widget implementation.
  */
 Widget.addClass('mybugs', Widget.extend({
+    TEMPLATE_TYPE: 'rss',
+
     _makeFeedUrl: function()
     {
         return makeUrl('buglist.cgi', {
@@ -655,6 +753,20 @@ var Dashboard = Base.extend({
     },
 
     /**
+     * Fetch a widget given its ID. Used for drag'n'drop.
+     */
+    widgetById: function(id)
+    {
+        id = +id;
+        for(var i = 0; i < this.widgets.length; i++) {
+            var widget = this.widgets[i];
+            if(widget.state.id == id) {
+                return widget;
+            }
+        }
+    },
+
+    /**
      * Reset front-end state to match the overlay described by the given
      * JSON object.
      *
@@ -676,6 +788,11 @@ var Dashboard = Base.extend({
             this.widgets.push(widget);
             this.widgetAddedCb.fire(widget);
         }
+    },
+
+    getFeed: function(url)
+    {
+        return this.rpc('get_feed', { url: url });
     },
 
     /**
@@ -751,6 +868,7 @@ var Dashboard = Base.extend({
     _onClearWorkspaceDone: function(workspace)
     {
         this.setWorkspace(workspace);
+        this.notifyCb.fire('Workspace cleared.');
     },
 
     /**
@@ -958,23 +1076,6 @@ var Dashboard = Base.extend({
     },
 
     /**
-     * Return an array describing state of columns in the workspace, as
-     * understood by 'save_workspace' RPC.
-     *
-     * @returns
-     *      Array of objects containing (initially) column widths.
-     */
-    _getColumnStates: function()
-    {
-        return;
-        var elems = $('.column:not(#column-1)');
-        return $.map(elems, function(index, col)
-        {
-            return { width: +$(col).css('width') };
-        });
-    },
-
-    /**
      * Return an array describing state of widgets in the workspace, as
      * understood by 'save_workspace' RPC.
      *
@@ -995,7 +1096,7 @@ var Dashboard = Base.extend({
     save: function()
     {
         var rpc = this.rpc('save_workspace', {
-            columns: this._getColumnStates(),
+            columns: this.columns,
             widgets: this._getWidgetStates()
         });
         return rpc;
@@ -1019,6 +1120,7 @@ var WidgetView = Base.extend({
         this._maximizedWidget = null;
         this._element = $('#columns');
         this._columns = [];
+        this._columns[-1] = $('#column-1'); // No effect on Array.length.
 
         $(document).keyup(this._onDocumentKeyup.bind(this));
         $(window).bind('resize', this._updateColumnWidths.bind(this));
@@ -1036,6 +1138,8 @@ var WidgetView = Base.extend({
 
         while(this._columns.length < this._dashboard.columns.length) {
             var column = cloneTemplate('#column_template');
+            // Necessary for drag'n'drop code below.
+            column.data('column_id', this._columns.length);
             this._columns.push(column);
             this._element.append(column);
         }
@@ -1085,8 +1189,6 @@ var WidgetView = Base.extend({
         this._insertWidget(widget);
         widget.element.trigger('vertical_resize');
         this._makeWidgetResizable(widget);
-        var s = widget.state.resizable ? 'enable' : 'disable';
-        widget.contentElement.resizable(s);
         this._makeSortable();
     },
 
@@ -1140,7 +1242,7 @@ var WidgetView = Base.extend({
     _makeWidgetResizable: function(widget)
     {
         widget.contentElement.resizable({
-            handles: 's',
+            handles: 'e, s, se',
             minWidth: 75,
             helper: 'widget-state-highlight',
             stop: this._onWidgetResizeStop.bind(this, widget)
@@ -1166,8 +1268,9 @@ var WidgetView = Base.extend({
         });
 
         this._updateColumnWidths();
+        widget.update({ height: widget.contentElement.height() });
         widget.element.trigger('vertical_resize');
-        widget.updateState();
+        widget.update();
         this._dashboard.save();
     },
 
@@ -1260,46 +1363,42 @@ var WidgetView = Base.extend({
         var sortable = this._getSortableWidgetElements();
         var heads = $('.widget-head', sortable);
 
-        heads.css('cursor', 'move');
-        heads.mousedown(function(e) {
-            sortable.css('width', '');
-            var widget = $(this).parent();
-            widget.css('width', widget.width() + 'px');
-        });
-        heads.mouseup(function() {
-            var widget = $(this).parent();
-            if (!widget.hasClass('dragging')) {
-                $(this).parent().css('width', '');
-            } else {
-                $('.column').sortable('disable');
-            }
-        });
+        //heads.mousedown(this._onHeadMouseDown);
+        //heads.mouseup(this._onHeadMouseUp);
 
         $('.column').sortable({
-            items: sortable,
             connectWith: $('.column'),
-            handle: '.widget-head',
-            placeholder: 'widget-placeholder',
-            forcePlaceholderSize: true,
-            revert: 300,
-            delay: 100,
-            opacity: 0.8,
-            tolerance: 'pointer',
             containment: 'document',
+            delay: 100,
+            forcePlaceholderSize: true,
+            handle: '.widget-head',
+            items: sortable,
+            opacity: 0.8,
+            placeholder: 'widget-placeholder',
+            revert: 300,
             start: this._onSortStart.bind(this),
-            stop: this._onSortStop.bind(this)
+            stop: this._onSortStop.bind(this),
+            tolerance: 'pointer'
         });
     },
 
     _onSortStart: function(e, ui) {
-        $(ui.helper).addClass('dragging');
+        // Set widget width to a rough approximation of the column size;
+        // simplifies dragging from the top column.
+        var width = this._element.width() / this._columns.length;
+        ui.item.css('width', Math.min(300, width));
     },
 
     _onSortStop: function(e, ui) {
-        $(ui.item).css('width', '');
-        $(ui.item).removeClass('dragging');
-        $('.column').sortable('enable');
+        ui.item.css('width', '');
+        var columnId = ui.item.parent('.column').data('column_id');
+        var widgetId = ui.item.data('widgetId');
+        var widget = this._dashboard.widgetById(widgetId);
+        widget.update({
+            col: columnId
+        });
         $(window).trigger("resize");
+        this._makeSortable();
         this._dashboard.save();
     }
 });
@@ -1442,31 +1541,25 @@ var OverlayView = Base.extend({
 var RpcProgressView = Base.extend({
     constructor: function()
     {
+        this._active = 0;
         this._progress = cloneTemplate('#in_progress_template');
         this._progress.hide();
         this._progress.appendTo('body');
-        $('.cancel', this._progress).click(this._onCancelClick.bind(this));
-
-        $.ajaxSetup({
-            beforeSend: this._onAjaxBeforeSend.bind(this)
-        });
+        $(document).ajaxSend(this._onAjaxSend.bind(this));
+        $(document).ajaxComplete(this._onAjaxComplete.bind(this));
     },
 
-    _onAjaxBeforeSend: function(xhr)
+    _onAjaxSend: function()
     {
-        xhr.complete(this._onComplete.bind(this));
+        this._active++;
+        this._progress.show();
     },
 
-    _onComplete: function(xhr)
+    _onAjaxComplete: function()
     {
-        this._progress.hide();
-        this._lastRpc = null;
-    },
-
-    _onCancelClick: function()
-    {
-        if(this._lastRpc) {
-            this._lastRpc.abort();
+        this._active--;
+        if(! this._active) {
+            this._progress.hide();
         }
     }
 });
@@ -1497,9 +1590,6 @@ var DashboardView = Base.extend({
         $('#savePrefsButton').click(dash.save.bind(dash));
         $('#deleteColumnButton').click(dash.deleteColumn.bind(dash));
         $('#clearWorkspaceButton').click(dash.clearWorkspace.bind(dash));
-
-        $('#reloadLink').click(
-            window.location.reload.bind(window.location));
 
         $('#newUrlButton').click(dash.addWidget.bind(dash, 'url'));
         $('#newMyBugsButton').click(dash.addWidget.bind(dash, 'mybugs'));

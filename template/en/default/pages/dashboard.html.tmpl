@@ -25,7 +25,6 @@
 
 [% header = BLOCK %]
     <a id="settingsLink">Dashboard</a>
-    <a id="reloadLink"><img src="extensions/Dashboard/web/css/img/reload.png"></a>
 [% END %]
 
 [% PROCESS global/header.html.tmpl
@@ -40,7 +39,7 @@
 
 <div id="dashboard">
     <div id="columns">
-        <ul id="column-1" class="column">
+        <ul id="column-1" class="column" data-column_id="-1">
         </ul>
 
         <br clear="both">
@@ -53,11 +52,6 @@
     <div align="center" id="loader_template">
         <img class="loader"
             src="extensions/Dashboard/web/css/img/ajax-loader.gif">
-    </div>
-
-    <div id="in_progress_template"
-            style="position: absolute; top: 32px; right: 32px; width: 220px; background: white; padding: 10px;">
-        <img src="extensions/Dashboard/web/css/img/ajax-loader.gif">
     </div>
 
     <div id="browser_warning_template">
@@ -86,7 +80,7 @@
         </li>
     </ul>
 
-    <li id="widget_template" class="widget">
+    <li class="widget" id="widget_template">
         <div class="widget-head">
             <a class="maximize">MAXIMIZE</a>
             <a class="collapse">COLLAPSE</a>
@@ -94,6 +88,7 @@
             <a class="remove">REMOVE</a>
             <a class="refresh">REFRESH</a>
             <a class="edit">EDIT</a>
+            <a class="save">SAVE</a>
         </div>
         <ul class="edit-box" style="display: none">
             <li class="item">
@@ -106,7 +101,7 @@
             </li>
             <li class="item">
                 <label>Reload:</label>
-                <select name="field-refresh">
+                <select class="field-refresh">
                     <option value="0">no refresh</option>
                     <option value="15">every 15 seconds</option>
                     <option value="60">every minute</option>
@@ -134,23 +129,36 @@
         </li>
 
         <li class="item">
+            <label>Selector:</label>
+            <input class="field-selector"><br>
+            <small>&nbsp; Supported syntax:
+                <a target="_new" href="http://www.w3.org/TR/CSS2/selector.html#pattern-matching">CSS</a>,
+                <a target="_new" href="http://api.jquery.com/category/selectors/">jQuery</a></small>
+        </li>
+
+        <li class="item">
             <label>Load:</label>
             <input type="button" class="field-load-url" value="Load URL">
+        </li>
+    </div>
+
+    <div id="rss_widget_settings_template">
+        <li class="item">
+            <label>URL:</label>
+            <input class="field-URL">
         </li>
     </div>
 
     <div id="mybugs_widget_settings_template">
     </div>
 
-    <div id="mybugs_widget_template" class="rss">
-        <h2><a></a></h2>
+    <div id="rss_widget_template" class="rss">
+        <h2><a target="_new"></a></h2>
     </div>
 
-    <div id="mybugs_item_template">
+    <div id="rss_item_template">
         <div class="rss_title">
-            <a title="open in popup" class="open_popup"></a>
-            <a title="open link" class="open_link"></a>
-            <h3></h3>
+            <h3><a target="_new"></a></h3>
         </div>
         <div class="updated">
             <p>
@@ -252,7 +260,12 @@
             <table><tbody></tbody></table>
         </div>
     </div>
+
+    <div id="in_progress_template" style="background: #7f0000; color: white; padding: 0.5ex; position: fixed; top: 0; right: 0; z-index: 9999999; text-decoration:blink">
+        Working..
+    </div>
 </div> <!-- /hide templates -->
+
 
 <script>
 var DASHBOARD_CONFIG = [% dashboard_config || 'null' %];
@@ -261,7 +274,6 @@ var DASHBOARD_CONFIG = [% dashboard_config || 'null' %];
 <script src="extensions/Dashboard/web/js/jquery-1.7.min.js"></script>
 <script src="extensions/Dashboard/web/js/jquery-ui-1.8.5.custom.min.js"></script>
 <script src="extensions/Dashboard/web/js/jquery.colorbox-min.js"></script>
-<script src="extensions/Dashboard/web/js/jquery.jfeed.js"></script>
 <script src="extensions/Dashboard/web/js/jquery.jsonrpc.js"></script>
 <script src="extensions/Dashboard/web/js/dashboard.js"></script>
 
