@@ -216,6 +216,7 @@ var Widget = Base.extend({
     render: function()
     {
         this.element = cloneTemplate('#widget_template');
+        this.headElement = $('.widget-head', this.element);
         this.innerElement = $('.widget_inner', this.element);
         this.contentElement = $('.widget-content', this.element);
 
@@ -237,12 +238,15 @@ var Widget = Base.extend({
     },
 
     /**
-     * Override in subclass. Called when the widget's height or width changes.
-     * The default implementation just adjuests the inner element's height to
-     * match.
+     * Called when the widget's height or width changes. The default
+     * implementation adjusts the content element height to match.
+     *
+     * Subclasses should use this.innerElement.height() to determine the
+     * maximum height their elements can grow to.
      */
     _onResize: function() {
-        this.innerElement.height(this.element.height());
+        var px = this.state.height - this.headElement.outerHeight();
+        this.innerElement.height(px);
     },
 
     /**
@@ -362,7 +366,6 @@ var Widget = Base.extend({
         if(state.height == 1) {
             state.height = 70; // From old RSS widget. TODO
         }
-        this.contentElement.height(state.height);
         this._onResize();
 
         // Temporarily needed for drag'n'drop code below.
@@ -418,7 +421,7 @@ var Widget = Base.extend({
         this.update({
             minimized: !this.state.minimized
         });
-        Dashboard.save();
+        this._dashboard.save();
     },
 
     _onRemoveClick: function()
@@ -540,7 +543,7 @@ Widget.addClass('url', Widget.extend({
     _onResize: function()
     {
         this.base();
-        this._child('iframe').height(this.innerElement.innerHeight());
+        this._iframe.height(this.innerElement.height());
     },
 
     // See Widget.setState().
@@ -548,17 +551,15 @@ Widget.addClass('url', Widget.extend({
     {
         this.base(state);
 
-        var iframe = this._child('iframe');
-        if(iframe.attr('src') != this.state.URL) {
-            iframe.attr('src', this.state.URL);
+        if(this._iframe.attr('src') != this.state.URL) {
+            this._iframe.attr('src', this.state.URL);
         }
     },
 
     // See Widget.reload().
     reload: function()
     {
-        var iframe = this._child('iframe');
-        iframe.attr('src', this.state.URL);
+        this._iframe.attr('src', this.state.URL);
     }
 }));
 
@@ -672,7 +673,6 @@ Widget.addClass('rss', Widget.extend({
 
     _onResize: function()
     {
-        var y = this.innerElement.height();
         this._child('.rss').height(this.innerElement.height());
     }
 }));
