@@ -1580,9 +1580,8 @@ var OverlayView = Base.extend({
     {
         this._saveSpinner.hide();
         if(! rpc.error) {
-            $('#overlay_save_box').children().remove();
-            $('#overlay_save_box').prepend(result);
-            $.colorbox.resize();
+            $('#overlay_save_box input').val('');
+            $.colorbox.close();
         }
     },
 
