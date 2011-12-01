@@ -363,9 +363,7 @@ var Widget = Base.extend({
         this._setColor(state.color);
         this._setRefreshSecs(state.refresh);
 
-        if(state.height == 1) {
-            state.height = 70; // From old RSS widget. TODO
-        }
+        state.height = Math.max(Widget.MIN_HEIGHT, state.height);
         this._onResize();
 
         // Temporarily needed for drag'n'drop code below.
@@ -445,11 +443,12 @@ var Widget = Base.extend({
 }, /* class variables: */ {
     _classes: {},
 
+    MIN_HEIGHT: 100,
+
     DEFAULT_STATE: {
         color: 'gray',
         minimized: false,
-        width: 0,
-        height: 100 // from initWidget.
+        height: 0
     },
 
     COLORS: ['gray', 'yellow', 'red', 'blue', 'white', 'orange', 'green'],
@@ -504,6 +503,9 @@ Widget.addClass('url', Widget.extend({
         var matched = $(this.state.selector, body);
         body.children().remove();
         matched.appendTo(body);
+        matched.css('padding', '0px');
+        body.css('margin', '0px');
+        $('html', this._iframe).css('margin', '0px');
     },
 
     // See Widget.renderSettings().
@@ -1268,6 +1270,7 @@ var WidgetView = Base.extend({
     {
         widget.contentElement.resizable({
             handles: 'e, s, se',
+            minHeight: Widget.MIN_HEIGHT,
             minWidth: 75,
             maxWidth: this._getMaxWidth(widget.state.col),
             helper: 'widget-state-highlight',
@@ -1329,7 +1332,9 @@ var WidgetView = Base.extend({
         var newPct = Math.floor(100 * (content.width() / (55 + this._element.width())));
         content.css('width', '');
 
-        widget.update({ height: content.height() });
+        var height = content.height() + widget.headElement.outerHeight();
+        content.css('height', '');
+        widget.update({ height: height });
         this._setColumnWidth(widget.state.col, newPct);
         this._dashboard.save();
     },
