@@ -716,6 +716,35 @@ Widget.addClass('mybugs', Widget.extend({
 
 
 /**
+ * Text widget implementation.
+ */
+Widget.addClass('text', Widget.extend({
+    // See Widget._restore().
+    _restore: function()
+    {
+        this.base();
+        this._child('.field-text').val(this.state.text || '');
+    },
+
+    // See Widget._apply().
+    _apply: function()
+    {
+        this.base();
+        this.update({
+            text: this._child('.field-text').val()
+        });
+    },
+
+    // See Widget.reload().
+    reload: function()
+    {
+        this.innerElement.css('padding', '8px');
+        this.innerElement.text(this.state.text || '');
+    }
+}));
+
+
+/**
  * Dashboard 'model': this maintains the front end's notion of the workspace
  * state, which includes column widths, widget instances, user's login state,
  * and available overlay list.
@@ -1175,7 +1204,6 @@ var WidgetView = Base.extend({
         this._updateColumnWidths();
     },
 
-
     /**
      * Search the list of widgets for the widget preceeding the given one.
      * Insert it in the DOM after that point, otherwise if no such widget is
@@ -1290,6 +1318,10 @@ var WidgetView = Base.extend({
      */
     _setColumnWidth: function(idx, newPct)
     {
+        if(idx == -1) {
+            return;
+        }
+
         // Make a new column information structure and save it on the server.
         // saveColumns() will fire columnsChangeCb on success, which will cause
         // the actual resize to occur.
@@ -1363,6 +1395,10 @@ var WidgetView = Base.extend({
      */
     _getMaxWidth: function(idx)
     {
+        if(idx == -1) {
+            return this._element.width();
+        }
+
         var last = this._columns[this._columns.length - 1];
         var maxGrowth = Math.max(0, last.width() - this.MIN_WIDTH);
         var pct = (this._element.width() - 4) / 100;
@@ -1670,6 +1706,7 @@ var DashboardView = Base.extend({
         $('#button-new-url').click(dash.addWidget.bind(dash, 'url'));
         $('#button-new-mybugs').click(dash.addWidget.bind(dash, 'mybugs'));
         $('#button-new-rss').click(dash.addWidget.bind(dash, 'rss'));
+        $('#button-new-text').click(dash.addWidget.bind(dash, 'text'));
     },
 
     _onClearWorkspaceClick: function()

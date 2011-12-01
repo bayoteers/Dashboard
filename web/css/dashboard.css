@@ -148,6 +148,12 @@
 #button-new-mybugs:hover {
     background: url(img/icon_new_widget_b.png) center left no-repeat;
 }
+#button-new-text {
+    background: url(img/icon_new_text.png) center left no-repeat;
+}
+#button-new-text:hover {
+    background: url(img/icon_new_text_b.png) center left no-repeat;
+}
 #button-add-column {
     background: url(img/icon_add_column.png) center left no-repeat;
 }

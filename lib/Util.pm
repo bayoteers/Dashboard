@@ -144,6 +144,7 @@ use constant WIDGET_FIELD_DEFS => {
     refresh => { type => 'int', default => 600, required => 1 },
     selector => { type => 'text' },
     title => { type => 'text', required => 1 },
+    text => { type => 'text' },
     type => { type => 'text', required => 1, choices => [ WIDGET_TYPES ]},
     URL => { type => 'text' },
     username => { type => 'text' },

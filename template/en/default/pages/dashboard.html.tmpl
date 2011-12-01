@@ -34,6 +34,7 @@
         <a id="button-new-url" title="New URL"></a>
         <a id="button-new-mybugs" title="New My Bugs"></a>
         <a id="button-new-rss" title="New RSS"></a>
+        <a id="button-new-text" title="New Text"></a>
         &nbsp;&nbsp;
         <a id="button-add-column" title="Add column"></a>
         <a id="button-del-column" title="Delete column"></a>
@@ -132,6 +133,15 @@
         </div>
     </li>
 
+    <div id="text_widget_template">
+    </div>
+
+    <div id="text_widget_settings_template">
+        <li class="item">
+            <label>Text:</label>
+            <input class="field-text">
+    </div>
+
     <div id="url_widget_template">
         <iframe target="new" class="widget_iframe" frameborder="0"
             scrolling="auto"></iframe>
@@ -217,12 +227,19 @@
     </table>
 
     <div id="overlay_page">
-        <h2>Overlays</h2>
+        <div>
+        <strong>Load Overlay</strong>
+        </div>
+
         <div class="overlay_box" id="overlay_load_box">
             <table><tbody></tbody></table>
         </div>
 
-        <h2>Save Overlay</h2>
+        <div>
+        <br>
+        <strong>Save Overlay</strong>
+        </div>
+
         <div class="overlay_box" id="overlay_save_box">
             <table>
             <tr>

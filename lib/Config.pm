@@ -45,6 +45,7 @@ use constant WIDGET_TYPES => qw(
     rss
     url
     xeyes
+    text
 );
 
 our $sortkey = 5000;
