@@ -738,8 +738,11 @@ Widget.addClass('text', Widget.extend({
     // See Widget.reload().
     reload: function()
     {
-        this.innerElement.css('padding', '8px');
-        this.innerElement.text(this.state.text || '');
+        var elem = this.innerElement;
+        elem.css('padding', '8px');
+        elem.text(this.state.text || '');
+        // Convert line breaks to <br>.
+        elem.html(elem.html().replace(/\n/g, '<br>\n'));
     }
 }));
 
@@ -1768,7 +1771,22 @@ function main()
     dashboard.setOverlays(DASHBOARD_CONFIG.overlays);
 
     if(! dashboard.widgets.length) {
-        view._overlayView.open();
+        dashboard.setWorkspace({
+            columns: [
+                { width: 25 },
+                { width: 50 },
+                { width: 25 }
+            ],
+            widgets: [ {
+                id: 1,
+                col: 1,
+                pos: 1,
+                type: 'text',
+                title: 'Welcome to Dashboard',
+                height: 150,
+                text: $('#dashboard_welcome_text').text()
+            } ]
+        });
     }
 }
 
