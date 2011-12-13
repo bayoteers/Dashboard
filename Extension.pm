@@ -17,6 +17,7 @@
 # Initial Developer. All Rights Reserved.
 #
 # Contributor(s):
+#   David Wilson <ext-david.3.wilson@nokia.com>
 #   Jari Savolainen <ext-jari.a.savolainen@nokia.com>
 #   Stephen Jayna <ext-stephen.jayna@nokia.com>
 
@@ -24,29 +25,42 @@ package Bugzilla::Extension::Dashboard;
 use strict;
 use base qw(Bugzilla::Extension);
 
+use Data::Dumper;
+use POSIX qw(strftime);
+
 use Bugzilla::Constants;
 use Bugzilla::Error;
 use Bugzilla::Util;
 use Bugzilla::User;
 
 use Bugzilla::Extension::Dashboard::Config;
-use Bugzilla::Extension::Dashboard::Util qw(
-    cgi_no_cache
-    dir_glob
-    load_user_overlay
-    get_user_prefs
-);
+use Bugzilla::Extension::Dashboard::Util;
+use Bugzilla::Extension::Dashboard::Schema;
 use Bugzilla::Extension::Dashboard::WebService;
 
 use JSON::PP;
 
 our $VERSION = '0.01';
 
-# See the documentation of Bugzilla::Hook ("perldoc Bugzilla::Hook"
-# in the bugzilla directory) for a list of all available hooks.
-sub install_update_db {
-    my ($self, $args) = @_;
+
+# Disable client-side caching of this HTTP request.
+sub cgi_no_cache {
+    my $headers = {
+        -expires       => 'Sat, 26 Jul 1997 05:00:00 GMT',
+        -Last_Modified => strftime('%a, %d %b %Y %H:%M:%S GMT', gmtime),
+        -Pragma        => 'no-cache',
+        -Cache_Control => join(
+            ', ', qw(
+              private no-cache no-store must-revalidate max-age=0
+              pre-check=0 post-check=0)
+        )
+    };
+
+    while(my ($key, $value) = each(%$headers)) {
+        print Bugzilla->cgi->header($key, $value);
+    }
 }
+
 
 # Hook for page.cgi and dashboard
 sub page_before_template {
@@ -59,46 +73,47 @@ sub page_before_template {
     }
 
     cgi_no_cache;
+    migrate_workspace;
 
-    my $vars = $args->{vars};
-    $vars->{dashboard_config} = JSON->new->utf8->pretty->encode({
-    #$vars->{dashboard_config} = encode_json({
+    my $config = {
         rss_max_items => int(Bugzilla->params->{dashboard_rss_max_items}),
+        user_id => int(Bugzilla->user->id),
         user_login => Bugzilla->user->login,
         is_admin => Bugzilla->user->in_group('admin'),
-        workspace => get_user_prefs,
         browsers_warn => Bugzilla->params->{"dashboard_browsers_warn"},
         browsers_block => Bugzilla->params->{"dashboard_browsers_block"},
         overlays => Bugzilla::Extension::Dashboard::WebService::get_overlays(),
-    });
+        overlay_id => first_free_id(get_overlays_dir())
+    };
 
-    if (Bugzilla->params->{"dashboard_jquery_path"}) {
-        $vars->{dashboard_jquery_path} = Bugzilla->params->{"dashboard_jquery_path"};
-    }
+    my $vars = $args->{vars};
+    $vars->{dashboard_config} = JSON->new->utf8->pretty->encode($config);
+    #$vars->{dashboard_config} = encode_json($config);
 }
+
 
 sub config {
     my ($self, $args) = @_;
-
     my $config = $args->{config};
     $config->{Dashboard} = "Bugzilla::Extension::Dashboard::Config";
 }
 
+
 sub config_add_panels {
     my ($self, $args) = @_;
-
     my $modules = $args->{panel_modules};
     $modules->{Dashboard} = "Bugzilla::Extension::Dashboard::Config";
 }
+
 
 sub webservice {
     my ($self, $args) = @_;
     $args->{dispatch}->{Dashboard} = "Bugzilla::Extension::Dashboard::WebService";
 }
 
+
 sub webservice_error_codes {
     my ($self, $args) = @_;
-
     my $error_map = $args->{error_map};
     $error_map->{'dashboard_my_error'} = 10001;
 }

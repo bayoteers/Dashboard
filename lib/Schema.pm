@@ -79,19 +79,23 @@ use constant OVERLAY_DEFS => {
     # List of columns.
     columns => { type => 'list', item => COLUMN_DEFS, required => 1 },
     # Seconds since epoch creation time.
-    created => { type => 'int', required => 1 },
+    created => { type => 'int' },
     # Long description.
     description => { type => 'text', required => 1, default => '' },
+    # Overlay ID, unique per user_id.
+    id => { type => 'int' },
     # Seconds since epoch last save time.
-    modified => { type => 'int', required => 1 },
+    modified => { type => 'int' },
     # Short name.
     name => { type => 'text', required => 1, min_length => 4 },
     # Owner user ID.
-    owner => { type => 'int', required => 1 },
+    owner => { type => 'int', },
     # Shared overlay hasn't been approved yet?
     pending => { type => 'int', default => 0 },
     # Shared between all users?
     shared => { type => 'bool', default => 0, required => 1 },
+    # User ID. '0' for shared overlays, otherways same as 'owner' field.
+    user_id => { type => 'int' },
     # List of widgets.
     widgets => { type => 'list', item => WIDGET_DEFS },
     # Bool, overlay represents a user's workspace.

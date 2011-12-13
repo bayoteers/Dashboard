@@ -32,9 +32,11 @@ our @EXPORT = qw(
     get_mtime
     get_overlay_dir
     get_overlays_dir
-    overlays_for_user
     merge
     migrate_workspace
+    overlay_from_dir
+    overlays_for_user
+    overlay_to_dir
 );
 
 use Data::Dumper;
@@ -204,7 +206,7 @@ sub blank_private_fields {
         push @private, $field if $def->{private};
     }
 
-    map { delete @$_->{@private} } @$widgets;
+    map { delete @$_{@private} } @$widgets;
 }
 
 
@@ -293,9 +295,9 @@ sub overlays_for_user {
             next if !-f $path;
             my $overlay = merge($base, retrieve($path));
             $overlay->{id} = int(basename dirname $path);
-            $overlay->{user_id}    = $user_id;
+            $overlay->{user_id} = $user_id;
             $overlay->{user_login} = user_id_to_login($overlay->{owner});
-            $overlay->{pending}    = int($path eq $pending);
+            $overlay->{pending} = int($path eq $pending);
             if(! $overlay->{modified}) {
                 $overlay->{modified} = get_mtime $path;
             }

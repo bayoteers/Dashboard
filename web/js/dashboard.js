@@ -56,6 +56,15 @@ function absorb(fn)
 
 
 /**
+ * Return integer seconds since UNIX epoch GMT.
+ */
+function now()
+{
+    return Math.floor((new Date).getTime());
+}
+
+
+/**
  * Make a GET URL from a dictionary of parametrrs.
  *
  * @param path
@@ -780,7 +789,7 @@ var Dashboard = Base.extend({
         this.notifyCb = new jQuery.Callbacks();
         this.overlaysChangeCb = new jQuery.Callbacks();
 
-        // Widgets existing in the user's workspace.
+        // UI Widgets existing in the user's workspace.
         this.widgets = [];
         // Columns existing in thte user's workspace.
         this.columns = [];
@@ -788,6 +797,8 @@ var Dashboard = Base.extend({
         this.login = config.user_login;
         // Bool is user an admin.
         this.isAdmin = config.is_admin;
+        // Description of currently loaded overlay.
+        this.overlay = null;
     },
 
     /**
@@ -811,18 +822,19 @@ var Dashboard = Base.extend({
      * @param workspace
      *      Overlay JSON, as represented by get_overlay, get_preferences RPCs.
      */
-    setWorkspace: function(workspace)
+    setOverlay: function(overlay)
     {
+        this.overlay = overlay;
         while(this.widgets.length) {
             var widget = this.widgets.pop();
             this.widgetRemovedCb.fire(widget);
         }
 
-        this.columns = workspace.columns;
+        this.columns = overlay.columns;
         this.columnsChangeCb.fire(this.columns);
 
-        for(var i = 0; i < workspace.widgets.length; i++) {
-            var widget = Widget.createInstance(this, workspace.widgets[i]);
+        for(var i = 0; i < overlay.widgets.length; i++) {
+            var widget = Widget.createInstance(this, overlay.widgets[i]);
             this.widgets.push(widget);
             this.widgetAddedCb.fire(widget);
         }
@@ -900,11 +912,11 @@ var Dashboard = Base.extend({
     },
 
     /**
-     * Ask the server to clear the user's workspace.
+     * Clear the user's workspace.
      */
-    clearWorkspace: function()
+    clear: function()
     {
-        this.setWorkspace({
+        this.setOverlay({
             widgets: [],
             columns: this._makeNewColumns(3)
         });
@@ -1012,17 +1024,19 @@ var Dashboard = Base.extend({
      */
     loadOverlay: function(overlay)
     {
-        var rpc = this.rpc('load_overlay', {
+        var rpc = this.rpc('clone_overlay', {
+            user_id: overlay.user_id,
             id: overlay.id,
-            user_id: overlay.user_id
+            new_id: this.overlay.id
         });
-        rpc.done(this._onLoadOverlayDone.bind(this, overlay));
+
+        rpc.done(this._onLoadOverlayDone.bind(this));
         return rpc;
     },
 
-    _onLoadOverlayDone: function(overlay, workspace)
+    _onLoadOverlayDone: function(overlay)
     {
-        this.setWorkspace(workspace);
+        this.setOverlay(overlay);
         this.notifyCb.fire('Overlay ' + overlay.name + ' loaded.');
     },
 
@@ -1035,7 +1049,7 @@ var Dashboard = Base.extend({
      */
     saveOverlay: function(overlay)
     {
-        var rpc = this.rpc('save_overlay', overlay);
+        var rpc = this.rpc('set_overlay', overlay);
         rpc.done(this._onSaveOverlayDone.bind(this, overlay));
         return rpc;
     },
@@ -1129,11 +1143,13 @@ var Dashboard = Base.extend({
             return;
         }
 
-        this._saveAgain = false;
-        this._lastSaveRpc = this.rpc('save_workspace', {
+        var overlay = $.extend({}, this.overlay, {
             columns: this.columns,
             widgets: this._getWidgetStates()
         });
+
+        this._saveAgain = false;
+        this._lastSaveRpc = this.rpc('set_overlay', overlay);
 
         this._lastSaveRpc.done(this._onSaveDone.bind(this));
         this._lastSaveRpc.complete(this._onSaveComplete.bind(this));
@@ -1144,9 +1160,10 @@ var Dashboard = Base.extend({
      * Handle save completion by clearing _lastSaveRpc. Note this must be done
      * for success *and* failure.
      */
-    _onSaveComplete: function()
+    _onSaveComplete: function(overlay)
     {
         this._lastSaveRpc = null;
+        this.overlay = overlay;
     },
 
     /**
@@ -1667,7 +1684,7 @@ var RpcProgressView = Base.extend({
     },
 
     /**
-     * Handle request copmletion by decrementing the active count, and hiding
+     * Handle request completion by decrementing the active count, and hiding
      * the progress indicator if there are no more active requests.
      */
     _onAjaxComplete: function()
@@ -1691,7 +1708,30 @@ var DashboardView = Base.extend({
         this._dashboard = dashboard;
         dashboard.notifyCb.add(this.notify.bind(this));
         this._overlayView = new OverlayView(dashboard);
+
+        window.onbeforeunload = this._onWindowBeforeUnload.bind(this);
+
         this._setupUi();
+    },
+
+    /**
+     * Handle user attempting to close the window/tab by requesting the browser
+     * show a confirmation prompt, if the current workspace is unsaved.
+     *
+     * @param e
+     *      BeforeUnload event object.
+     */
+    _onWindowBeforeUnload: function(e)
+    {
+        if(! this._dashboard.dirty) {
+            return;
+        }
+
+        // Stupid evolved interface requires that this handler both set
+        // returnValue and return a string, but despite that, both strings are
+        // ignored (at least in Firefox) for security reasons.
+        e.returnValue = 'You have unsaved changes.';
+        return e.returnValue;
     },
 
     _setupUi: function()
@@ -1702,7 +1742,7 @@ var DashboardView = Base.extend({
 
         $('#button-overlay').click(this._onOpenOverlayClick.bind(this));
         $('#button-save-widgets').click(dash.save.bind(dash));
-        $('#button-clear-workspace').click(this._onClearWorkspaceClick.bind(this));
+        $('#button-clear-workspace').click(this._onClearClick.bind(this));
         $('#button-add-column').click(dash.addColumn.bind(dash));
         $('#button-del-column').click(dash.deleteColumn.bind(dash));
         $('#button-reset-columns').click(dash.resetColumns.bind(dash));
@@ -1712,10 +1752,10 @@ var DashboardView = Base.extend({
         $('#button-new-text').click(dash.addWidget.bind(dash, 'text'));
     },
 
-    _onClearWorkspaceClick: function()
+    _onClearClick: function()
     {
         if(confirm('Are you sure you want to clear your workspace?')) {
-            this._dashboard.clearWorkspace();
+            this._dashboard.clear();
         }
     },
 
@@ -1767,27 +1807,34 @@ function main()
     view = new DashboardView(dashboard);
     widgetView = new WidgetView(dashboard);
 
-    dashboard.setWorkspace(DASHBOARD_CONFIG.workspace);
     dashboard.setOverlays(DASHBOARD_CONFIG.overlays);
-
-    if(! dashboard.widgets.length) {
-        dashboard.setWorkspace({
-            columns: [
-                { width: 25 },
-                { width: 50 },
-                { width: 25 }
-            ],
-            widgets: [ {
-                id: 1,
-                col: 1,
-                pos: 1,
-                type: 'text',
-                title: 'Welcome to Dashboard',
-                height: 150,
-                text: $('#dashboard_welcome_text').text()
-            } ]
-        });
+    if(dashboard.widgets.length) {
+        return;
     }
+
+    // Create a fake overlay containing some informative welcome text.
+    dashboard.setOverlay({
+        name: 'Unsaved overlay',
+        description: '',
+        owner: DASHBOARD_CONFIG.user_login,
+        user_id: DASHBOARD_CONFIG.user_id,
+        id: DASHBOARD_CONFIG.overlay_id,
+        workspace: true,
+        columns: [
+            { width: 25 },
+            { width: 50 },
+            { width: 25 }
+        ],
+        widgets: [ {
+            id: 1,
+            col: 1,
+            pos: 1,
+            type: 'text',
+            title: 'Welcome to Dashboard',
+            height: 150,
+            text: $('#dashboard_welcome_text').text()
+        } ]
+    });
 }
 
 $(document).ready(main);
