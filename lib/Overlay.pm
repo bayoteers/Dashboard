@@ -83,13 +83,14 @@ sub publish {
 
 
 sub clone {
-    my ($self, $new_id) = shift;
+    my ($self, $new_id) = @_;
 
     my $new = $self->from_hash($self);
     $new->{shared} = 0;
     $new->{owner} = int(Bugzilla->user->id);
     $new->{created} = time;
-    $new->{id} = $new_id;
+    $new->{id} = to_int($new_id);
+    $new->{workspace} = 1;
     $new->save();
 }
 

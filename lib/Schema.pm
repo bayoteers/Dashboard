@@ -94,6 +94,8 @@ use constant OVERLAY_DEFS => {
     pending => { type => 'int', default => 0 },
     # Shared between all users?
     shared => { type => 'bool', default => 0, required => 1 },
+    # User login. Only appears in get_overlays list.
+    user_login => { type => 'text' },
     # User ID. '0' for shared overlays, otherways same as 'owner' field.
     user_id => { type => 'int' },
     # List of widgets.
