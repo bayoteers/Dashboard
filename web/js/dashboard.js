@@ -47,30 +47,45 @@ function lpad(s, c, n)
 
 
 /**
- * Format a timestamp to string HHHH-MM-SS in local time.
- * @param ts
- *      Integer seconds since UNIX epoch.
- */
-function formatDate(ts)
-{
-    var dt = new Date(ts * 1000);
-    return [1900 + dt.getYear(),
-            lpad(dt.getMonth()),
-            lpad(dt.getDay())].join('-');
-}
-
-
-/**
- * Format a timestamp to string HH:MM:SS in local time.
+ * Format a timestamp to string YYYY-MM-DD HH:MM:SS in local time.
  * @param ts
  *      Integer seconds since UNIX epoch.
  */
 function formatTime(ts)
 {
     var dt = new Date(ts * 1000);
-    return [lpad(dt.getHours()),
-            lpad(dt.getMinutes()),
-            lpad(dt.getSeconds())].join(':');
+    var dat = [1900 + dt.getYear(),
+               lpad(dt.getMonth()),
+               lpad(dt.getDay())].join('-');
+    var tim = [lpad(dt.getHours()),
+               lpad(dt.getMinutes()),
+               lpad(dt.getSeconds())].join(':');
+    return dat + ' ' + tim;
+}
+
+
+/**
+ * Given 2 overlays, sort them:
+ *      Workspaces first
+ *      Newest first
+ *      Lexicographically.
+ */
+function overlayCmp(a, b)
+{
+    if(a.workspace > b.workspace) {
+        return -1;
+    } else if(a.workspace < b.workspace) {
+        return 1;
+    } else if(a.modified > b.modified) {
+        return -1;
+    } else if(a.modified < b.modified) {
+        return 1;
+    } else if(a.name > b.name) {
+        return 1;
+    } else if(a.name < b.name) {
+        return -1;
+    }
+    return 0;
 }
 
 
@@ -921,6 +936,7 @@ var Dashboard = Base.extend({
     setOverlays: function(overlays)
     {
         this.overlays = overlays;
+        this.overlays.sort(overlayCmp);
         this.overlaysChangeCb.fire(overlays);
     },
 
@@ -1651,14 +1667,14 @@ var OverlayView = Base.extend({
 
     _makeTr: function(overlay)
     {
+        var title = 'Created ' + formatTime(overlay.created);
+
         var tr = cloneTemplate('#overlay_template');
         $('.name', tr).text(overlay.name);
         $('.description', tr).text(overlay.description || '(none)');
         $('.login', tr).text(overlay.user_login || 'Unknown');
-        $('.created', tr).text(formatDate(overlay.created));
-        $('.created', tr).attr('title', formatTime(overlay.created));
-        $('.modified', tr).text(formatDate(overlay.modified));
-        $('.modified', tr).attr('title', formatTime(overlay.modified));
+        $('.modified', tr).text(formatTime(overlay.modified));
+        $('.modified', tr).attr('title', title);
         $('.publish_link', tr).click(this._onPublishClick.bind(this, overlay));
         $('.load_link', tr).click(this._onLoadClick.bind(this, overlay));
         $('.delete_link', tr).click(this._onDeleteClick.bind(this, overlay));
