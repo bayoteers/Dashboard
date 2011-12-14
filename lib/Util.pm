@@ -28,6 +28,7 @@ use warnings;
 
 use Exporter 'import';
 our @EXPORT = qw(
+    dir_glob
     first_free_id
     get_mtime
     get_overlay_dir
@@ -46,7 +47,7 @@ use File::Copy qw(move);
 use File::Path qw(mkpath remove_tree);
 use File::Spec;
 use List::Util qw(sum);
-use POSIX qw(strftime);
+use POSIX qw(getpid strftime);
 use Storable qw(store retrieve);
 
 use Bugzilla::Constants;
@@ -132,11 +133,17 @@ sub get_mtime {
 sub first_free_id {
     my ($dir) = @_;
     my $dest_dir;
-    my $id = 0;
+    my $found = 0;
+    my $id;
 
     do {
-        $dest_dir = File::Spec->catdir($dir, ++$id);
-    } until (!-d $dest_dir);
+        $id = time() | getpid();
+        $dest_dir = File::Spec->catdir($dir, $id);
+        $found = mkdir($dest_dir);
+        if(! $found) {
+            sleep 1;
+        }
+    } until($found);
 
     return int($id);
 }

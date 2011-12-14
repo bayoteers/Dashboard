@@ -49,7 +49,7 @@ sub from_store {
     }
 
     my $dir = get_overlay_dir($user_id, $overlay_id);
-    if(!-d $dir) {
+    if(!-d $dir || !scalar dir_glob($dir, '*')) {
         return undef;
     }
 
