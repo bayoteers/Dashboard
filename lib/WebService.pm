@@ -53,8 +53,9 @@ sub delete_overlay {
 
     my $overlay = Bugzilla::Extension::Dashboard::Overlay->from_store(
         $params->{user_id}, $params->{id});
-
-    $overlay->delete();
+    if($overlay) {
+        $overlay->delete();
+    }
     return get_overlays();
 }
 

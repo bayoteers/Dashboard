@@ -750,6 +750,7 @@ Widget.addClass('rss', Widget.extend({
 
     _onResize: function()
     {
+        this.base();
         this._child('.rss').height(this.innerElement.height());
     }
 }));
@@ -859,15 +860,63 @@ var Dashboard = Base.extend({
         this.widgets = [];
         // Columns in the user's workspace.
         this.columns = [];
+        // Integer overlay ID to save workspace changes to.
+        this.overlayId = config.overlay_id;
+        // Integer user ID.
+        this.userId = config.user_id;
         // String user's login name.
         this.login = config.user_login;
         // Bool is user an admin.
         this.isAdmin = config.is_admin;
+
         // Description of loaded overlay. Note the 'widgets' and 'columns'
         // properties are only used during initial load; the 'widgets' and
         // 'columns' properties of the Dashboard object itself describe the
         // actual state of columns and widgets.
         this.overlay = null;
+    },
+
+    /**
+     * Repopulate with the initial blank workspace (separate from constructor
+     * since view classes need to subscribe before this fires any events),
+     * containing some informative welcome text.
+     */
+    reset: function()
+    {
+        this.setOverlay($.extend(this._makeDefaultOverlay(),
+        {
+            columns: [
+                { width: 25 },
+                { width: 50 },
+                { width: 25 }
+            ],
+            widgets: [{
+                id: 1,
+                col: 1,
+                pos: 1,
+                type: 'text',
+                title: 'Welcome to Dashboard',
+                height: 150,
+                text: $('#dashboard_welcome_text').text()
+            }]
+        }));
+    },
+
+    /**
+     * Create an empty overlay for our workspace.
+     */
+    _makeDefaultOverlay: function()
+    {
+        return {
+            name: 'Workspace',
+            description: 'Unsaved changes',
+            owner: this.login,
+            user_id: this.userId,
+            id: this.overlayId,
+            workspace: true,
+            columns: this._makeColumns(3),
+            widgets: []
+        };
     },
 
     /**
@@ -935,9 +984,15 @@ var Dashboard = Base.extend({
      */
     setOverlays: function(overlays)
     {
-        this.overlays = overlays;
+        // Remove this tab's workspace from the returned list.
+        var that = this;
+
+        this.overlays = $.grep(overlays, function(o)
+        {
+            return o.user_id != that.userId || o.id != that.overlayId;
+        });
         this.overlays.sort(overlayCmp);
-        this.overlaysChangeCb.fire(overlays);
+        this.overlaysChangeCb.fire(this.overlays);
     },
 
     /**
@@ -988,17 +1043,17 @@ var Dashboard = Base.extend({
     },
 
     /**
-     * Clear the user's workspace.
+     * Clear the user's workspace, deleting the temporary workspace overlay on
+     * the server simultaneously.
      */
     clear: function()
     {
-        while(this.widgets.length) {
-            var widget = this.widgets.pop();
-            this.widgetRemovedCb.fire(widget);
-        }
-        this.setColumns(this._makeColumns(3));
-        this.save();
-        this.notifyCb.fire('Workspace cleared.');
+        this.setOverlay(this._makeDefaultOverlay());
+        this.deleteOverlay({
+            id: this.overlayId,
+            user_id: this.userId,
+            name: 'Unsaved changes'
+        });
     },
 
     /**
@@ -1909,34 +1964,8 @@ function main()
     view = new DashboardView(dashboard);
     widgetView = new WidgetView(dashboard);
 
+    dashboard.reset();
     dashboard.setOverlays(DASHBOARD_CONFIG.overlays);
-    if(dashboard.widgets.length) {
-        return;
-    }
-
-    // Create a fake overlay containing some informative welcome text.
-    dashboard.setOverlay({
-        name: 'Unsaved workspace',
-        description: '',
-        owner: DASHBOARD_CONFIG.user_login,
-        user_id: DASHBOARD_CONFIG.user_id,
-        id: DASHBOARD_CONFIG.overlay_id,
-        workspace: true,
-        columns: [
-            { width: 25 },
-            { width: 50 },
-            { width: 25 }
-        ],
-        widgets: [ {
-            id: 1,
-            col: 1,
-            pos: 1,
-            type: 'text',
-            title: 'Welcome to Dashboard',
-            height: 150,
-            text: $('#dashboard_welcome_text').text()
-        } ]
-    });
 }
 
 $(document).ready(main);
