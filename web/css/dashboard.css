@@ -468,3 +468,15 @@
     float: left;
     overflow: hidden;
 }
+
+.can-delete {
+    font-size: smaller;
+}
+
+#overlay_load_box table tr:hover td,
+#overlay_load_box table tr:hover th {
+    background: #efefef;
+}
+.is-workspace {
+    font-style: italic;
+}

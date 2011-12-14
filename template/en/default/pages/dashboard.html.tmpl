@@ -42,7 +42,7 @@
     </span>
 
     &nbsp;
-    <span id="dashboard_notify">Welcome</p>
+    <span id="dashboard_notify"></p>
 [% END %]
 
 [% PROCESS global/header.html.tmpl
@@ -218,16 +218,23 @@ The current workspace available in this session will not be saved until you expl
 
     <table> <!-- required to satisfy HTML parser. -->
     <tr id="overlay_template">
-        <th align="right" valign="top">
+        <td align="right" valign="top">
             <a class="load_link"><span class="name"></span></a>
             <span class="can-publish">[<a class="publish_link">ok</a>]</span>
-            <span class="can-delete">[<a class="delete_link">x</a>]:</span>
-        </th>
+        </td>
         <td valign="top">
-            <span class="description"></span>
-            <span class="is-pending">
-                <small>(<span class="login"></small>)
+            <span class="description is-workspace"></span>
+            <br>
+            <small>
+            Created <span class="created"></span>,
+            edited <span class="modified"></span>,
+            <span class="login"></span>
+            </small>
+            <span class="can-publish">
             </span>
+        </td>
+        <td valign="top" align="right" style="width: 4ex;">
+            <span class="can-delete"><a class="delete_link">Del</a></span>
         </td>
     </tr>
     </table>
@@ -238,7 +245,7 @@ The current workspace available in this session will not be saved until you expl
         </div>
 
         <div class="overlay_box" id="overlay_load_box">
-            <table><tbody></tbody></table>
+            <table width=100%><tbody></tbody></table>
         </div>
 
         <div>

@@ -24,6 +24,57 @@
 
 
 /**
+ * Left-pad a string with a character until it is a certain length.
+ * @param s
+ *      The string.
+ * @param c
+ *      The character, defaults to '0'.
+ * @param n
+ *      The length, defaults to 2.
+ */
+function lpad(s, c, n)
+{
+    s = '' + s;
+    c = c || '0';
+    n = n || 2;
+
+    while(s.length < n) {
+        s = c + s;
+    }
+
+    return s;
+}
+
+
+/**
+ * Format a timestamp to string HHHH-MM-SS in local time.
+ * @param ts
+ *      Integer seconds since UNIX epoch.
+ */
+function formatDate(ts)
+{
+    var dt = new Date(ts * 1000);
+    return [1900 + dt.getYear(),
+            lpad(dt.getMonth()),
+            lpad(dt.getDay())].join('-');
+}
+
+
+/**
+ * Format a timestamp to string HH:MM:SS in local time.
+ * @param ts
+ *      Integer seconds since UNIX epoch.
+ */
+function formatTime(ts)
+{
+    var dt = new Date(ts * 1000);
+    return [lpad(dt.getHours()),
+            lpad(dt.getMinutes()),
+            lpad(dt.getSeconds())].join(':');
+}
+
+
+/**
  * Clone a template.
  *
  * @param sel
@@ -1049,6 +1100,11 @@ var Dashboard = Base.extend({
      */
     saveOverlay: function(overlay)
     {
+        overlay = $.extend(this._makeOverlay(), overlay, {
+            workspace: 0,
+            id: 0
+        });
+
         var rpc = this.rpc('set_overlay', overlay);
         rpc.done(this._onSaveOverlayDone.bind(this, overlay));
         return rpc;
@@ -1129,6 +1185,18 @@ var Dashboard = Base.extend({
     },
 
     /**
+     * Return an overlay structure describing the current workspace state, and
+     * taking the remaining metadata fields from this.overlay.
+     */
+    _makeOverlay: function()
+    {
+        return $.extend({}, this.overlay, {
+            columns: this.columns,
+            widgets: this._getWidgetStates()
+        });
+    },
+
+    /**
      * Save the current workspace state. If a save is already in progress, just
      * set a flag telling the completion handler to start another one. This
      * avoids races in two places:
@@ -1143,14 +1211,8 @@ var Dashboard = Base.extend({
             return;
         }
 
-        var overlay = $.extend({}, this.overlay, {
-            columns: this.columns,
-            widgets: this._getWidgetStates()
-        });
-
         this._saveAgain = false;
-        this._lastSaveRpc = this.rpc('set_overlay', overlay);
-
+        this._lastSaveRpc = this.rpc('set_overlay', this._makeOverlay());
         this._lastSaveRpc.done(this._onSaveDone.bind(this));
         this._lastSaveRpc.complete(this._onSaveComplete.bind(this));
         return this._lastSaveRpc;
@@ -1565,7 +1627,7 @@ var OverlayView = Base.extend({
     {
         $.colorbox({
             inline: true,
-            width: '665px',
+            width: '700px',
             height: '562px',
             href: '#overlay_page'
         });
@@ -1576,7 +1638,11 @@ var OverlayView = Base.extend({
         var tr = cloneTemplate('#overlay_template');
         $('.name', tr).text(overlay.name);
         $('.description', tr).text(overlay.description);
-        $('.login', tr).text(overlay.user_login || 'unknown author');
+        $('.login', tr).text(overlay.user_login || 'Unknown');
+        $('.created', tr).text(formatDate(overlay.created));
+        $('.created', tr).attr('title', formatTime(overlay.created));
+        $('.modified', tr).text(formatDate(overlay.modified));
+        $('.modified', tr).attr('title', formatTime(overlay.modified));
         $('.publish_link', tr).click(this._onPublishClick.bind(this, overlay));
         $('.load_link', tr).click(this._onLoadClick.bind(this, overlay));
         $('.delete_link', tr).click(this._onDeleteClick.bind(this, overlay));
@@ -1617,6 +1683,10 @@ var OverlayView = Base.extend({
 
             if(login != overlay.user_login && !isAdmin) {
                 $('.can-delete', tr).remove();
+            }
+
+            if(! overlay.workspace) {
+                $('span', tr).removeClass('is-workspace');
             }
 
             if(! overlay.pending) {
