@@ -840,15 +840,18 @@ var Dashboard = Base.extend({
         this.notifyCb = new jQuery.Callbacks();
         this.overlaysChangeCb = new jQuery.Callbacks();
 
-        // UI Widgets existing in the user's workspace.
+        // Widgets in the user's workspace.
         this.widgets = [];
-        // Columns existing in thte user's workspace.
+        // Columns in the user's workspace.
         this.columns = [];
         // String user's login name.
         this.login = config.user_login;
         // Bool is user an admin.
         this.isAdmin = config.is_admin;
-        // Description of currently loaded overlay.
+        // Description of loaded overlay. Note the 'widgets' and 'columns'
+        // properties are only used during initial load; the 'widgets' and
+        // 'columns' properties of the Dashboard object itself describe the
+        // actual state of columns and widgets.
         this.overlay = null;
     },
 
@@ -951,7 +954,13 @@ var Dashboard = Base.extend({
         return rpc;
     },
 
-    _makeNewColumns: function(count)
+    /**
+     * Return an array of equally sized column objects.
+     *
+     * @param count
+     *      Number of columns.
+     */
+    _makeColumns: function(count)
     {
         var cols = [];
         for(var i = 0; i < count; i++) {
@@ -967,10 +976,11 @@ var Dashboard = Base.extend({
      */
     clear: function()
     {
-        this.setOverlay({
-            widgets: [],
-            columns: this._makeNewColumns(3)
-        });
+        while(this.widgets.length) {
+            var widget = this.widgets.pop();
+            this.widgetRemovedCb.fire(widget);
+        }
+        this.setColumns(this._makeColumns(3));
         this.save();
         this.notifyCb.fire('Workspace cleared.');
     },
@@ -983,7 +993,7 @@ var Dashboard = Base.extend({
         if(this.columns.length == 4) {
             return alert("Can't add new column, maximum reached.");
         }
-        this.setColumns(this._makeNewColumns(this.columns.length + 1));
+        this.setColumns(this._makeColumns(this.columns.length + 1));
         this.notifyCb.fire('Added a new column.');
         this.save();
     },
@@ -993,7 +1003,7 @@ var Dashboard = Base.extend({
      */
     resetColumns: function()
     {
-        this.setColumns(this._makeNewColumns(this.columns.length));
+        this.setColumns(this._makeColumns(this.columns.length));
         this.notifyCb.fire('Column widths reset.');
         this.save();
     },
@@ -1152,7 +1162,7 @@ var Dashboard = Base.extend({
             }
         });
 
-        this.setColumns(this._makeNewColumns(this.columns.length - 1));
+        this.setColumns(this._makeColumns(this.columns.length - 1));
         this.notifyCb.fire('Column removed.');
         this.save();
     },
@@ -1222,21 +1232,27 @@ var Dashboard = Base.extend({
      * Handle save completion by clearing _lastSaveRpc. Note this must be done
      * for success *and* failure.
      */
-    _onSaveComplete: function(overlay)
+    _onSaveComplete: function()
     {
         this._lastSaveRpc = null;
-        this.overlay = overlay;
     },
 
     /**
      * Handle successful save by checking to see if there were any more
      * attempts to save while the last RPC was in progress. If so, save again.
      */
-    _onSaveDone: function()
+    _onSaveDone: function(overlay)
     {
         this._lastSaveRpc = null;
+
         if(this._saveAgain) {
             this.save();
+        } else {
+            // In case of updates to overlay metadata, only overwrite the
+            // frontend's metadata if another save isn't pending (e.g. user
+            // updated overlay name immediately after deleting a widget, and
+            // widget deletion RPC hasn't completed yet).
+            this.overlay = overlay;
         }
     }
 });
@@ -1637,7 +1653,7 @@ var OverlayView = Base.extend({
     {
         var tr = cloneTemplate('#overlay_template');
         $('.name', tr).text(overlay.name);
-        $('.description', tr).text(overlay.description);
+        $('.description', tr).text(overlay.description || '(none)');
         $('.login', tr).text(overlay.user_login || 'Unknown');
         $('.created', tr).text(formatDate(overlay.created));
         $('.created', tr).attr('title', formatTime(overlay.created));
@@ -1884,7 +1900,7 @@ function main()
 
     // Create a fake overlay containing some informative welcome text.
     dashboard.setOverlay({
-        name: 'Unsaved overlay',
+        name: 'Unsaved workspace',
         description: '',
         owner: DASHBOARD_CONFIG.user_login,
         user_id: DASHBOARD_CONFIG.user_id,
