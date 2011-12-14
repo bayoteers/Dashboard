@@ -83,7 +83,9 @@ sub get_overlays {
     }
 
     my $is_admin = Bugzilla->user->in_group('admin');
-    return [ grep { $is_admin || !$_->{'pending'} } @overlays ];
+    @overlays = grep { $is_admin || !$_->{'pending'} } @overlays;
+    # Sort workspace overlays higher.
+    return [ sort { $b->{workspace} <=> $a->{workspace} } @overlays ];
 }
 
 
@@ -113,6 +115,7 @@ sub set_overlay {
     }
 
     $overlay->save();
+    trim_workspace_overlays();
     return merge $overlay;
 }
 

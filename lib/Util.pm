@@ -37,6 +37,7 @@ our @EXPORT = qw(
     overlay_from_dir
     overlays_for_user
     overlay_to_dir
+    trim_workspace_overlays
 );
 
 use Data::Dumper;
@@ -363,6 +364,22 @@ sub normalize_columns {
     my $total = sum map { $_->{width} } @{$prefs->{columns}};
     my $delta = int((100 - $total) / @{$prefs->{columns}});
     map { $_->{width} += $delta } @{$prefs->{columns}};
+}
+
+
+# Remove all but the newest <Params.dashboard_max_workspaces> 'workspace'
+# overlays from a user's overlay directory.
+sub trim_workspace_overlays {
+    my @overlays = overlays_for_user(@_);
+    my @workspaces = grep { $_->{workspace} == 1 } @overlays;
+    @workspaces = sort { $b->{modified} <=> $a->{modified} } @workspaces;
+
+    while(@workspaces > Bugzilla->params->{'dashboard_max_workspaces'}) {
+        my $info = pop @workspaces;
+        my $overlay = Bugzilla::Extension::Dashboard::Overlay->from_store(
+            $info->{user_id}, $info->{id});
+        $overlay->delete();
+    }
 }
 
 

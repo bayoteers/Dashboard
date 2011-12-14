@@ -53,6 +53,14 @@ sub get_param_list {
 
     my @param_list = (
                       {
+                         name => 'dashboard_max_workspaces',
+                         desc => 'Maximum number of temporary "workspace" '.
+                                 'overlays a user may have before '.
+                                 'automatically deleting the oldest one.',
+                         type => 't', # can't find docs, should be numeric.
+                         default => '5',
+                      },
+                      {
                          name => 'dashboard_jquery_path',
                          desc => 'Path to JQuery, empty if Bugzilla already uses JQuery',
                          type => 't',
