@@ -53,7 +53,12 @@ sub from_store {
         return undef;
     }
 
-    bless(overlay_from_dir($user_id, $dir));
+    my $self = overlay_from_dir($user_id, $dir);
+    $self->{id} = $overlay_id;
+    if(! $self->{shared}) {
+        $self->{owner} = $user_id;
+    }
+    bless($self);
 }
 
 
@@ -64,7 +69,12 @@ sub delete {
         ThrowUserError('dashboard_illegal_id');
     }
 
-    my $dir = get_overlay_dir($self->{owner}, $self->{id});
+    my $target_id = $self->{owner};
+    if($self->{shared}) {
+        $target_id = 0;
+    }
+
+    my $dir = get_overlay_dir($target_id, $self->{id});
     remove_tree($dir);
 }
 
@@ -104,6 +114,11 @@ sub save {
 
     if(! $self->{owner}) {
         $self->{owner} = int(Bugzilla->user->id);
+    }
+
+    if($self->{owner} != Bugzilla->user->id
+       && !Bugzilla->user->in_group('admin')) {
+        ThrowUserError('dashboard_illegal_id');
     }
 
     my $target_id = $self->{shared} ? 0 : $self->{owner};
