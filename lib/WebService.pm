@@ -124,7 +124,9 @@ sub clone_overlay {
 
     my $overlay = Bugzilla::Extension::Dashboard::Overlay->from_store(
         $params->{user_id}, $params->{id});
-    return merge $overlay->clone($params->{new_id});
+    my $result = merge $overlay->clone($params->{new_id});
+    trim_workspace_overlays();
+    return $result;
 }
 
 
