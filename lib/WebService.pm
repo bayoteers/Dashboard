@@ -161,15 +161,21 @@ sub get_feed {
         return '';
     }
 
+    sub _ascii {
+        my $s = shift;
+        $s =~ s/[^[:ascii:]]//g;
+        $s;
+    }
+
     return {
-        title => $feed->title,
+        title => _ascii($feed->title),
         link => $feed->link,
-        description => $feed->description,
-        tagline => $feed->tagline,
+        description => _ascii($feed->description),
+        tagline => _ascii($feed->tagline),
         items => [ map { {
-            title => $_->title,
+            title => _ascii($_->title),
             link => $_->link,
-            description => $_->content->body,
+            description => _ascii($_->content->body),
             modified => _format_time($_->modified)
         } } $feed->items ]
     };

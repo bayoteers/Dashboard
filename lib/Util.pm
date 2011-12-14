@@ -122,7 +122,7 @@ sub dir_glob {
 sub get_mtime {
     my ($path) = @_;
     my @st = lstat $path;
-    return @st[9];
+    return $st[9];
 }
 
 
