@@ -24,6 +24,31 @@
 
 
 /**
+ * Return a self-referring URL with the given string appended as anchor text.
+ */
+function makeSelfUrl(obj)
+{
+    var url = window.location.toString().split('#')[0];
+    return url + '#?' + $.param(obj, true);
+}
+
+
+/**
+ * Return anchor parameters as an object.
+ */
+function getAnchorParams()
+{
+    var obj = {};
+    var params = window.location.hash.substr(2).split('&');
+    for(var i = 0; i < params.length; i++) {
+        var bits = params[i].split('=');
+        obj[bits[0]] = decodeURIComponent(bits[1]);
+    }
+    return obj;
+}
+
+
+/**
  * Left-pad a string with a character until it is a certain length.
  * @param s
  *      The string.
@@ -744,8 +769,8 @@ Widget.addClass('rss', Widget.extend({
     {
         // TODO
         html = html || '';
-        var s = html.replace(/^<.+>/,'');
-        return s.replace(/<.+/g,'');
+        var s = html.replace(/^<.+>/, '');
+        return s.replace(/<.+/g, '');
     },
 
     _onResize: function()
@@ -1723,8 +1748,15 @@ var OverlayView = Base.extend({
     _makeTr: function(overlay)
     {
         var title = 'Created ' + formatTime(overlay.created);
+        var url = makeSelfUrl({
+            action: 'load',
+            user_id: overlay.user_id,
+            id: overlay.id
+        });
 
         var tr = cloneTemplate('#overlay_template');
+        $('a', tr).attr('href', 'javascript:;');
+
         $('.name', tr).text(overlay.name);
         $('.description', tr).text(overlay.description || '(none)');
         $('.login', tr).text(overlay.user_login || 'Unknown');
@@ -1732,9 +1764,9 @@ var OverlayView = Base.extend({
         $('.modified', tr).attr('title', title);
         $('.publish_link', tr).click(this._onPublishClick.bind(this, overlay));
         $('.load_link', tr).click(this._onLoadClick.bind(this, overlay));
+        $('.load_link', tr).attr('href', url);
         $('.delete_link', tr).click(this._onDeleteClick.bind(this, overlay));
 
-        $('a', tr).attr('href', 'javascript:;');
         return tr;
     },
 
@@ -1966,6 +1998,15 @@ function main()
 
     dashboard.reset();
     dashboard.setOverlays(DASHBOARD_CONFIG.overlays);
+
+    var params = getAnchorParams();
+    if(params.action == 'load') {
+        dashboard.loadOverlay({
+            id: +params.id,
+            user_id: +params.user_id
+        });
+    }
+    window.location.hash = '';
 }
 
 $(document).ready(main);
