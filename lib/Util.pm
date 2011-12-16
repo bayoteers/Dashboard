@@ -332,7 +332,10 @@ sub migrate_workspace {
     my $mtime = get_mtime $prefs_path;
     my $time_str = strftime('%a, %Y-%m-%d %H:%M:%S', gmtime $mtime);
 
-    my $overlay = parse(OVERLAY_DEFS, merge(retrieve($prefs_path), {
+    my $prefs = retrieve($prefs_path);
+    normalize_columns($prefs);
+
+    my $overlay = parse(OVERLAY_DEFS, merge($prefs, {
         created => $mtime,
         modified => $mtime,
         description => 'Last active workspace from old Dashboard',
@@ -341,6 +344,10 @@ sub migrate_workspace {
         widgets => widgets_from_dir($user_dir),
         workspace => 1,
     }));
+
+    # Must remove 'overlay' file first as it shadows overlay subdirectory.
+    my $overlay_path = File::Spec->catfile($user_dir, 'overlay');
+    unlink $overlay_path if(-f $overlay_path);
 
     my $overlay_dir = get_overlay_dir($user_id, $mtime);
     overlay_to_dir $overlay_dir, $overlay;
