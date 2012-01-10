@@ -332,7 +332,8 @@ sub migrate_workspace {
     my $mtime = get_mtime $prefs_path;
     my $time_str = strftime('%a, %Y-%m-%d %H:%M:%S', gmtime $mtime);
 
-    my $prefs = retrieve($prefs_path);
+    my $prefs = retrieve($prefs_path)
+        or die $!;
     normalize_columns($prefs);
 
     my $overlay = parse(OVERLAY_DEFS, merge($prefs, {
@@ -361,7 +362,7 @@ sub normalize_columns {
     my ($prefs) = @_;
 
     if(! UNIVERSAL::isa($prefs->{columns}, "ARRAY")) {
-        my @keys = sort grep { /^column[0-9]/ } keys %{$prefs};
+        my @keys = grep /^column[0-9]/, sort keys %{$prefs};
         $prefs->{columns} = [ map { { width => $prefs->{$_} } } @keys ];
         map { delete $prefs->{$_} } @keys;
     }
