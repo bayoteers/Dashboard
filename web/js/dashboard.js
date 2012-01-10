@@ -685,12 +685,23 @@ Widget.addClass('rss', Widget.extend({
         this.reload();
     },
 
+    // See Widget._restore().
+    _restore: function()
+    {
+        this.base();
+        this._child('.field-URL').val(this.state.URL);
+        this._child('.field-username').val(this.state.username);
+        this._child('.field-password').val(this.state.password);
+    },
+
     // See Widget._apply().
     _apply: function()
     {
         this.base();
         this.update({
-            URL: this._child('.field-URL').val()
+            URL: this._child('.field-URL').val(),
+            username: this._child('.field-username').val(),
+            password: this._child('.field-password').val()
         });
     },
 
