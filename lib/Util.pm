@@ -136,6 +136,8 @@ sub first_free_id {
     my $found = 0;
     my $id;
 
+    mkdir($dir);
+
     do {
         $id = time() | getpid();
         $dest_dir = File::Spec->catdir($dir, $id);
