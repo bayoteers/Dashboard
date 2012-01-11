@@ -136,7 +136,7 @@ sub first_free_id {
     my $found = 0;
     my $id;
 
-    mkdir($dir);
+    make_path($dir);
 
     do {
         $id = time() | getpid();
