@@ -62,7 +62,7 @@ use constant WIDGET_DEFS => {
     title => { type => 'text', required => 1 },
     # Contents of 'text' widget.
     text => { type => 'text' },
-    # Type, one of 'url', 'rss', 'mybugs', 'xeyes'.
+    # Type, one of 'url', 'rss', 'mybugs'.
     type => { type => 'text', required => 1, choices => [ WIDGET_TYPES ]},
     # URL for 'url' widget.
     URL => { type => 'text' },

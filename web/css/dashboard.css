@@ -179,13 +179,6 @@
     background: url(img/icon_clear_workspace_b.png) center left no-repeat;
 }
 
-#button-new-xeyes {
-    background: url(img/icon_new_xeyes.png) center left no-repeat;
-}
-#button-new-xeyes:hover {
-    background: url(img/icon_new_xeyes_b.png) center left no-repeat;
-}
-
 #button-new-rss {
     background: url(img/icon_new_rss.png) center left no-repeat;
 }

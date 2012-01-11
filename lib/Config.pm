@@ -42,7 +42,6 @@ use constant WIDGET_TYPES => qw(
     mybugs
     rss
     url
-    xeyes
     text
 );
 
