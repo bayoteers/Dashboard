@@ -220,8 +220,9 @@ var Rpc = Base.extend({
      * @param params
      *      Object containing method parameters.
      */
-    constructor: function(method, params)
+    constructor: function(namespace, method, params)
     {
+        this.namespace = namespace
         this.method = method;
         this.params = params;
         this.response = null;
@@ -248,7 +249,7 @@ var Rpc = Base.extend({
     {
         $.jsonRPC.setup({
             endPoint: 'jsonrpc.cgi',
-            namespace: 'Dashboard'
+            namespace: this.namespace
         })
 
         $.jsonRPC.request(this.method, {
@@ -745,7 +746,7 @@ Widget.addClass('rss', Widget.extend({
         }
 
         this.innerElement.html(cloneTemplate('#loader_template'));
-        var rpc = new Rpc('get_feed', { url: this.state.URL });
+        var rpc = new Rpc('Dashboard', 'get_feed', { url: this.state.URL });
         rpc.fail(this._onReloadFail.bind(this));
         rpc.done(this._onReloadDone.bind(this));
         this._onResize();
@@ -1086,7 +1087,7 @@ var Dashboard = Base.extend({
      */
     rpc: function(method, params, cb)
     {
-        var rpc = new Rpc(method, params);
+        var rpc = new Rpc('Dashboard', method, params);
         rpc.fail(function(e) { alert(e.message ? e.message : e); });
         rpc.fail(this.notifyCb.fire.bind(this.notifyCb));
         return rpc;
