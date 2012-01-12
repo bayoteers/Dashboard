@@ -1982,6 +1982,7 @@ var DashboardView = Base.extend({
         $('#button-new-mybugs').click(dash.addWidget.bind(dash, 'mybugs'));
         $('#button-new-rss').click(dash.addWidget.bind(dash, 'rss'));
         $('#button-new-text').click(dash.addWidget.bind(dash, 'text'));
+        $('#button-new-bugs').click(dash.addWidget.bind(dash, 'bugs'));
     },
 
     _onClearClick: function()

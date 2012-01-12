@@ -148,6 +148,12 @@
 #button-new-mybugs:hover {
     background: url(img/icon_new_widget_b.png) center left no-repeat;
 }
+#button-new-bugs {
+    background: url(img/icon_new_bugs.png) center left no-repeat;
+}
+#button-new-bugs:hover {
+    background: url(img/icon_new_bugs_b.png) center left no-repeat;
+}
 #button-new-text {
     background: url(img/icon_new_text.png) center left no-repeat;
 }
@@ -190,6 +196,18 @@
 }
 #button-save-widgets:hover {
         background: url(img/icon_save_b.png) center left no-repeat;
+}
+
+a.add_entry {
+    background: url(img/icon_add_column.png) center left no-repeat;
+    display: inline-block;
+    vertical-align: middle;
+    width: 21px;
+    height: 21px;
+}
+
+a.add_entry:hover {
+    background: url(img/icon_add_column_b.png) center left no-repeat;
 }
 
 .loader {
