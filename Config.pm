@@ -40,6 +40,11 @@ use constant REQUIRED_MODULES => [
                                       package => 'libxml-feed-perl',
                                       module => 'XML::Feed',
                                       version => 0.40
+                                   },
+                                   {
+                                     package => 'libjson-pp-perl',
+                                     module => 'JSON::PP',
+                                     version =>  2.72
                                    }
                                  ];
 
