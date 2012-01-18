@@ -193,7 +193,7 @@ Widget.addClass('bugs', Widget.extend(
         }
         else
         {
-            var content = $("<table class=\"buglist\"/>");
+            var content = $("<table class='buglist tablesorter'/>");
             content.append("<thead/>");
             content.append("<tbody/>");
             // Create header
@@ -208,8 +208,8 @@ Widget.addClass('bugs', Widget.extend(
             {
                 $("tbody", content).append(this._formatBug(result.bugs[i]));
             }
+	    content.tablesorter();
         }
-
         this.innerElement.html(content);
         this.innerElement.trigger('vertical_resize');
     },
