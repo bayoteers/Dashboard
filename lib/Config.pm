@@ -43,6 +43,7 @@ use constant WIDGET_TYPES => qw(
     rss
     url
     text
+    bugs
 );
 
 our $sortkey = 5000;
