@@ -6,7 +6,7 @@
  * @return Object containing the name - value pairs
  *
  */
-function get_form_values(form)
+function getFormValues(form)
 {
     var values = form.serializeArray();
     var result = {}
@@ -37,7 +37,7 @@ function get_form_values(form)
  *        Object containing the values
  *
  */
-function set_form_values(form, data)
+function setFormValues(form, data)
 {
     for (var key in data) {
         var elements = $("input[name='" + key + "']", form);
@@ -48,16 +48,16 @@ function set_form_values(form, data)
             // set value in existing entries
             if (i < values.length) $(elements[i]).val(values[i]);
             // remove extra entries
-	    else if (i > values.length) $(elements[i]).remove();
+            else if (i > values.length) $(elements[i]).remove();
             // empty the last entry
             else $(elements[i]).val("");
         }
         // Add more enties if more values (plus one empty)
-	var last = elements.last();
+        var last = elements.last();
         for (var i = elements.length; i < values.length; i++){
-	    // Clone and append after
+            // Clone and append after
             last = add_input(last);
-	    last.val(values[i]);
+            last.val(values[i]);
         }
     }
 }
@@ -131,16 +131,16 @@ Widget.addClass('bugs', Widget.extend(
         if(this.state.text) settings = JSON.parse(this.state.text);
         this._params = settings.params ? settings.params : {};
         this._options = settings.options ? settings.options : this.DEFAULT_OPTIONS;
-        set_form_values(this._params_form, this._params);
-        set_form_values(this._options_form, this._options);
+        setFormValues(this._params_form, this._params);
+        setFormValues(this._options_form, this._options);
     },
 
     // See Widget._apply().
     _apply: function()
     {
         this.base();
-        var params = get_form_values(this._params_form);
-        var options = get_form_values(this._options_form);
+        var params = getFormValues(this._params_form);
+        var options = getFormValues(this._options_form);
         // Update the settings in state
         this.update({text: JSON.stringify(
                         {params: params, options: options})});
@@ -208,7 +208,7 @@ Widget.addClass('bugs', Widget.extend(
             {
                 $("tbody", content).append(this._formatBug(result.bugs[i]));
             }
-	    content.tablesorter();
+            content.tablesorter();
         }
         this.innerElement.html(content);
         this.innerElement.trigger('vertical_resize');
