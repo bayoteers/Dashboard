@@ -88,7 +88,7 @@ function stripBugzillaPage(frame)
 /**
  * Generic bugs widget class
  */
-Widget.addClass('bugs', Widget.extend(
+var BugsWidget = Widget.extend(
 {
     // Default query string
     DEFAULT_QUERY: "",
@@ -158,11 +158,8 @@ Widget.addClass('bugs', Widget.extend(
         if (settings.query){
             this._query = settings.query;
             this._queryButton.data().colorbox.href = "buglist.cgi" + this._query;
-        } else {
-            this._query = this.DEFAULT_QUERY;
-            this._queryButton.data().colorbox.href = "query.cgi";
+            this._queryField.val(this._query);
         }
-        this._queryField.val(this._query);
     },
 
     // See Widget._apply().
@@ -254,4 +251,33 @@ Widget.addClass('bugs', Widget.extend(
         this.innerElement.trigger('vertical_resize');
     }
 
-}));
+});
+Widget.addClass('bugs', BugsWidget);
+
+/**
+ * My bugs widget implementation
+ */
+var MyBugsWidget = BugsWidget.extend({
+
+    constructor: function(dashboard, state)
+    {
+        this.base(dashboard, state);
+        this.DEFAULT_QUERY = getQueryString({
+            bug_status: ['NEW', 'ASSIGNED', 'NEED_INFO', 'REOPENED', 'WAITING',
+                    'RESOLVED', 'RELEASED'],
+            email1: this._dashboard.login,
+            emailassigned_to1: 1,
+            email_reporter1: 1,
+            emailtype1: 'exact',
+            'field0-0-0': 'bug_status',
+            'field0-0-1': 'reporter',
+            query_format: 'advanced',
+            'type0-0-0': 'notequals',
+            'type0-0-1': 'equals',
+            'value0-0-0': 'UNCONFIRMED',
+            'value0-0-1': this._dashboard.login
+        });
+    },
+
+});
+Widget.addClass('mybugs', MyBugsWidget);

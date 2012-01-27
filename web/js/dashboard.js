@@ -187,27 +187,6 @@ function now()
 
 
 /**
- * Make a GET URL from a dictionary of parametrrs.
- *
- * @param path
- *      Base URL (e.g. "buglist.cgi").
- * @param params
- *      Object whose property names and values become URL parameters.
- *      List-valued properties are repeated in the query string
- *      (e.g. {a: [1,2,3]} becomes "a=1&a=2&a=3".
- */
-function makeUrl(path, params)
-{
-    var s = $.param(params, true);
-    if(s) {
-        path += (path.indexOf('?') == -1) ? '?' : '&';
-        path += s;
-    }
-    return path;
-}
-
-
-/**
  * RPC object. Wraps the parameters of a Bugzilla RPC up along with callbacks
  * indicating completion state.
  */
@@ -822,42 +801,6 @@ Widget.addClass('rss', Widget.extend({
         this._child('.rss').height(this.innerElement.height());
     }
 }));
-
-
-/**
- * My Bugs widget implementation.
- */
-Widget.addClass('mybugs', Widget.extend({
-    TEMPLATE_TYPE: 'rss',
-
-    _makeFeedUrl: function()
-    {
-        return makeUrl('buglist.cgi', {
-            bug_status: ['NEW', 'ASSIGNED', 'NEED_INFO', 'REOPENED', 'WAITING',
-                'RESOLVED', 'RELEASED'],
-            email1: this._dashboard.login,
-            emailassigned_to1: 1,
-            email_reporter1: 1,
-            emailtype1: 'exact',
-            'field0-0-0': 'bug_status',
-            'field0-0-1': 'reporter',
-            query_format: 'advanced',
-            'type0-0-0': 'notequals',
-            'type0-0-1': 'equals',
-            'value0-0-0': 'UNCONFIRMED',
-            'value0-0-1': this._dashboard.login,
-            title: 'Bug List',
-            ctype: 'atom'
-        });
-    },
-
-    setState: function(state)
-    {
-        state.URL = this._makeFeedUrl();
-        this.base(state);
-    }
-}));
-
 
 /**
  * Text widget implementation.
