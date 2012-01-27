@@ -38,7 +38,7 @@ use Bugzilla::Extension::Dashboard::Util;
 use Bugzilla::Extension::Dashboard::Schema;
 use Bugzilla::Extension::Dashboard::WebService;
 
-use JSON::PP;
+use JSON;
 
 our $VERSION = '0.01';
 
