@@ -218,104 +218,14 @@ The current workspace available in this session will not be saved until you expl
         </p>
     </div>
 
+    <div id="bugs_widget_template">
+    </div>
+
     <div id="bugs_widget_settings_template">
-        <li class="item">Search parameters</li>
-        <form class="search_params">
         <li class="item">
-            <label>Alias:</label><input name="alias" type="text"/>
-            <a class="add_entry"></a>
+            <label>Query string:</label><input name="query" type="text"/>
+            <input name="editquery" type="button" value="Edit"/>
         </li>
-        <li class="item">
-            <label>Assigned to:</label><input name="assigned_to" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>Component:</label><input name="component" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>Creation time:</label><input name="creation_time" type="text"/>
-        </li>
-        <li class="item">
-            <label>ID:</label><input name="id" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>Last change time:</label><input name="last_change_time" type="text"/>
-        </li>
-        <li class="item">
-            <label>Limit:</label><input name="limit" type="text"/>
-        </li>
-        <li class="item">
-            <label>Offset:</label><input name="offset" type="text"/>
-        </li>
-        <li class="item">
-            <label>Operating system:</label><input name="op_sys" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>Platform:</label><input name="platform" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>Priority:</label><input name="priority" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>Product:</label><input name="product" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>Reporter:</label><input name="reporter" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>Resolution:</label><input name="resolution" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>Severity:</label><input name="severity" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>Status:</label><input name="status" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>Summary:</label><input name="summary" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>Target milestone:</label><input name="target_milestone" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>QA contact:</label><input name="qa_contact" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>URL:</label><input name="url" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>Version:</label><input name="version" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        <li class="item">
-            <label>Votes:</label><input name="votes" type="text"/>
-        </li>
-        <li class="item">
-            <label>Whiteboard:</label><input name="whiteboard" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        </form>
-        <li class="item">Result display options</li>
-        <form class="table_options">
-        <li class="item">
-            <label>Show fields:</label><input name="fields" type="text"/>
-            <a class="add_entry"></a>
-        </li>
-        </form>
     </div>
 
     <table> <!-- required to satisfy HTML parser. -->
@@ -394,6 +304,7 @@ var DASHBOARD_CONFIG = [% dashboard_config || 'null' %];
 <script src="extensions/Dashboard/web/js/jquery.colorbox-min.js"></script>
 <script src="extensions/Dashboard/web/js/jquery.tablesorter.min.js"></script>
 <script src="extensions/Dashboard/web/js/jquery.jsonrpc.js"></script>
+<script src="extensions/Dashboard/web/js/jquery.csv.min.js"></script>
 <script src="extensions/Dashboard/web/js/dashboard.js"></script>
 <script src="extensions/Dashboard/web/js/widget_bugs.js"></script>
 
