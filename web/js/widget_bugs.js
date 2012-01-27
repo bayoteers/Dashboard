@@ -1,126 +1,152 @@
+/**
+ * Confirmation support to colorbox.close()
+ *
+ * Adds new configuration option to colorbox
+ *
+ *      onCloseConfirm: callback
+ *
+ * Where callback is a function which should return true if it is ok to close
+ * the box.
+ */
+$.colorbox.originalClose = $.colorbox.close;
+$.colorbox.close = function() {
+    element = $.colorbox.element();
+    var confirmClose = element.data().colorbox.onCloseConfirm;
+    if (typeof confirmClose == "undefined") {
+        $.colorbox.originalClose();
+    } else {
+        if (confirmClose() == true) $.colorbox.originalClose();
+    }
+}
 
 /**
- * Utility function to get form values as an object
+ * Utility function to covert query string to parameter object
  *
- * @param form The form element.
- * @return Object containing the name - value pairs
+ * @param query
+ *      String in format "key=value&key=othervalue&foo=bar"
  *
+ * @returns Object containing the paramters
+ *      {key: ["value", "othervalue"], foo: "bar"}
+ *      Values will be URI decoded
  */
-function getFormValues(form)
+function getQueryParams(query)
 {
-    var values = form.serializeArray();
-    var result = {}
-    for (var i = 0; i < values.length; i++){
-        var entry = values[i];
-        // Skip empty fields
-        if(! entry.value) continue;
-        if (entry.name in result){
-            if (! $.isArray(result[entry.name])){
-                result[entry.name] = [result[entry.name]];
+    var params = {};
+    var regex = /([^=&\?]*)=([^&]*)/g;
+    var match = null;
+    while ((match = regex.exec(query)) != null) {
+        var name = match[1];
+        var value = decodeURIComponent(match[2]);
+        if (params.hasOwnProperty(name)) {
+            if (! $.isArray(params[name])) {
+                params[name] = [params[name]];
             }
-            result[entry.name].push($.trim(entry.value));
-        }else{
-            result[entry.name] = $.trim(entry.value);
+            params[name].push(value);
+        } else {
+            params[name] = value;
         }
     }
-    return result;
+    return params;
 }
-
 /**
- * Utility function to set values in a form
+ * Utility function to convert parameter object ro query string
  *
- * Currently works only with forms consisting of normal input fields
+ * @param params
+ *      Object containing teh params
+ *      { key: ["value", "othervalue"], foo: "bar" }
  *
- * @param form
- *        The form element
- * @param data
- *        Object containing the values
- *
+ * @returns Query string
+ *      "?key=value&key=othervalue&foo=bar"
+ *      Values will be URI encoded
  */
-function setFormValues(form, data)
+function getQueryString(params)
 {
-    for (var key in data) {
-        var elements = $("input[name='" + key + "']", form);
-        if (elements.length == 0) continue;
-        var values = data[key];
+    var query = "?"
+    for (name in params) {
+        var values = params[name];
         if (! $.isArray(values)) values = [values];
-        for (var i = 0; i < elements.length; i++){
-            // set value in existing entries
-            if (i < values.length) $(elements[i]).val(values[i]);
-            // remove extra entries
-            else if (i > values.length) $(elements[i]).remove();
-            // empty the last entry
-            else $(elements[i]).val("");
-        }
-        // Add more enties if more values (plus one empty)
-        var last = elements.last();
-        for (var i = elements.length; i < values.length; i++){
-            // Clone and append after
-            last = add_input(last);
-            last.val(values[i]);
+        for (var i = 0; i < values.length; i++) {
+            query += "&" + name + "=" + encodeURIComponent(values[i]);
         }
     }
+    return query;
 }
+
 /**
- * Utility function to append new input entry
+ * Helper function to hide the header and footer from bugzilla page
  *
- * @param element
- *        This element will be cloned and the new one is added after this one in
- *        the DOM.
- *
+ * @param frame
+ *      The iframe element
  */
-function add_input(element)
+function stripBugzillaPage(frame)
 {
-    var clone = element.clone();
-    clone.val("");
-    element.after(clone);
-    return clone;
+    var contents = $(frame).contents();
+    contents.find("div#header").hide();
+    contents.find("div#footer").hide();
 }
 
-
 /**
- * Generic bugs widget
+ * Generic bugs widget class
  */
 Widget.addClass('bugs', Widget.extend(
 {
-    // Default options
-    // fields: Fields to show in bug result table
-    DEFAULT_OPTIONS: {
-        fields: ["id", "summary", "status"],
-    },
+    // Default query string
+    DEFAULT_QUERY: "",
 
     // See Widget.renderSettings().
     renderSettings: function()
     {
         this.base();
-        this._params_form = this._child('form.search_params');
-        this._options_form = this._child('form.table_options');
-
-        $(".add_entry", this._params_form).click(function(event)
-            {
-                add_input($(event.target).prev("input"))
-            });
-        $(".add_entry", this._options_form).click(function(event)
-            {
-                add_input($(event.target).prev("input"))
-            });
+        this._queryField = this._child("input[name='query']");
+        this._queryButton = this._child("input[name='editquery']");
+        this._queryButton.colorbox({
+            width: "90%",
+            height: "90%",
+            iframe: true,
+            fastIframe: false,
+            href: "query.cgi",
+            onCloseConfirm: this._confirmQueryClose.bind(this),
+            onCleanup: this._getSearchQuery.bind(this),
+            onComplete: this._onEditBoxReady.bind(this)
+        });
     },
 
-    // See Widget.edit().
-    edit: function(event)
+    /**
+     * Hide unneeded elements from the page in edit box
+     */
+    _onEditBoxReady: function()
     {
-        this._restore();
-        this._child('.edit').hide();
-        this._child('.save').show();
-        var editbox = this._child(".edit-box");
-        // The element needs to be visible for colorbox to figure out the
-        // dimensions.
-        editbox.show()
-        $.colorbox({
-            inline: true,
-            href: editbox,
-            onClosed: this._onSaveClick.bind(this)
-        });
+        var frame = $("#cboxContent iframe")
+        stripBugzillaPage(frame);
+        frame.load(function(event){stripBugzillaPage(event.target);});
+    },
+
+    /**
+     * Get the query string from buglist page open in edit box
+     */
+    _getSearchQuery: function()
+    {
+        var loc = $("#cboxContent iframe").contents().get(0).location;
+        if (loc.pathname.match("buglist.cgi")) {
+            this._queryField.val(loc.search);
+        }
+    },
+
+    /**
+     * Confirm that query edit box is on buglist page before closing
+     */
+    _confirmQueryClose: function()
+    {
+        var page = $("#cboxContent iframe").contents()[0].location.pathname;
+        if (page.match("buglist.cgi") == null) {
+            return confirm(
+                "After entering the search parameters, "
+                + "you need to click 'search' to open "
+                + "the buglist before closing. "
+                + "Do you really want to close?");
+        } else {
+            return true;
+        }
     },
 
     // See Widget._restore().
@@ -128,55 +154,64 @@ Widget.addClass('bugs', Widget.extend(
     {
         this.base();
         var settings = {}
-        if(this.state.text) settings = JSON.parse(this.state.text);
-        this._params = settings.params ? settings.params : {};
-        this._options = settings.options ? settings.options : this.DEFAULT_OPTIONS;
-        setFormValues(this._params_form, this._params);
-        setFormValues(this._options_form, this._options);
+        if (this.state.text) settings = JSON.parse(this.state.text);
+        if (settings.query){
+            this._query = settings.query;
+            this._queryButton.data().colorbox.href = "buglist.cgi" + this._query;
+        } else {
+            this._query = this.DEFAULT_QUERY;
+            this._queryButton.data().colorbox.href = "query.cgi";
+        }
+        this._queryField.val(this._query);
     },
 
     // See Widget._apply().
     _apply: function()
     {
         this.base();
-        var params = getFormValues(this._params_form);
-        var options = getFormValues(this._options_form);
-        // Update the settings in state
-        this.update({text: JSON.stringify(
-                        {params: params, options: options})});
-    }, 
-    
+        this.update({
+            text: JSON.stringify({query: this._queryField.val()})
+        });
+    },
+
     // See Widget.setState().
     setState: function(state)
     {
         this.base(state);
         var settings = {}
-        if(state.text) settings = JSON.parse(state.text);
-        this._params = settings.params ? settings.params : {};
-        this._options = settings.options ? settings.options : this.DEFAULT_OPTIONS;
+        if (state.text) settings = JSON.parse(state.text);
+        this._query = settings.query ?
+            settings.query :
+            this.DEFAULT_QUERY;
     },
 
     // See Widget.reload().
     reload: function()
     {
-        this.innerElement.html(cloneTemplate('#loader_template'));
-        var rpc = new Rpc('Bug', 'search', this._params);
-        rpc.fail(this._onReloadFail.bind(this));
-        rpc.done(this._onReloadDone.bind(this));
-        //this._onResize();
+        if (this._query) {
+            // display loader animation
+            this.innerElement.html(cloneTemplate('#loader_template'));
+            // set ctype to csv in query parameters
+            params = getQueryParams(this._query);
+            params.ctype = "csv";
+            // Create request to fetch the data and set result callbacks
+            var jqxhr = $.get("buglist.cgi" + getQueryString(params), {});
+            jqxhr.success(this._onReloadDone.bind(this));
+            jqxhr.error(this._onReloadFail.bind(this));
+        } else {
+            this.innerElement.html("Set the query string in widget options");
+        }
     },
-    
+
     /**
-     * Display an error message when bug search fails
+     * Display an error message when bug list fetching
      *
      * @param error
      *      String error from backend.
      */
     _onReloadFail: function(error)
     {
-        var clone = cloneTemplate('#rss_widget_error');
-        $('.error-text', clone).text(error);
-        this.innerElement.html(clone);
+        this.innerElement.html("<p class='error'>" + error + "</p>");
     },
 
     /**
@@ -185,51 +220,38 @@ Widget.addClass('bugs', Widget.extend(
      * @param result
      *      Result JSON object, as returned by search RPC.
      */
-    _onReloadDone: function(result)
+    _onReloadDone: function(data)
     {
-        if (result.bugs.length == 0)
-        {
+        var buglist = $.csv()(data);
+        if (buglist.length == 1) {
             var content = $("<p>Sorry, no bugs found</p>");
-        }
-        else
-        {
+        } else {
+            // Create table
             var content = $("<table class='buglist tablesorter'/>");
             content.append("<thead/>");
             content.append("<tbody/>");
             // Create header
             var header = $("<tr/>");
-            for (var i = 0; i < this._options.fields.length; i++)
+            for (var i = 0; i < buglist[0].length; i++)
             {
-                header.append("<th>" + this._options.fields[i] + "</th>");
+                header.append("<th>" + buglist[0][i] + "</th>");
             }
             $("thead", content).append(header);
-            // Format bug rows
-            for(var i = 0; i < result.bugs.length; i++)
+            // Create rows
+            for(var i = 1; i < buglist.length; i++)
             {
-                $("tbody", content).append(this._formatBug(result.bugs[i]));
+                var row = $("<tr/>");
+                for(var j = 0; j < buglist[i].length; j++)
+                {
+                    row.append("<td>" + buglist[i][j]+"</td>");
+                }
+                $("tbody", content).append(row);
             }
+            // Make it pretty and sortable
             content.tablesorter();
         }
         this.innerElement.html(content);
         this.innerElement.trigger('vertical_resize');
-    },
-
-    /**
-     * Format bug as a single row in the table.
-     *
-     * @param bug
-     *      Single Bug JSON object as returned by search RPC
-     * @returns <tr> elemenet
-     *
-     */
-    _formatBug: function(bug)
-    {
-        var row = $("<tr/>");
-        for(var i = 0; i < this._options.fields.length; i++){
-            var value = bug[this._options.fields[i]] ? bug[this._options.fields[i]] : "";
-            row.append("<td>"+value+"</td>");
-        }
-        return row;
     }
-}));
 
+}));
