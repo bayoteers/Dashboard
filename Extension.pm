@@ -92,6 +92,18 @@ sub page_before_template {
 }
 
 
+sub bb_common_links {
+    my ($self, $args) = @_;
+
+    $args->{links}->{Dashboard} = [
+        {
+            text => 'Dashboard',
+            href => 'page.cgi?id=dashboard.html'
+        }
+    ];
+}
+
+
 sub config {
     my ($self, $args) = @_;
     my $config = $args->{config};
