@@ -131,22 +131,6 @@ function cloneTemplate(sel)
 
 
 /**
- * Run a function, logging any exception thrown to the console. Used for
- * debugging XMLHTTPRequest event handlers, whose exceptions are silently
- * discarded.
- */
-function absorb(fn)
-{
-    try {
-        return fn();
-    } catch(e) {
-        console.error('absorb(): %o', e);
-        throw e;
-    }
-}
-
-
-/**
  * Return integer seconds since UNIX epoch GMT.
  */
 function now()
