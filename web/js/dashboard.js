@@ -171,14 +171,10 @@ var Widget = Base.extend({
             this.TEMPLATE_TYPE = this.TYPE;
         }
 
-        // "outer" element; contains the title bar, controls, the settings box,
-        // and the widget content area.
+        /** Contains title bar, controls, settings box, and content. */
         this.element = null;
-        // "content" element; contains the inner element (from the original
-        // design, not sure why this exists).
+        /** "content" element; contains the actual widget content */
         this.contentElement = null;
-        // "inner" element; contains the actual widget content.
-        this.innerElement = null;
 
         this.refreshIntervalId = null;
 
@@ -196,36 +192,40 @@ var Widget = Base.extend({
     {
         this.element = cloneTemplate('#widget_template');
         this.headElement = $('.widget-head', this.element);
-        this.innerElement = $('.widget_inner', this.element);
+        this.bodyElement = $('.widget-body', this.element);
+        this.hintElement = $('.widget-hint', this.element);
         this.contentElement = $('.widget-content', this.element);
 
         this._child('.remove').click(this._onRemoveClick.bind(this));
         this._child('.refresh').click(this.reload.bind(this));
         this._child('.collapse').click(this._onMinimizeClick.bind(this));
-        this._child('.maximize').click(this._onMaximizeClick.bind(this));
 
         this._child('.edit').click(this.edit.bind(this));
         this._child('.save').click(this._onSaveClick.bind(this));
         this._child('.save').hide();
 
-        //this.element.bind('resize', this._onResize.bind(this));
         this.element.bind('vertical_resize', this._onResize.bind(this));
 
-        // Populate inner element with widget's template, if one exists.
+        // Populate content element with widget's template, if one exists.
         var sel = '#' + this.TEMPLATE_TYPE + '_widget_template';
-        this.innerElement.append(cloneTemplate(sel));
+        this.contentElement.append(cloneTemplate(sel));
     },
 
     /**
      * Called when the widget's height or width changes. The default
      * implementation adjusts the content element height to match.
      *
-     * Subclasses should use this.innerElement.height() to determine the
+     * Subclasses should use this.contentElement.height() to determine the
      * maximum height their elements can grow to.
      */
     _onResize: function() {
-        var px = this.state.height - this.headElement.outerHeight();
-        this.innerElement.height(px);
+        var px;
+        if(this.state.maximized) {
+            px = $(window).height() - this.hintElement.outerHeight();
+        } else {
+            px = this.state.height - this.headElement.outerHeight();
+        }
+        this.contentElement.height(px);
     },
 
     /**
@@ -303,22 +303,6 @@ var Widget = Base.extend({
         this._child('.edit-box').hide();
     },
 
-    _onMaximizeClick: function() {
-        var clone = cloneTemplate('#widget_maximized_hint')
-        clone.click(closeMaximizedWidget.bind(this, this));
-        this.contentElement.prepend(clone);
-        this.contentElement.resizable('destroy');
-        this.contentElement.addClass('widget-max');
-        this.contentElement.css('position', '');
-
-        $('.widget').not(this.element).hide();
-        elem.show();
-
-        var windowY = $(window).height() - 10;
-        elem.height(windowY);
-        $(window).trigger('resize');
-    },
-
     /**
      * Update just a few widget parameters.
      */
@@ -337,7 +321,7 @@ var Widget = Base.extend({
         this.state = state;
 
         // toggle() insists on bool.
-        this._child('.widget-content').toggle(!state.minimized);
+        this.contentElement.toggle(!state.minimized);
 
         this._setColor(state.color);
         this._setRefreshSecs(state.refresh);
@@ -420,23 +404,45 @@ var Widget = Base.extend({
         // Override in subclass.
     }
 }, /* class variables: */ {
+
+    /** Mapping of type name of constructor. */
     _classes: {},
 
+    /** Minimum height for any widget. */
     MIN_HEIGHT: 100,
 
+    /** Values assigned if they're missing during createInstance(). */
     DEFAULT_STATE: {
         color: 'gray',
         minimized: false,
         height: 0
     },
 
+    /** Color classes we have CSS defined for. */
     COLORS: ['gray', 'yellow', 'red', 'blue', 'white', 'orange', 'green'],
 
+    /**
+     * Register a Widget subclass for use with Widget.createInstance().
+     *
+     * @param type
+     *      String type name, e.g. "rss".
+     * @param klass
+     *      Constructor, i.e. the result of Widget.extend().
+     */
     addClass: function(type, klass) {
         klass.TYPE = type;
         this._classes[type] = klass;
     },
 
+    /**
+     * Create a Widget given a state object.
+     *
+     * @param dashboard
+     *      Dashboard the widget is associated with.
+     * @param state
+     *      Widget state object, including at least "type", which is the type
+     *      of the widget to create.
+     */
     createInstance: function(dashboard, state) {
         var klass = this._classes[state.type];
         return new klass(dashboard, state);
@@ -524,7 +530,7 @@ Widget.addClass('url', Widget.extend({
     _onResize: function()
     {
         this.base();
-        this._iframe.height(this.innerElement.height());
+        this._iframe.height(this.contentElement.height());
     },
 
     // See Widget.setState().
@@ -588,11 +594,11 @@ Widget.addClass('rss', Widget.extend({
     reload: function()
     {
         if(! this.state.URL) {
-            this.innerElement.text('Please set a feed URL.');
+            this.contentElement.text('Please set a feed URL.');
             return;
         }
 
-        this.innerElement.html(cloneTemplate('#loader_template'));
+        this.contentElement.html(cloneTemplate('#loader_template'));
         var rpc = new Rpc('Dashboard', 'get_feed', { url: this.state.URL });
         rpc.fail(this._onReloadFail.bind(this));
         rpc.done(this._onReloadDone.bind(this));
@@ -609,7 +615,7 @@ Widget.addClass('rss', Widget.extend({
     {
         var clone = cloneTemplate('#rss_widget_error');
         $('.error-text', clone).text(error);
-        this.innerElement.html(clone);
+        this.contentElement.html(clone);
     },
 
     /**
@@ -635,8 +641,8 @@ Widget.addClass('rss', Widget.extend({
             template.append(this._formatItem(feed.items[i]));
         }
 
-        this.innerElement.html(template);
-        this.innerElement.trigger('vertical_resize');
+        this.contentElement.html(template);
+        this.contentElement.trigger('vertical_resize');
     },
 
     /**
@@ -666,9 +672,10 @@ Widget.addClass('rss', Widget.extend({
     _onResize: function()
     {
         this.base();
-        this._child('.rss').height(this.innerElement.height());
+        this._child('.rss').height(this.contentElement.height());
     }
 }));
+
 
 /**
  * Text widget implementation.
@@ -693,7 +700,7 @@ Widget.addClass('text', Widget.extend({
     // See Widget.reload().
     reload: function()
     {
-        var elem = this.innerElement;
+        var elem = this.contentElement;
         elem.css('padding', '8px');
         elem.text(this.state.text || '');
         // Convert line breaks to <br>.
@@ -1227,7 +1234,7 @@ var WidgetView = Base.extend({
         this._columns[-1] = $('#column-1'); // No effect on Array.length.
 
         $(document).keyup(this._onDocumentKeyup.bind(this));
-        $(window).bind('resize', this._updateColumnWidths.bind(this));
+        $(window).on('resize', this._onWindowResize.bind(this));
     },
 
     /**
@@ -1289,6 +1296,8 @@ var WidgetView = Base.extend({
             widget.state.col = 1;
         }
 
+        widget._child('.maximize').click(
+            this._onMaximizeClick.bind(this, widget));
         this._insertWidget(widget);
         widget.element.trigger('vertical_resize');
         this._makeSortable();
@@ -1312,6 +1321,43 @@ var WidgetView = Base.extend({
         });
     },
 
+    /**
+     * Respond to click on the widget's maximize button by displaying the
+     * restore hint, and applying CSS to display the widget contents full
+     * screen.
+     */
+    _onMaximizeClick: function(widget) {
+        widget.hintElement.click(this.restore.bind(this));
+        widget.hintElement.show();
+        widget.bodyElement.addClass('widget-max');
+        widget.update({
+            maximized: true
+        });
+        this._maximizedWidget = widget;
+        this._updateWidgetResizable(widget);
+        widget.element.trigger('vertical_resize');
+    },
+
+    /**
+     * Respond to window resize by triggering the vertical_resize event on the
+     * maximized widget, if any. If there is no maximized widget, then this
+     * means the columns are visisble, so recalculate their widths.
+     *
+     * TODO: this should be implemented in CSS, as installing window.onresize
+     * handlers results in extremely slow painting in every browser.
+     */
+    _onWindowResize: function()
+    {
+        if(this._maximizedWidget) {
+            this._maximizedWidget.element.trigger('vertical_resize');
+        } else {
+            this._updateColumnWidths();
+        }
+    },
+
+    /**
+     * Respond to escape key being pressed by restoring the maximized widget.
+     */
     _onDocumentKeyup: function(e)
     {
         // Clear maximized widgets when ESC is pressed.
@@ -1325,34 +1371,45 @@ var WidgetView = Base.extend({
      */
     restore: function()
     {
-        if(! this._maximizedWidget) {
+        var widget = this._maximizedWidget;
+        if(! widget) {
             return;
         }
 
-        var widget = this._maximizedWidget;
         this._maximizedWidget = null;
 
-        widget.element.removeClass('widget-max');
-        widget.child('.maximized-hint').remove();
+        widget.hintElement.hide();
+        widget.bodyElement.removeClass('widget-max');
 
-        widget.contentElement.height(widget.state.height);
-        this._makeWidgetResizable(widget);
+        widget.update({
+            maximized: false
+        });
 
-        $(".widget").show();
+        this._updateWidgetResizable(widget);
         this._updateColumnWidths();
     },
 
-    _makeWidgetResizable: function(widget)
+    /**
+     * Update a widget's jQuery resizable() state, destroying it if the widget
+     * is marked as maximized, otherwise (re)creating it.
+     */
+    _updateWidgetResizable: function(widget)
     {
-        widget.contentElement.resizable({
-            handles: 'e, s, se',
-            minHeight: Widget.MIN_HEIGHT,
-            minWidth: 75,
-            maxWidth: this._getMaxWidth(widget.state.col),
-            helper: 'widget-state-highlight',
-            start: this._disableIframes,
-            stop: this._onWidgetResizeStop.bind(this, widget)
-        });
+        if(widget.state.maximized) {
+            if(widget.bodyElement.data('resizable')) {
+                widget.bodyElement.resizable('destroy');
+            }
+        } else {
+            widget.bodyElement.resizable({
+                handles: 'e, s, se',
+                minHeight: Widget.MIN_HEIGHT,
+                minWidth: 75,
+                maxWidth: this._getMaxWidth(widget.state.col),
+                helper: 'widget-state-highlight',
+                start: this._disableIframes,
+                stop: this._onWidgetResizeStop.bind(this, widget)
+            });
+        }
     },
 
     /**
@@ -1402,7 +1459,7 @@ var WidgetView = Base.extend({
      * the widget's column and storing the height of the widget itself.
      *
      * @param widget
-     *      Widget object passed from _makeWidgetResizable().
+     *      Widget object passed from _updateWidgetResizable().
      */
     _onWidgetResizeStop: function(widget)
     {
@@ -1459,11 +1516,7 @@ var WidgetView = Base.extend({
      */
     _updateColumnWidths: function()
     {
-        var that = this;
-        $.each(this._dashboard.widgets, function(_, widget)
-        {
-            that._makeWidgetResizable(widget);
-        });
+        this._dashboard.widgets.forEach(this._updateWidgetResizable, this);
 
         for(var i = 0; i < this._columns.length; i++) {
             var notLast = (i + 1) != this._columns.length;

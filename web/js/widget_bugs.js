@@ -187,7 +187,7 @@ var BugsWidget = Widget.extend(
     {
         if (this._query) {
             // display loader animation
-            this.innerElement.html(cloneTemplate('#loader_template'));
+            this.contentElement.html(cloneTemplate('#loader_template'));
             // set ctype to csv in query parameters
             params = getQueryParams(this._query);
             params.ctype = "csv";
@@ -196,7 +196,7 @@ var BugsWidget = Widget.extend(
             jqxhr.success(this._onReloadDone.bind(this));
             jqxhr.error(this._onReloadFail.bind(this));
         } else {
-            this.innerElement.html("Set the query string in widget options");
+            this.contentElement.html("Set the query string in widget options");
         }
     },
 
@@ -208,7 +208,7 @@ var BugsWidget = Widget.extend(
      */
     _onReloadFail: function(error)
     {
-        this.innerElement.html("<p class='error'>" + error + "</p>");
+        this.contentElement.html("<p class='error'>" + error + "</p>");
     },
 
     /**
@@ -247,8 +247,8 @@ var BugsWidget = Widget.extend(
             // Make it pretty and sortable
             content.tablesorter();
         }
-        this.innerElement.html(content);
-        this.innerElement.trigger('vertical_resize');
+        this.contentElement.html(content);
+        this.contentElement.trigger('vertical_resize');
     }
 
 });

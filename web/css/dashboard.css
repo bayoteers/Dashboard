@@ -78,6 +78,10 @@
     overflow: hidden;
 }
 
+.widget-hint {
+    display: none;
+}
+
 .widget-divider {
     clear: both;
     border-bottom: 1px dashed #666;
@@ -355,8 +359,7 @@ a.add_entry:hover {
     position: absolute;
     top: 0;
     left: 0;
-    width: 99%;
-    height: 98%;
+    width: 100%;
     margin: 0;
     padding: 0;
     z-index: 9999;
