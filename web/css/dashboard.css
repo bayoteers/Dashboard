@@ -1,4 +1,4 @@
-#columns img,
+#columns images,
 #columns p,
 #columns h1,
 #columns h2,
@@ -135,75 +135,75 @@
 }
 
 #button-overlay {
-    background: url(img/icon_overlay.png) center left no-repeat;
+    background: url(images/icon_overlay.png) center left no-repeat;
 }
 #button-overlay:hover {
-    background: url(img/icon_overlay_b.png) center left no-repeat;
+    background: url(images/icon_overlay_b.png) center left no-repeat;
 }
 #button-new-url {
-    background: url(img/icon_new_widget.png) center left no-repeat;
+    background: url(images/icon_new_widget.png) center left no-repeat;
 }
 #button-new-url:hover {
-    background: url(img/icon_new_widget_b.png) center left no-repeat;
+    background: url(images/icon_new_widget_b.png) center left no-repeat;
 }
 #button-new-mybugs {
-    background: url(img/icon_new_bugs.png) center left no-repeat;
+    background: url(images/icon_new_bugs.png) center left no-repeat;
 }
 #button-new-mybugs:hover {
-    background: url(img/icon_new_bugs_b.png) center left no-repeat;
+    background: url(images/icon_new_bugs_b.png) center left no-repeat;
 }
 #button-new-bugs {
-    background: url(img/icon_new_bugs.png) center left no-repeat;
+    background: url(images/icon_new_bugs.png) center left no-repeat;
 }
 #button-new-bugs:hover {
-    background: url(img/icon_new_bugs_b.png) center left no-repeat;
+    background: url(images/icon_new_bugs_b.png) center left no-repeat;
 }
 #button-new-text {
-    background: url(img/icon_new_text.png) center left no-repeat;
+    background: url(images/icon_new_text.png) center left no-repeat;
 }
 #button-new-text:hover {
-    background: url(img/icon_new_text_b.png) center left no-repeat;
+    background: url(images/icon_new_text_b.png) center left no-repeat;
 }
 #button-add-column {
-    background: url(img/icon_add_column.png) center left no-repeat;
+    background: url(images/icon_add_column.png) center left no-repeat;
 }
 #button-add-column:hover {
-    background: url(img/icon_add_column_b.png) center left no-repeat;
+    background: url(images/icon_add_column_b.png) center left no-repeat;
 }
 #button-reset-columns {
-    background: url(img/icon_reset_columns.png) center left no-repeat;
+    background: url(images/icon_reset_columns.png) center left no-repeat;
 }
 #button-reset-columns:hover {
-    background: url(img/icon_reset_columns_b.png) center left no-repeat;
+    background: url(images/icon_reset_columns_b.png) center left no-repeat;
 }
 #button-del-column {
-    background: url(img/icon_del_column.png) center left no-repeat;
+    background: url(images/icon_del_column.png) center left no-repeat;
 }
 #button-del-column:hover {
-    background: url(img/icon_del_column_b.png) center left no-repeat;
+    background: url(images/icon_del_column_b.png) center left no-repeat;
 }
 #button-clear-workspace {
-    background: url(img/icon_clear_workspace.png) center left no-repeat;
+    background: url(images/icon_clear_workspace.png) center left no-repeat;
 }
 #button-clear-workspace:hover {
-    background: url(img/icon_clear_workspace_b.png) center left no-repeat;
+    background: url(images/icon_clear_workspace_b.png) center left no-repeat;
 }
 
 #button-new-rss {
-    background: url(img/icon_new_rss.png) center left no-repeat;
+    background: url(images/icon_new_rss.png) center left no-repeat;
 }
 #button-new-rss:hover {
-    background: url(img/icon_new_rss_b.png) center left no-repeat;
+    background: url(images/icon_new_rss_b.png) center left no-repeat;
 }
 #button-save-widgets {
-        background: url(img/icon_save.png) center left no-repeat;
+        background: url(images/icon_save.png) center left no-repeat;
 }
 #button-save-widgets:hover {
-        background: url(img/icon_save_b.png) center left no-repeat;
+        background: url(images/icon_save_b.png) center left no-repeat;
 }
 
 a.add_entry {
-    background: url(img/icon_add_column.png) center left no-repeat;
+    background: url(images/icon_add_column.png) center left no-repeat;
     display: inline-block;
     vertical-align: middle;
     width: 21px;
@@ -211,7 +211,7 @@ a.add_entry {
 }
 
 a.add_entry:hover {
-    background: url(img/icon_add_column_b.png) center left no-repeat;
+    background: url(images/icon_add_column_b.png) center left no-repeat;
 }
 
 .loader {
@@ -228,10 +228,10 @@ a.add_entry:hover {
     text-indent: -9999em;
     margin: 2px 2px 2px 2px;
     outline: none;
-    background: url(img/red.png) no-repeat;
+    background: url(images/red.png) no-repeat;
 }
 .widget-head a.remove:hover  {
-    background: url(img/red_b.png) no-repeat;   
+    background: url(images/red_b.png) no-repeat;   
 }
 
 .widget-head a.maximize  {
@@ -243,10 +243,10 @@ a.add_entry:hover {
     text-indent: -9999em;
     margin: 2px 2px 2px 2px;
     outline: none;
-    background: url(img/green.png) no-repeat;
+    background: url(images/green.png) no-repeat;
 }
 .widget-head a.maximize:hover  {
-    background: url(img/green_b.png) no-repeat; 
+    background: url(images/green_b.png) no-repeat; 
 }
 
 .widget-head a.edit  {
@@ -258,10 +258,10 @@ a.add_entry:hover {
     text-indent: -9999em;
     margin: 2px 2px 2px 2px;
     outline: none;
-    background: url(img/prefs.png) no-repeat;
+    background: url(images/prefs.png) no-repeat;
 }
 .widget-head a.edit:hover  {
-    background: url(img/prefs_b.png) no-repeat; 
+    background: url(images/prefs_b.png) no-repeat; 
 }
 
 .widget-head a.refresh  {
@@ -273,10 +273,10 @@ a.add_entry:hover {
     text-indent: -9999em;
     margin: 2px 2px 2px 2px;
     outline: none;
-    background: url(img/reload.png) no-repeat;
+    background: url(images/reload.png) no-repeat;
 }
 .widget-head a.refresh:hover  {
-    background: url(img/reload_b.png) no-repeat;    
+    background: url(images/reload_b.png) no-repeat;    
 }
 
 
@@ -289,10 +289,10 @@ a.add_entry:hover {
     text-indent: -9999em;
     margin: 2px 2px 2px 2px;
     outline: none;
-    background: url(img/save.png) no-repeat;
+    background: url(images/save.png) no-repeat;
 }
 .widget-head a.save:hover  {
-    background: url(img/save_b.png) no-repeat;  
+    background: url(images/save_b.png) no-repeat;  
 }
 
 .widget-head a.collapse  {
@@ -304,10 +304,10 @@ a.add_entry:hover {
     text-indent: -9999em;
     margin: 2px 2px 2px 2px;
     outline: none;
-    background: url(img/orange.png) no-repeat;  
+    background: url(images/orange.png) no-repeat;  
 }
 .widget-head a.collapse:hover  {
-    background: url(img/orange_b.png) no-repeat;    
+    background: url(images/orange_b.png) no-repeat;    
 }
 
 
@@ -366,7 +366,7 @@ a.add_entry:hover {
     background: #fff;
 }
 .oro_ui-resizable-handle {
-    background: url(img/resize_handler.png) center top no-repeat;
+    background: url(images/resize_handler.png) center top no-repeat;
     height: 10px;
 }
 .widget_iframe {
@@ -412,7 +412,7 @@ a.add_entry:hover {
     height: 15px;
     margin-left: 5px;
     float: right;
-    background: url(img/icon_rss_popup.png) center left no-repeat;
+    background: url(images/icon_rss_popup.png) center left no-repeat;
 }
 
 .rss {
@@ -420,7 +420,7 @@ a.add_entry:hover {
 }
 
 .widget .rss a:hover.open_popup {
-    background: url(img/icon_rss_popup_b.png) center left no-repeat;
+    background: url(images/icon_rss_popup_b.png) center left no-repeat;
 }
 
 .widget .rss a.open_link {
@@ -428,11 +428,11 @@ a.add_entry:hover {
     height: 15px;
     margin-left: 5px;
     float: right;
-    background: url(img/icon_rss_link.png) center left no-repeat;
+    background: url(images/icon_rss_link.png) center left no-repeat;
 }
 
 .widget .rss a:hover.open_link {
-    background: url(img/icon_rss_link_b.png) center left no-repeat;
+    background: url(images/icon_rss_link_b.png) center left no-repeat;
 }
 
 .overlay_box {
@@ -453,26 +453,26 @@ a.add_entry:hover {
 .column-state-highlight {
     opacity: 0.4;
     filter: alpha(opacity=40);
-    background: url(img/sizer_right_b.png) center right no-repeat #fff;
+    background: url(images/sizer_right_b.png) center right no-repeat #fff;
 }
 
 .column_helper {
     height: 16px;
-    background: url(img/sizer_mid.png) repeat-x;
+    background: url(images/sizer_mid.png) repeat-x;
 }
 
 .arrow_left {
     height: 16px;
     width: 16px;
     float: left;
-    background: url(img/sizer_left.png) no-repeat;
+    background: url(images/sizer_left.png) no-repeat;
 }
 
 .arrow_right {
     height: 16px;
     width: 16px;
     float: right;
-    background: url(img/sizer_right.png) no-repeat;
+    background: url(images/sizer_right.png) no-repeat;
 }
 
 .widget-title {
