@@ -91,6 +91,119 @@ sub page_before_template {
     #$vars->{dashboard_config} = encode_json($config);
 }
 
+sub db_schema_abstract_schema {
+    my ($self, $args) = @_;
+    my $schema = $args->{schema};
+
+    $schema->{dashboard_overlays} = {
+        FIELDS => [
+            id => {
+                TYPE => 'MEDIUMSERIAL',
+                NOTNULL => 1,
+                PRIMARYKEY => 1,
+            },
+            name => {
+                TYPE => 'TINYTEXT',
+                NOTNULL => 1,
+            },
+            description => {
+                TYPE => 'TINYTEXT',
+            },
+            columns => {
+                TYPE => 'TINYTEXT',
+                NOTNULL => 1,
+            },
+            created => {
+                TYPE => 'DATE',
+                NOTNULL => 1,
+            },
+            modified => {
+                TYPE => 'DATE',
+                NOTNULL => 1,
+            },
+            owner_id => {
+                TYPE => 'INT3',
+                NOTNULL => 1,
+                REFERENCES => {
+                    TABLE => 'profiles',
+                    COLUMN => 'userid',
+                    DELETE => 'CASCADE',
+                },
+            },
+            pending => {
+                TYPE => 'BOOLEAN',
+                NOTNULL => 1,
+                DEFAULT => 0,
+            },
+            shared => {
+                TYPE => 'BOOLEAN',
+                NOTNULL => 1,
+                DEFAULT => 0,
+            },
+            workspace => {
+                TYPE => 'BOOLEAN',
+                NOTNULL => 1,
+                DEFAULT => 0,
+            }
+        ]
+    };
+
+    $schema->{dashboard_widgets} = {
+        FIELDS => [
+            id => {
+                TYPE => 'MEDIUMSERIAL',
+                NOTNULL => 1,
+                PRIMARYKEY => 1,
+            },
+            name => {
+                TYPE => 'TINYTEXT',
+                NOTNULL => 1,
+            },
+            type => {
+                TYPE => 'TINYTEXT',
+                NOTNULL => 1,
+            },
+            overlay_id => {
+                TYPE => 'INT3',
+                NOTNULL => 1,
+                REFERENCES => {
+                    TABLE => 'dashboard_overlays',
+                    COLUMN => 'id',
+                    DELETE => 'CASCADE',
+                },
+            },
+            color => {
+                TYPE => 'TINYTEXT',
+            },
+            col => {
+                TYPE => 'INT1',
+                DEFAULT => 0,
+            },
+            pos => {
+                TYPE => 'INT1',
+                DEFAULT => 0,
+            },
+            height => {
+                TYPE => 'INT2',
+                DEFAULT => 100,
+            },
+            minimized => {
+                TYPE => 'BOOLEAN',
+                NOTNULL => 1,
+                DEFAUL => 0,
+            },
+            refresh => {
+                TYPE => 'INT2',
+                NOTNULL => 1,
+                DEFAULT => 0,
+            },
+            data => {
+                TYPE => 'MEDIUMTEXT',
+            }
+        ]
+    };
+}
+
 
 sub bb_common_links {
     my ($self, $args) = @_;
