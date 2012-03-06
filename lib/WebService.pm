@@ -40,12 +40,35 @@ use Bugzilla::Extension::Dashboard::Overlay;
 use Bugzilla::Extension::Dashboard::Schema qw(to_int);
 use Bugzilla::Extension::Dashboard::Util;
 
+use constant WIDGET_FIELDS => {
+    id => 'int',
+    name => 'string',
+    overlay_id => 'int',
+    type => 'string',
+    color => 'string',
+    col => 'int',
+    pos => 'int',
+    height => 'int',
+    minimized => 'boolean',
+    refresh => 'int',
+};
+
+use constant OVERLAY_FIELDS => {
+    id => 'int',
+    name => 'string',
+    description => 'string',
+    created => 'dateTime',
+    modified => 'dateTime',
+    shared => 'boolean',
+    pending => 'boolean',
+    workspace => 'boolean',
+};
 
 sub overlay_create {
     my ($self, $params) = @_;
     my $user = Bugzilla->login(LOGIN_REQUIRED);
     my $overlay = Bugzilla::Extension::Dashboard::Overlay->create($params);
-    return $overlay;
+    return $self->_overlay_to_hash($overlay);
 }
 
 sub overlay_get {
@@ -62,10 +85,11 @@ sub overlay_get {
         || $overlay->pending){
         ThrowCodeError("overlay_acces_denied")
     }
-    return $overlay
+    return $self->_overlay_to_hash($overlay);
 }
 
 sub overlay_list {
+    my $self = shift;
     my $user = Bugzilla->login(LOGIN_REQUIRED);
 
     my @overlays;
@@ -76,7 +100,58 @@ sub overlay_list {
             shared => 1, pending => $user->in_group('admin')})};
     push @overlays, @{Bugzilla::Extension::Dashboard::Overlay->match({
             owner_id => $user->id})};
+    @overlays = map { $self->_overlay_to_hash($_, {widgets=>1}) } @overlays;
     return \@overlays;
+}
+
+
+
+
+sub _overlay_to_hash {
+    my ($self, $overlay, $exclude) = @_;
+    my %result;
+    while (my ($field, $type) = each %{(OVERLAY_FIELDS)}) {
+        next if $exclude->{$field} == 1;
+        $result{$field} = $self->type($type, $overlay->$field);
+    }
+    # owner, columns and widgets are special cases
+    if (!$exclude->{owner}) {
+        $result{owner} = {
+            id => $self->type('int', $overlay->owner->id),
+            login => $self->type('string', $overlay->owner->login),
+            name => $self->type('string', $overlay->owner->name),
+        };
+    }
+    if (!$exclude->{columns}) {
+        my @columns;
+        foreach my $col (@{$overlay->columns}) {
+            push(@columns, {
+                    width => $self->type('int', $col->{width})
+                });
+        }
+        $result{columns} = \@columns;
+    }
+    if (!$exclude->{widgets}) {
+        my @widgets;
+        foreach my $widget (@{$overlay->widgets}) {
+            push(@widgets, $self->_widget_to_hash(
+                    $widget, $exclude->{widget}));
+        }
+        $result{widgets} = \@widgets;
+    }
+    return \%result;
+}
+
+
+sub _widget_to_hash {
+    my ($self, $widget, $exclude) = @_;
+    my %result;
+    while (my ($field, $type) = each %{(WIDGET_FIELDS)}) {
+        next if $exclude->{$field} == 1;
+        $result{$field} = $self->type($type, $widget->$field);
+    }
+    $result{data} = $widget->data;
+    return \%result
 }
 
 
