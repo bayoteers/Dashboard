@@ -31,6 +31,7 @@ use List::Util;
 use Storable;
 use XML::Feed;
 
+use Bugzilla::Constants;
 use Bugzilla::Error;
 use Bugzilla::Util;
 
@@ -38,6 +39,50 @@ use Bugzilla::Extension::Dashboard::Config;
 use Bugzilla::Extension::Dashboard::Overlay;
 use Bugzilla::Extension::Dashboard::Schema qw(to_int);
 use Bugzilla::Extension::Dashboard::Util;
+
+
+sub overlay_create {
+    my ($self, $params) = @_;
+    my $user = Bugzilla->login(LOGIN_REQUIRED);
+    my $overlay = Bugzilla::Extension::Dashboard::Overlay->create($params);
+    return $overlay;
+}
+
+sub overlay_get {
+    my ($self, $params) = @_;
+    my $user = Bugzilla->login(LOGIN_REQUIRED);
+
+    defined $params->{id}
+        || ThrowCodeError('param_required', { param => 'id' });
+
+    my $overlay = Bugzilla::Extension::Dashboard::Overlay->new($params->{id});
+    defined $overlay
+        || ThrowCodeError('overlay_unknown', { id => $params->{id} });
+    if ($overlay->owner_id != $user->id && !$overlay->shared
+        || $overlay->pending){
+        ThrowCodeError("overlay_acces_denied")
+    }
+    return $overlay
+}
+
+sub overlay_list {
+    my $user = Bugzilla->login(LOGIN_REQUIRED);
+
+    my @overlays;
+    my $match = {};
+    $match->{shared} = 1;
+    $match->{pending} = 1;
+    push @overlays, @{Bugzilla::Extension::Dashboard::Overlay->match({
+            shared => 1, pending => $user->in_group('admin')})};
+    push @overlays, @{Bugzilla::Extension::Dashboard::Overlay->match({
+            owner_id => $user->id})};
+    return \@overlays;
+}
+
+
+# Old methods
+
+
 
 
 sub require_account {
