@@ -29,12 +29,11 @@ use base qw(Bugzilla::Object);
 use Bugzilla::User;
 use Bugzilla::Error;
 
-#use Bugzilla::Extension::Dashboard::Widget;
-
 use JSON;
 use List::Util qw(sum);
 
 use constant DB_TABLE => 'dashboard_overlays';
+
 
 use constant DB_COLUMNS => qw(
     id
@@ -91,7 +90,7 @@ sub owner_id    { return $_[0]->{'owner_id'}; }
 sub description { return $_[0]->{'description'}; }
 sub created     { return $_[0]->{'created'}; }
 sub modified    { return $_[0]->{'modified'}; }
-sub pendind     { return $_[0]->{'pending'}; }
+sub pending     { return $_[0]->{'pending'}; }
 sub shared      { return $_[0]->{'shared'}; }
 sub workspace   { return $_[0]->{'workspace'}; }
 
@@ -109,6 +108,7 @@ sub columns {
 
 sub widgets {
     my $self = shift;
+    require Bugzilla::Extension::Dashboard::Widget;
     $self->{'widgets'} ||= Bugzilla::Extension::Dashboard::Widget->match(
         {overlay_id => $self->id});
     return $self->{'widgets'};
@@ -173,13 +173,14 @@ sub create {
         ];
     }
 
-    my @widgets = @{delete $params->{widgets}};
+    my @widgets = @{delete $params->{widgets}} if exists $params->{widgets};
     my $overlay = $class->SUPER::create($params);
 
     # Create widgets if provided
     foreach my $widget (@widgets) {
+        require Bugzilla::Extension::Dashboard::Widget;
         $widget->{overlay_id} = $overlay->id;
-        $widget = Bugzilla::Extension::Dashboad::Widget->create($widget);
+        $widget = Bugzilla::Extension::Dashboard::Widget->create($widget);
         push(@{$overlay->{widgets}}, $widget);
     }
     return $overlay;

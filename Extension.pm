@@ -114,11 +114,11 @@ sub db_schema_abstract_schema {
                 NOTNULL => 1,
             },
             created => {
-                TYPE => 'DATE',
+                TYPE => 'DATETIME',
                 NOTNULL => 1,
             },
             modified => {
-                TYPE => 'DATE',
+                TYPE => 'DATETIME',
                 NOTNULL => 1,
             },
             owner_id => {

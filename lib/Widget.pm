@@ -98,7 +98,7 @@ sub overlay {
 
 sub data {
     my $self = shift;
-    $self->{'parsed_data'}) ||= JSON->new-utf8-decode($self->{'data'});
+    $self->{'parsed_data'} ||= JSON->new->utf8->decode($self->{'data'});
     return $self->{'parsed_data'};
 }
 
