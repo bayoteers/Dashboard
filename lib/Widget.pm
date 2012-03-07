@@ -98,7 +98,9 @@ sub overlay {
 
 sub data {
     my $self = shift;
-    $self->{'parsed_data'} ||= JSON->new->utf8->decode($self->{'data'});
+    my $data = $self->{'data'};
+    $data = "null" unless defined $data;
+    $self->{'parsed_data'} ||= JSON->new->utf8->allow_nonref->decode($data);
     return $self->{'parsed_data'};
 }
 
@@ -116,7 +118,7 @@ sub set_refresh   { $_[0]->set('refresh', $_[1]); }
 
 sub set_data {
     my ($self, $data) = @_;
-    $self->set('data', JSON->new->utf8->encode($data));
+    $self->set('data', JSON->new->utf8->allow_nonref->encode($data));
     $self->{'parsed_data'} = $data;
 }
 

@@ -105,8 +105,6 @@ sub overlay_list {
 }
 
 
-
-
 sub _overlay_to_hash {
     my ($self, $overlay, $exclude) = @_;
     my %result;
