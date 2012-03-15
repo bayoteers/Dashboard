@@ -118,9 +118,8 @@ sub widgets {
 # Mutators #
 ############
 
+sub set_name        { $_[0]->set('name', $_[1]); }
 sub set_description { $_[0]->set('description', $_[1]); }
-sub set_created     { $_[0]->set('created', $_[1]); }
-sub set_modified    { $_[0]->set('modified', $_[1]); }
 sub set_pending     { $_[0]->set('pending', $_[1]); }
 sub set_shared      { $_[0]->set('shared', $_[1]); }
 sub set_workspace   { $_[0]->set('workspace', $_[1]); }
@@ -184,6 +183,32 @@ sub create {
         push(@{$overlay->{widgets}}, $widget);
     }
     return $overlay;
+}
+
+sub _update_modified_ts {
+    my $self = shift;
+    my $dbh = Bugzilla->dbh;
+    my $modified_ts = $dbh->selectrow_array(
+        'SELECT LOCALTIMESTAMP(0)');
+    $dbh->do('UPDATE dashboard_overlays SET modified = ? WHERE id = ?',
+                         undef, ($modified_ts, $self->id));
+    $self->{modified} = $modified_ts;
+}
+
+sub update {
+    my $self = shift;
+    my($changes, $old) = $self->SUPER::update(@_);
+    if (scalar(keys %$changes)) {
+        $self->_update_modified_ts();
+    }
+    return $changes;
+}
+
+sub user_is_owner {
+    my $self = shift;
+    my $user = Bugzilla->user;
+    return 0 unless defined $user;
+    return $user->id == $self->owner_id;
 }
 
 ## Old storable stuff

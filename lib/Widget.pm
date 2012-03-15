@@ -108,6 +108,7 @@ sub data {
 # Mutators #
 ############
 
+sub set_name      { $_[0]->set('name', $_[1]); }
 sub set_type      { $_[0]->set('type', $_[1]); }
 sub set_color     { $_[0]->set('color', $_[1]); }
 sub set_col       { $_[0]->set('col', $_[1]); }
@@ -139,4 +140,19 @@ sub create {
     return $class->SUPER::create($params);
 }
 
+sub update {
+    my $self = shift;
+    my($changes, $old) = $self->SUPER::update(@_);
+    if (scalar(keys %$changes)) {
+        $self->overlay->_update_modified_ts();
+    }
+    return $changes;
+}
+
+sub user_is_owner {
+    my $self = shift;
+    my $user = Bugzilla->user;
+    return 0 unless defined $user;
+    return $user->id == $self->overlay->owner_id;
+}
 1;
