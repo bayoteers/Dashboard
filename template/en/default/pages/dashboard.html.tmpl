@@ -19,6 +19,7 @@
   #   David Wilson <ext-david.3.wilson@nokia.com>
   #   Stephen Jayna <ext-stephen.jayna@nokia.com>
   #   Allan Savolainen <ext-jari.a.savolainen@nokia.com>
+  #   Pami Ketolainen <pami.ketolainen@gmail.com>
   #%]
 
 [% USE Bugzilla %]
@@ -46,191 +47,74 @@
     <span id="dashboard_notify"></p>
 [% END %]
 
+[% javascript = BLOCK %]
+    var DASHBOARD_CONFIG = [% dashboard_config || 'null' %];
+[% END %]
+
 [% PROCESS global/header.html.tmpl
     title = "Bugzilla Dashboard"
+    style_urls = [
+        "extensions/Dashboard/web/css/dashboard.css",
+        "extensions/Dashboard/web/css/colorbox.css",
+        "extensions/Dashboard/web/css/tablesorter.css"]
+
+    javascript_urls = [
+        "extensions/Dashboard/web/js/colResizable-1.3.min.js",
+        "extensions/Dashboard/web/js/jquery.colorbox-min.js",
+        "extensions/Dashboard/web/js/jquery.tablesorter.min.js",
+        "extensions/Dashboard/web/js/jquery.csv.min.js",
+        "extensions/Dashboard/web/js/dashboard.js",
+        "extensions/Dashboard/web/js/widget_bugs.js"]
 %]
 
-<link rel="stylesheet" href="extensions/Dashboard/web/css/dashboard.css">
-<link rel="stylesheet" href="extensions/Dashboard/web/css/colorbox.css">
-<link rel="stylesheet" href="extensions/Dashboard/web/css/tablesorter.css">
-
-<div id="dashboard">
-    <div id="columns">
-        <ul id="column-1" class="column" data-column_id="-1">
-        </ul>
-
-        <br clear="both">
-    </div>
-</div>
+<table id="overlay" style="width:90%;">
+<tr id="overlay-header"></tr>
+<tr>
+    <td id="overlay-top" class="overlay-column" valign="top"></td>
+</tr>
+<tr id="overlay-columns"></tr>
+</table>
 
 <br clear="both">
 
+
 <div style="display: none;"> <!-- hide templates -->
-    <div align="center" id="loader_template">
+    <div align="center" id="dash-template-loader">
         <img class="loader"
             src="extensions/Dashboard/web/css/img/ajax-loader.gif">
     </div>
 
-    <div id="browser_warning_template">
+    <!-- Overlay templates -->
+
+    <div id="dash-template-browser_warning">
         <p style="color: red">
         Your web browser is not fully tested with the Dashboard, please use
         Firefox if you experience problems.
         </p>
     </div>
 
-    <div id="browser_block_template">
+    <div id="dash-template-browser_block">
         <h2 style="text-align: center">Your web browser is not compatible with
         Dashboard; please use Firefox instead.</h2>
     </div>
 
-    <ul class="column" id="column_template">
-        <li class="column_helper">
-            <div class="arrow_left"></div>
-            <div class="arrow_right"></div>
-            <br clear="both">
-        </li>
-    </ul>
+    <div id="dash-template-welcome-text">
+        <p>To begin, please load an existing overlay using the Open icon in the
+        toolbar above, or alternatively you may clear the workspace and begin
+        building a new overlay from scratch.</p>
 
-    <li class="widget" id="widget_template">
-        <div class="widget-head">
-            <a class="maximize" title="Maximize">MAXIMIZE</a>
-            <a class="collapse" title="Restore">COLLAPSE</a>
-            <div class="widget-title"></div>
-            <a class="remove" title="Close">REMOVE</a>
-            <a class="refresh" title="Refresh">REFRESH</a>
-            <a class="edit" title="Edit">EDIT</a>
-            <a class="save" title="Save">SAVE</a>
-        </div>
-        <ul class="edit-box" style="display: none">
-            <li class="item">
-                <label>Change the title?</label>
-                <input class="field-title">
-            </li>
-            <li class="item">
-                <label>Available colors:</label>
-                <ul class="colors"></ul>
-            </li>
-            <li class="item">
-                <label>Reload:</label>
-                <select class="field-refresh">
-                    <option value="0">no refresh</option>
-                    <option value="15">every 15 seconds</option>
-                    <option value="60">every minute</option>
-                    <option value="300">every 5 minutes</option>
-                    <option value="900">every 15 minutes</option>
-                    <option value="1800">every 30 minutes</option>
-                </select>
-            </li>
-        </ul>
-        <div class="widget-body">
-            <div class="widget-hint">
-                <p>
-                Press ESC or click here to return to the Dashboard.
-                </p>
-            </div>
-            <div class="widget-content">
-            </div>
-        </div>
-    </li>
+        <p>The current workspace available in this session will not be saved
+        until you explicitly write the changes to a new or existing overlay,
+        using the Save icon above.</p>
+    <div>
 
-    <pre id="dashboard_welcome_text">To begin, please load an existing overlay using the Open icon in the toolbar above, or alternatively you may clear the workspace and begin building a new overlay from scratch.
-
-The current workspace available in this session will not be saved until you explicitly write the changes to a new or existing overlay, using the Save icon above.
-</pre>
-
-    <div id="text_widget_template">
+    <div id="dash-overlay-open">
+        <strong>Load Overlay</strong>
+        <table class="overlay-list" width="100%"><tbody></tbody></table>
     </div>
 
-    <div id="text_widget_settings_template">
-        <li class="item">
-            <label>Text:</label>
-            <textarea style="width: 100%; height: 10em;"
-                class="field-text"></textarea>
-    </div>
-
-    <div id="url_widget_template">
-        <iframe target="new" class="widget_iframe" frameborder="0"
-            scrolling="auto"></iframe>
-    </div>
-
-    <div id="url_widget_settings_template">
-        <li class="item">
-            <label>URL:</label>
-            <input class="field-URL">
-        </li>
-
-        <li class="item">
-            <label>Selector:</label>
-            <input class="field-selector"><br>
-            <small>&nbsp; Supported syntax:
-                <a target="_new" href="http://www.w3.org/TR/CSS2/selector.html#pattern-matching">CSS</a>,
-                <a target="_new" href="http://api.jquery.com/category/selectors/">jQuery</a></small>
-        </li>
-
-        <li class="item">
-            <label>Load:</label>
-            <input type="button" class="field-load-url" value="Load URL">
-        </li>
-    </div>
-
-    <div id="rss_widget_settings_template">
-        <li class="item">
-            <label>URL:</label>
-            <input class="field-URL">
-        </li>
-
-        <li class="item">
-            <label>Username:</label>
-            <input class="field-username">
-        </li>
-
-        <li class="item">
-            <label>Password:</label>
-            <input type="password" class="field-password">
-        </li>
-    </div>
-
-    <div id="rss_widget_template" class="rss">
-        <h2><a target="_new"></a></h2>
-    </div>
-
-    <div id="rss_item_template">
-        <div class="rss_title">
-            <h3><a target="_new"></a></h3>
-        </div>
-        <div class="updated">
-            <p>
-            Updated: <span class="updated-text"></span>
-            </p>
-        </div>
-        <div class="description-text">
-        </div>
-    </div>
-
-    <div id="rss_widget_error">
-        <p class="error">
-        Feed returned error: <span class="error-text"></span>
-        </p>
-    </div>
-
-    <div id="bugs_widget_template">
-    </div>
-
-    <div id="bugs_widget_settings_template">
-        <li class="item">
-            <label>Query string:</label><input name="query" type="text"/>
-            <input name="editquery" type="button" value="Edit"/>
-        </li>
-    </div>
-
-    <div id="mybugs_widget_template">
-    </div>
-
-    <div id="mybugs_widget_settings_template">
-    </div>
-
-    <table> <!-- required to satisfy HTML parser. -->
-    <tr id="overlay_template">
+    <table id="dash-template-overlay-entry">
+    <tr>
         <td align="right" valign="top">
             <a class="load_link"><span class="name"></span></a>
             <span class="can-publish">[<a class="publish_link">ok</a>]</span>
@@ -245,65 +129,175 @@ The current workspace available in this session will not be saved until you expl
             <span class="can-publish">
             </span>
         </td>
-        <td valign="top" align="right" style="width: 4ex;">
-            <span class="can-delete"><a class="delete_link">Del</a></span>
-        </td>
     </tr>
     </table>
 
-    <div id="overlay_page">
-        <div>
-        <strong>Load Overlay</strong>
-        </div>
-
-        <div class="overlay_box" id="overlay_load_box">
-            <table width=100%><tbody></tbody></table>
-        </div>
-
-        <div>
-        <br>
+    <div id="overlay-save">
         <strong>Save Overlay</strong>
-        </div>
-
-        <div class="overlay_box" id="overlay_save_box">
+        <form name="overlay-save">
             <table>
-            <tr>
-            <th align="right" valign="top">
-                Overlay name:
-            <td valign="top">
-                <input class="overlay_field" id="overlay_name" size="32">
+                <tr>
+                    <th>Overlay name:</th>
+                    <td><input name="name" size="32"></td>
+                </tr>
 
-            <tr>
-            <th align="right" valign="top">
-                Description:
-            <td valign="top">
-                <input class="overlay_field" id="overlay_description" size="32">
-            <tr>
-            <th align="right" valign="top">
-                <input id="overlay_shared" type="checkbox"> Shared
-                <div class="requires-admin">
-                    <small><br>requires<br>admin<br>approval</small>
-                </div>
-            <td align="right" valign="top">
-                <button id="overlay_save_button">Save</button>
+                <tr>
+                    <th>Description:</th>
+                    <td><input name="description" size="32"></td>
+                </tr>
+                <tr>
+                    <th>Shared</th>
+                    <td>
+                        <input id="overlay_shared" type="checkbox"/>
+                        <div class="requires-admin">
+                            <small><br>requires<br>admin<br>approval</small>
+                        </div>
+                    </td>
+                </tr>
             </table>
+        </form>
+    </div>
+
+
+    <!-- Widget templates -->
+
+    <div class="ui-widget" id="widget-template">
+        <div class="ui-widget-header">
+            <div class="widget-title"></div>
+            <button name="maximize" title="Maximize"
+                class="ui-icon ui-icon-circle-plus ui-corner-all">+</button>
+            <button name="minimize" title="Minimize"
+                class="ui-icon ui-icon-circle-minus ui-corner-all">-</button>
+            <button name="remove" title="Remove"
+                class="ui-icon ui-icon-circle-close ui-corner-all">X</button>
+            <button name="refresh" title="Refresh"
+                class="ui-icon ui-icon-refresh ui-corner-all">R</button>
+            <button name="edit" title="Edit"
+                class="ui-icon ui-icon-pencil ui-corner-all">E</button>
+        </div>
+        <div class="ui-widget-content">
+        </div>
+
+        <div class="widget-settings">
+            <form>
+            <fieldset name="common">
+                <legend>Widget</legend>
+                <li>
+                    <label>Title:</label>
+                    <input name="name" class="settings-field"/>
+                </li>
+                <li>
+                    <label>Color:</label>
+                    <select name="color" class="settings-field">
+                        <option value="">None</option>
+                    </select>
+                </li>
+                <li>
+                    <label>Reload:</label>
+                    <select name="refresh" class="settings-field">
+                        <option value="0">no refresh</option>
+                        <option value="15">every 15 seconds</option>
+                        <option value="60">every minute</option>
+                        <option value="300">every 5 minutes</option>
+                        <option value="900">every 15 minutes</option>
+                        <option value="1800">every 30 minutes</option>
+                    </select>
+                </li>
+            </fieldset>
+            </form>
+
         </div>
     </div>
 
-    <div id="in_progress_template" style="background: #7f0000; color: white; padding: 0.5ex; position: fixed; top: 0; right: 0; z-index: 9999999; text-decoration:blink">
-        Working..
+    <div id="widget-error-template">
+        <p class="error">
+        Error occured: <span class="error-text"></span>
+        </p>
     </div>
+
+    <!-- Text widget -->
+    <fieldset id="widget-settings-template-text">
+        <legend>Text</legend>
+        <textarea style="width: 100%; height: 10em;" name="text"
+            class="custom-field"></textarea>
+    </fieldset>
+
+    <!-- URL widget -->
+    <div id="widget-template-url">
+        <iframe target="new" class="widget_iframe" frameborder="0"
+            scrolling="auto"></iframe>
+    </div>
+
+    <fieldset id="widget-settings-template-url">
+        <legend>URL options</legend>
+        <li>
+            <label>URL:</label>
+            <input name="url" class="custom-field"/>
+        </li>
+
+        <li>
+            <label>Selector:</label>
+            <input name="selector" class="cudtom-field"/>
+        </li>
+        <li>
+            <small>Supported syntax:
+                <a target="_new" href="http://www.w3.org/TR/CSS2/selector.html#pattern-matching">CSS</a>,
+                <a target="_new" href="http://api.jquery.com/category/selectors/">jQuery</a>
+            </small>
+        </li>
+
+        <li>
+            <"button" name="loadurl">Load URL</button>
+        </li>
+    </fieldset>
+
+    <!-- RSS widget -->
+    <fieldset id="widget-settings-template-rss">
+        <legend>RSS options</legend>
+        <li>
+            <label>URL:</label>
+            <input name="url" class="custom-field"/>
+        </li>
+        <li>
+            <label>Username:</label>
+            <input name="username" class="custom-field"/>
+        </li>
+        <li>
+            <label>Password:</label>
+            <input type="password" name="password" class="custom-field"/>
+        </li>
+    </fieldset>
+
+    <div id="widget-template-rss" class="rss">
+        <h2><a target="_new"></a></h2>
+    </div>
+
+    <div id="rss-template-item">
+        <div class="rss-title">
+            <h3><a target="_new"></a></h3>
+        </div>
+        <div class="updated">
+            <p>
+            Updated: <span class="updated-text"></span>
+            </p>
+        </div>
+        <div class="description-text">
+        </div>
+    </div>
+
+    <!-- Bugs widget -->
+    <fieldset id="widget-settings-template-bugs">
+        <legend>Bug list options</legend>
+        <li class="buglist-query-entry">
+            <label>Query string:</label>
+            <input name="query" type="text" class="custom-field" /><br />
+            <input name="editquery" type="button" value="Edit query" />
+        </li>
+        <li>
+            <label>Columns:</label><b>* Not supported yet *</b>
+        </li>
+    </fieldset>
+
 </div> <!-- /hide templates -->
-
-
-<script>
-var DASHBOARD_CONFIG = [% dashboard_config || 'null' %];
-</script>
-<script src="extensions/Dashboard/web/js/jquery-ui-1.8.5.custom.min.js"></script>
-<script src="extensions/Dashboard/web/js/jquery.colorbox-min.js"></script>
-<script src="extensions/Dashboard/web/js/jquery.tablesorter.min.js"></script>
-<script src="extensions/Dashboard/web/js/jquery.csv.min.js"></script>
-<script src="extensions/Dashboard/web/js/dashboard.js"></script>
-<script src="extensions/Dashboard/web/js/widget_bugs.js"></script>
 
 [% PROCESS global/footer.html.tmpl %]
