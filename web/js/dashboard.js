@@ -139,17 +139,35 @@ function now()
 }
 
 
+
+
+
+
+
+
 /**
  * Base widget. To keep things simple, currently combines state and visual
  * rendering. Manages constructing a widget's DOM, cloning any templates,
  * refresh timer, and rendering the widget's settings.
  *
- * The default render() prepopulates the widget's element with a
- * "#<type>_widget_template" template, if one exists. The default
- * renderSettings() prepopulates "#<type>_widget_settings_template". Both
- * templates are expected to be defined in dashboard.html.tmpl. Subclasses are
- * expected to at least override render() and provide some behaviours for these
- * templates.
+ * The default render() prepopulates the widget's content element with a
+ * "#widget-template-<type>" and adds "#widget-settings-template-<type>" to the
+ * settings dialog. Both templates are expected to be defined in
+ * dashboard.html.tmpl.
+ *
+ * Any field value in the settings dialog template with class 'custom-field'
+ * and name attribute gets automatically transfered to and from
+ * widget.state.data. If something else is require, subclass shoud override
+ * _setCustomSettingFields() and _applyCustomSettings() methods.
+ *
+ * In the simplest scenario the subclass only needs to implement reload() method
+ * to display the desired content in the widget content element.
+ *
+ * When templates are rendered, the click event of any <button> element with
+ * attribute 'name' is bound to onClick<Name>() method, where <Name> is the
+ * value of name attribute with first letter capitalized.
+ *
+ * 
  */
 var Widget = Base.extend({
     /**
@@ -164,6 +182,16 @@ var Widget = Base.extend({
     {
         // Shorthand.
         this._dashboard = dashboard;
+
+        // Fired when widget is removed
+        this.onRemoveCb = new jQuery.Callbacks();
+        // Fired when widget is maximized
+        this.onMaximizeCb = new jQuery.Callbacks();
+        // Fired when the widget state changes
+        this.stateChangeCb = new jQuery.Callbacks();
+
+        this.id = Widget.counter++;
+
         if(! this.TYPE) {
             this.TYPE = this.constructor.TYPE;
         }
@@ -171,201 +199,311 @@ var Widget = Base.extend({
             this.TEMPLATE_TYPE = this.TYPE;
         }
 
-        /** Contains title bar, controls, settings box, and content. */
-        this.element = null;
-        /** "content" element; contains the actual widget content */
-        this.contentElement = null;
-
-        this.refreshIntervalId = null;
-
+        this.state = $.extend({
+                color: 'none',
+                minimized: false,
+                height: 100,
+                refresh: 0,
+                data: {},
+            }, state);
         this.render();
-        this.renderSettings();
-        this.setState(state);
-        this.reload();
+        this.applyState();
     },
 
     /**
-     * Override in subclass; default implementation just appends
-     * "<type>_widget_template" children to the content area.
+     * Renders the widget ui from templates.
      */
     render: function()
     {
-        this.element = cloneTemplate('#widget_template');
-        this.headElement = $('.widget-head', this.element);
-        this.bodyElement = $('.widget-body', this.element);
-        this.hintElement = $('.widget-hint', this.element);
-        this.contentElement = $('.widget-content', this.element);
+        // The top level container
+        this.element = cloneTemplate('#widget-template');
+        this.element.attr("id", "widget_" + this.id);
+        // The header element, containing title and buttons
+        this.headerElement = this._child(".widget-header");
+        // The resizable container
+        this.containerElement = this._child(".widget-container");
+        // The actual widget content container
+        this.contentElement = this._child(".widget-content");
+        // Notification container
+        this.statusElement = this._child(".widget-status");
 
-        this._child('.remove').click(this._onRemoveClick.bind(this));
-        this._child('.refresh').click(this.reload.bind(this));
-        this._child('.collapse').click(this._onMinimizeClick.bind(this));
-
-        this._child('.edit').click(this.edit.bind(this));
-        this._child('.save').click(this._onSaveClick.bind(this));
-        this._child('.save').hide();
-
-        this.element.bind('vertical_resize', this._onResize.bind(this));
+        this._child(".widget-buttons [name='maximize']").button(
+                {text:false, icons:{primary:"ui-icon-circle-plus"}});
+        this._child(".widget-buttons [name='minimize']").button(
+                {text:false, icons:{primary:"ui-icon-circle-minus"}});
+        this._child(".widget-buttons [name='remove']").button(
+                {text:false, icons:{primary:"ui-icon-circle-close"}});
+        this._child(".widget-buttons [name='edit']").button(
+                {text:false, icons:{primary:"ui-icon-wrench"}});
+        this._child(".widget-buttons [name='refresh']").button(
+                {text:false, icons:{primary:"ui-icon-refresh"}});
 
         // Populate content element with widget's template, if one exists.
-        var sel = '#' + this.TEMPLATE_TYPE + '_widget_template';
+        var sel = '#widget-template-' + this.TEMPLATE_TYPE;
         this.contentElement.append(cloneTemplate(sel));
-    },
+        
 
-    /**
-     * Called when the widget's height or width changes. The default
-     * implementation adjusts the content element height to match.
-     *
-     * Subclasses should use this.contentElement.height() to determine the
-     * maximum height their elements can grow to.
-     */
-    _onResize: function() {
-        var px;
-        if(this.state.maximized) {
-            px = $(window).height() - this.hintElement.outerHeight();
-        } else {
-            px = this.state.height - this.headElement.outerHeight();
-        }
-        this.contentElement.height(px);
-    },
-
-    /**
-     * Extend in subclass; default implementation just appends the default
-     * name, title, color, and refresh interval options.
-     */
-    renderSettings: function()
-    {
-        var list = this._child('.edit-box .colors');
-        for(var i = 0; i < Widget.COLORS.length; i++) {
-            var color = Widget.COLORS[i];
-            var item = $('<li>');
-            item.addClass('color-' + color);
-            item.click(this.update.bind(this, { color: color }));
-            item.appendTo(list);
+        // Prepare settings dialog
+        this.settingsDialog = this._child('.widget-settings');
+        this.settingsDialog.attr("id", "widget_settings_" + this.id);
+        var colorSelect = $("[name='color']", this.settingsDialog);
+        for(var bg in Widget.COLORS) {
+            var fg = Widget.COLORS[bg];
+            var item = $('<option />');
+            item.html(bg);
+            item.attr("value", bg);
+            item.css({"background-color": bg, "color": fg});
+            colorSelect.append(item);
         }
 
-        var sel = '#' + this.TEMPLATE_TYPE + '_widget_settings_template';
+        // Append custom widget settings
+        var sel = '#widget-settings-template-' + this.TEMPLATE_TYPE;
         var template = cloneTemplate(sel);
-        template.children().appendTo(this._child('.edit-box'));
+        this.settingsDialog.find("form").append(template);
+
+        // Bind any buttons to automatic callbacks
+        var widget = this;
+        this._child(":button").each(function() {
+            var name = $(this).attr("name");
+            if (!name) return;
+            var method = "onClick" + name[0].toUpperCase() + name.slice(1).toLowerCase();
+            // this is the button element in this context
+            $(this).click($.proxy(widget, method));
+        });
+
+        // Make widget resizable
+        this.containerElement.resizable({
+            handles:"s",
+            start: $.proxy(this, "_onResizeStart"),
+            stop: $.proxy(this, "_onResizeStop")
+        });
     },
 
-    _onTitleKeyup: function()
+    _onResizeStart: function()
     {
-        var value = this._child('.field-title').val();
-        this._child('.widget-title').text(value);
+        // Iframes can eat mouse events, so we need to hide them
+        this.contentElement.find("iframe").hide();
     },
 
     /**
-     * Update the state from the settings dialog fields. Called during save,
-     * override in subclass to include your fields.
+     * Handle the resize event
      */
-    _apply: function()
+    _onResizeStop: function()
     {
-        this.update({
-            title: this._child('.field-title').val(),
-            refresh: +this._child('.field-refresh').val()
+        this.contentElement.find("iframe").show();
+        // jquery ui resizable forces all dimensions, but we want width from
+        // the parent overaly column.
+        this.containerElement.css("width", "");
+        this.state.height = this.containerElement.height();
+    },
+
+    /**
+     * Widget title bar maximize button click
+     */
+    onClickMaximize: function()
+    {
+        this.element.toggleClass("widget-max");
+        this.headerElement.toggleClass("widget-header-maximized");
+        this._child("button[name='minimize']").toggle();
+        this._child("button[name='maximize'] .ui-button-icon-primary").toggleClass(
+                "ui-icon-circle-plus ui-icon-arrowthick-1-sw");
+
+        if (this.element.hasClass("widget-max")) {
+            this.containerElement.css("height", "100%");
+            this.onMaximizeCb.fire(true);
+        } else {
+            this.containerElement.css("height", this.state.height);
+            this.onMaximizeCb.fire(false);
+        }
+
+    },
+    
+    /**
+     * Widget title bar minimize button click
+     */
+    onClickMinimize: function()
+    {
+        if (this.state.minimized) {
+            this.headerElement.removeClass("ui-corner-bottom");
+            this.containerElement.slideDown("fast");
+            this.state.minimized = false;
+        } else {
+            this.headerElement.addClass("ui-corner-bottom");
+            this.containerElement.slideUp("fast");
+            this.state.minimized = true;
+        }
+    },
+    
+    /**
+     * Widget title bar remove button click
+     */
+    onClickRemove: function()
+    {
+        if (confirm("Do you really want to remove this widget?")) {
+            this.onRemoveCb.fire(this);
+            this.destroy();
+        }
+    },
+    
+    /**
+     * Widget title bar refresh button click
+     */
+    onClickRefresh: function()
+    {
+        this.reload();
+    },
+    
+    /**
+     * Widget title bar edit button click
+     */
+    onClickEdit: function()
+    {
+        var self = this;
+        this.settingsDialog.find(".settings-field").each(function() {
+            var key = $(this).attr("name");
+            if(!key) return;
+            $(this).val(self.state[key]);
+        });
+        this._setCustomSettingFields();
+        this.settingsDialog.dialog({
+            width: 500,
+            zIndex: 9999,
+            buttons: {
+                "Apply": $.proxy(this, "applySettings"),
+                "Cancel": function(){ $(this).dialog("destroy") }
+            },
         });
     },
 
     /**
-     * Update the state of the settings dialog; Called on display of settings,
-     * override in subclass to include your fields.
-     */
-    _restore: function()
-    {
-        for(var key in this.state) {
-            if(! this.state.hasOwnProperty(key)) {
-                continue;
-            }
-
-            var value = this.state[key];
-            this._child('.field-' + key).val(value);
-        }
-    },
-
-    /**
-     * Request the editing controls be shown.
-     */
-    edit: function(event)
-    {
-        this._restore();
-        this._child('.edit').hide();
-        this._child('.save').show();
-        this._child('.edit-box').show();
-    },
-
-    _onSaveClick: function()
-    {
-        this._apply();
-        this.reload();
-        this._dashboard.save();
-        this._child('.edit').show();
-        this._child('.save').hide();
-        this._child('.edit-box').hide();
-    },
-
-    /**
-     * Update just a few widget parameters.
-     */
-    update: function(state)
-    {
-        this.setState($.extend({}, this.state, state));
-    },
-
-    /**
-     * Replace all widget parameters with a new state.
-     */
-    setState: function(state)
-    {
-        // Fill any missing parameters using the defaults.
-        state = $.extend({}, Widget.DEFAULT_STATE, state);
-        this.state = state;
-
-        // toggle() insists on bool.
-        this.contentElement.toggle(!state.minimized);
-
-        this._setColor(state.color);
-        this._setRefreshSecs(state.refresh);
-
-        state.height = Math.max(Widget.MIN_HEIGHT, state.height);
-        this._onResize();
-
-        // Temporarily needed for drag'n'drop code below.
-        this.element.data('widgetId', state.id);
-
-        this._child('.widget-title').text(state.title);
-        this._child('.widget-title').keyup(this._onTitleKeyup.bind(this));
-    },
-
-    /**
-     * Color the widget frame as appropriate.
-     */
-    _setColor: function(color)
-    {
-        var oldColor = this.element.data('color');
-        if(oldColor) {
-            this.element.removeClass('color-' + oldColor);
-        }
-
-        if(color) {
-            this.element.addClass('color-' + color);
-        }
-
-        this.element.data('color', color);
-    },
-
-    /**
-     * Arrange for reload() to be called periodically.
+     * Sets the widget specific setting values in the settigns dialog.
      *
-     * @param secs
-     *      Seconds between reload() calls. If 0, cancels any existing timer.
+     * Default implementation copies value to each "custom-field" class
+     * form element from this.state.data[<name>], where <name> is the field
+     * element name attribute.
+     *
+     * Override in subclass if special processing is required.
      */
-    _setRefreshSecs: function(secs)
+    _setCustomSettingFields: function()
     {
-        clearTimeout(this.refreshIntervalId);
-        if(secs) {
-            var callback = this.reload.bind(this);
-            var ms = secs * 1000;
-            this.refreshIntervalId = setInterval(callback, ms);
+        var self = this;
+        this.settingsDialog.find(".custom-field").each(function() {
+            var key = $(this).attr("name");
+            if(!key) return;
+            $(this).val(self.state.data[key]);
+        });
+    },
+
+    /**
+     * Copies the settings from widget settings dialog to widget state
+     */
+    applySettings: function()
+    {
+        this.settingsDialog.dialog("close");
+        var self = this;
+        this.settingsDialog.find(".settings-field").each(function() {
+            var key = $(this).attr("name");
+            if(!key) return;
+            self.state[key] = $(this).val();
+        });
+        this._applyCustomSettings();
+        this.applyState();
+        this.reload();
+    },
+    
+    /**
+     * Aplies the widget specific settings from the settings dialog.
+     *
+     * Default implementation copies value from each "custom-field" class
+     * form element to this.state.data[<name>], where <name> is the field
+     * element name attribute.
+     *
+     * Override in subclass if special processing is required.
+     */
+    _applyCustomSettings: function()
+    {
+        var self = this;
+        this.settingsDialog.find(".custom-field").each(function() {
+            var key = $(this).attr("name");
+            if(!key) return;
+            self.state.data[key] = $(this).val();
+        });
+    },
+
+    /**
+     * 
+     */
+    applyState: function()
+    {
+        window.clearInterval(this._refreshInterval);
+        if(+this.state.refresh){
+            this._refreshInterval = window.setInterval($.proxy(this, "reload"),
+                    1000 * this.state.refresh)
+        }
+
+        var color = this.state.color == "none" ? "" : this.state.color;
+        this.headerElement.css({
+                "background": color,
+                "color": Widget.COLORS[color]
+        });
+        this._child(".widget-header, .widget-container")
+            .css("border-color", color);
+
+        this._child(".widget-title").html(this.state.name);
+
+        this.containerElement.css("height", this.state.height);
+
+        this._applyCustomState();
+    },
+
+    /**
+     * Execute any actions required to apply widget specific settings
+     */
+    _applyCustomState: function()
+    {
+        // Implement in the subclass, if some actions are needed when state
+        // changes.
+    },
+
+    /**
+     * Reloads the widget content.
+     */
+    reload: function()
+    {
+        this.statusElement.empty();
+    },
+
+    /**
+     * Removes the widget
+     */
+
+    destroy: function() {
+        this.element.remove();
+    },
+
+    /**
+     * Displays error text in widget status box
+     */
+    error: function(text)
+    {
+        if (text != undefined) {
+            var clone = cloneTemplate('#widget-template-error');
+            $('.error-text', clone).text(text);
+            this.statusElement.html(clone);
+        } else {
+            this.statusElement.empty();
+        }
+    },
+    /**
+     * Display loader in widget status box
+     */
+    loader: function(on)
+    {
+        if (on) {
+            var clone = cloneTemplate("#dash-template-loader");
+            this.statusElement.html(clone);
+        } else {
+            this.statusElement.empty();
         }
     },
 
@@ -377,49 +515,27 @@ var Widget = Base.extend({
         return $(sel, this.element);
     },
 
-    _onMinimizeClick: function()
-    {
-        this.update({
-            minimized: !this.state.minimized
-        });
-        this._dashboard.save();
-    },
-
-    _onRemoveClick: function()
-    {
-        if(confirm('This widget will be removed, ok?')) {
-            this._dashboard.deleteWidget(this);
-        }
-        return false;
-    },
-
-    destroy: function()
-    {
-        this.element.remove();
-        clearTimeout(this.refreshIntervalId);
-    },
-
-    reload: function()
-    {
-        // Override in subclass.
-    }
 }, /* class variables: */ {
 
     /** Mapping of type name of constructor. */
     _classes: {},
 
+    /** Counter for widget instances to provide unique ID */
+    counter: 0,
+
     /** Minimum height for any widget. */
     MIN_HEIGHT: 100,
 
-    /** Values assigned if they're missing during createInstance(). */
-    DEFAULT_STATE: {
-        color: 'gray',
-        minimized: false,
-        height: 0
-    },
-
-    /** Color classes we have CSS defined for. */
-    COLORS: ['gray', 'yellow', 'red', 'blue', 'white', 'orange', 'green'],
+    /** Available colors, background -> foreground */
+    COLORS: {
+        'none':'',
+        'gray':'white',
+        'yellow': 'black',
+        'red': 'black',
+        'blue': 'white',
+        'white': 'black',
+        'orange': 'black',
+        'green': 'black'},
 
     /**
      * Register a Widget subclass for use with Widget.createInstance().
@@ -450,263 +566,237 @@ var Widget = Base.extend({
 });
 
 
+
 /**
- * URL widget implementation.
+ * Overlay class which handles the dashboard columnt layout.
+ *
+ * Provides two callbacks
+ *
+ * stateChangeCb - fired when columns change
+ * widgetsMovedCb - fired when widget order has been changed
+ *
  */
-Widget.addClass('url', Widget.extend({
-    // See Widget.render().
-    render: function()
+var Overlay = Base.extend({
+    constructor: function(dashboard, state)
     {
-        this.base();
-        this._iframe = this._child('iframe')
-        this._iframe.load(this._onIframeLoad.bind(this));
+        this.stateChangeCb = new jQuery.Callbacks();
+        this.widgetsMovedCb = new jQuery.Callbacks();
+        this.dashboard = dashboard;
+        this.element = $("table#overlay");
+        $("#button-add-column").click($.proxy(this, "addColumn"));
+        $("#button-remove-column").click($.proxy(this, "removeColumn"));
+        $("#button-reset-columns").click($.proxy(this, "resetColumns"));
+        this.setState(state);
     },
 
     /**
-     * Handle completion of IFRAME load by attempting to modify (and replace)
-     * the child document using the elements matched by the configured CSS
-     * selector, if any. This may fail due to browser same-origin policy (e.g.
-     * different domain).
+     * Resets the overlay container table to original condition
      */
-    _onIframeLoad: function()
+    destroy: function()
     {
-        if(this.state.maximized || !this.state.selector) {
-            return;
-        }
-
-        try {
-            // Any property access will throw if same origin policy in effect.
-            var location = this._iframe[0].contentDocument.location;
-        } catch(e) {
-            if(window.console) {
-                console.error('_onIframeLoad: can\'t apply CSS: %o', e);
-            }
-            return;
-        }
-
-        var body = $('body', this._iframe[0].contentDocument);
-        var matched = $(this.state.selector, body);
-        body.children().remove();
-        matched.appendTo(body);
-        matched.css('padding', '0px');
-        body.css('margin', '0px');
-        $('html', this._iframe).css('margin', '0px');
+        this.element.colResizable({disable:true});
+        this._disableSortable();
+        this._child("#overlay-top").empty();
+        this._child("#overlay-columns").empty();
     },
 
-    // See Widget.renderSettings().
-    renderSettings: function()
-    {
-        this.base();
-        this._child('.field-load-url').click(this._onLoadUrlClick.bind(this));
-    },
-
-    // See Widget._restore().
-    _restore: function()
-    {
-        this.base();
-        this._child('.field-URL').val(this.state.URL);
-        this._child('.field-selector').val(this.state.selector);
-    },
-
-    // See Widget._apply().
-    _apply: function()
-    {
-        this.base()
-        this.update({
-            URL: this._child('.field-URL').val(),
-            selector: this._child('.field-selector').val()
-        });
-    },
-
-    _onLoadUrlClick: function()
-    {
-        this.update({
-            URL: this._child('.field-URL').val()
-        });
-        this.reload();
-    },
-
-    // See Widget._onResize().
-    _onResize: function()
-    {
-        this.base();
-        this._iframe.height(this.contentElement.height());
-    },
-
-    // See Widget.setState().
     setState: function(state)
     {
-        this.base(state);
+        // Reset
+        this.destroy();
 
-        if(this._iframe.attr('src') != this.state.URL) {
-            this._iframe.attr('src', this.state.URL);
+        // Re initialize
+        this.state = $.extend({}, Overlay.DEFAULTS, state);
+
+        for (var i = 0; i < this.state.columns.length; i++) {
+            this._createColumn(this.state.columns[i]);
         }
+        this._resetResizable();
     },
-
-    // See Widget.reload().
-    reload: function()
+    
+    /**
+     * Adds new column at the end
+     */
+    addColumn: function(column)
     {
-        this._iframe.attr('src', this.state.URL);
-    }
-}));
-
-
-/**
- * RSS widget implementation.
- */
-Widget.addClass('rss', Widget.extend({
-    // See Widget.renderSettings().
-    renderSettings: function()
-    {
-        this.base();
-        this._child('.field-load-url').click(this._onLoadUrlClick.bind(this));
-    },
-
-    _onLoadUrlClick: function()
-    {
-        this._widget.setState({
-            URL: this._child('.field-URL').val()
-        });
-        this.reload();
-    },
-
-    // See Widget._restore().
-    _restore: function()
-    {
-        this.base();
-        this._child('.field-URL').val(this.state.URL);
-        this._child('.field-username').val(this.state.username);
-        this._child('.field-password').val(this.state.password);
-    },
-
-    // See Widget._apply().
-    _apply: function()
-    {
-        this.base();
-        this.update({
-            URL: this._child('.field-URL').val(),
-            username: this._child('.field-username').val(),
-            password: this._child('.field-password').val()
-        });
-    },
-
-    // See Widget.reload().
-    reload: function()
-    {
-        if(! this.state.URL) {
-            this.contentElement.text('Please set a feed URL.');
+        if (this.state.columns.length >= Overlay.MAX_COLUMNS) {
+            alert("Maximum of " + Overlay.MAX_COLUMNS + " columns reached");
             return;
         }
-
-        this.contentElement.html(cloneTemplate('#loader_template'));
-        var rpc = new Rpc('Dashboard', 'get_feed', { url: this.state.URL });
-        rpc.fail(this._onReloadFail.bind(this));
-        rpc.done(this._onReloadDone.bind(this));
-        this._onResize();
+        this._createColumn(column);
+        this._updateColumnState();
+        this._resetResizable();
+        this._resetSortable();
     },
 
     /**
-     * Display an error message when the feed cannot be fetched.
-     *
-     * @param error
-     *      String error from backend.
+     * Removes the last column and moves the widgets to previous column
      */
-    _onReloadFail: function(error)
+    removeColumn:function()
     {
-        var clone = cloneTemplate('#rss_widget_error');
-        $('.error-text', clone).text(error);
-        this.contentElement.html(clone);
+        if (this.state.columns.legth == 1) return;
+        var removeColumn = this._child("#overlay-columns > td").last();
+        var lastColumn = removeColumn.prev(".overlay-column");
+        if (removeColumn.children().size()) {
+            lastColumn.append(removeColumn.children());
+            this.widgetsMovedCb.fire(this.state.columns.length - 1,
+                    lastColumn.sortable("toArray"));
+        }
+        removeColumn.sortable("destroy").remove();
+        this._child("#overlay-header > th").last().remove();
+        var count = this._child("#overlay-columns > td").size();
+        this._child("#overlay-top").attr("colspan", count);
+        this._updateColumnState();
+        this._resetResizable();
+        this._resetSortable();
+    },
+    
+    /**
+     * Reset column widths to be even.
+     */
+    resetColumns: function()
+    {
+        var width = Math.floor(100 / this.state.columns.length);
+        this._child("#overlay-columns > td").css("width", width + "%");
+        this._updateColumnState();
+        this._resetResizable();
     },
 
     /**
-     * Populate our template with the feed contents.
-     *
-     * @param feed
-     *      Feed JSON object, as returned by get_feed RPC.
+     * Adds new widget in the overlay.
+     * Inspects the widget.state.col/pos attributes and places it accordingly,
+     * or as the first columns last, if col/pos does not match the overlay.
      */
-    _onReloadDone: function(feed)
+    insertWidget: function(widget)
     {
-        var template = cloneTemplate('#rss_widget_template');
-
-        if(feed.link) {
-            $('h2 a', template).attr('href', feed.link);
-            $('h2 a', template).text(feed.title);
+        var col = widget.state.col;
+        var colElement = this._child(".overlay-column").eq(col);
+        if (!colElement.size()) {
+            colElement = this._child("#overlay-columns > td").first();
+            col = 1;
+        }
+        var posElement = colElement.find(".ui-widget").eq(widget.state.pos);
+        if (posElement.size()) {
+            posElement.before(widget.element);
         } else {
-            $('h2', template).text(feed.title);
+            colElement.append(widget.element);
         }
-
-        var length = Math.min(feed.items.length,
-            DASHBOARD_CONFIG.rss_max_items);
-        for(var i = 0; i < length; i++) {
-            template.append(this._formatItem(feed.items[i]));
-        }
-
-        this.contentElement.html(template);
-        this.contentElement.trigger('vertical_resize');
+        this.widgetsMovedCb.fire(col, colElement.sortable("toArray"));
+        widget.reload();
+        widget.onMaximizeCb.add($.proxy(this, "_onWidgetMaximize"));
+        this._resetSortable();
     },
 
     /**
-     * Format a single item.
-     *
-     * @param item
-     *      Item JSON object as returned by get_feed RPC.
+     * Disables and enables column resizing
      */
-    _formatItem: function(item)
+    _resetResizable: function()
     {
-        var template = cloneTemplate('#rss_item_template');
-        $('h3 a', template).text(item.title);
-        $('h3 a', template).attr('href', item.link);
-        $('.updated-text', template).text(item.modified);
-        $('.description-text', template).text(this._sanitize(item.description));
-        return template;
-    },
-
-    _sanitize: function(html)
-    {
-        // TODO
-        html = html || '';
-        var s = html.replace(/^<.+>/, '');
-        return s.replace(/<.+/g, '');
-    },
-
-    _onResize: function()
-    {
-        this.base();
-        this._child('.rss').height(this.contentElement.height());
-    }
-}));
-
-
-/**
- * Text widget implementation.
- */
-Widget.addClass('text', Widget.extend({
-    // See Widget._restore().
-    _restore: function()
-    {
-        this.base();
-        this._child('.field-text').val(this.state.text || '');
-    },
-
-    // See Widget._apply().
-    _apply: function()
-    {
-        this.base();
-        this.update({
-            text: this._child('.field-text').val()
+        this.element.colResizable({disable:true});
+        this.element.colResizable({
+            minWidth: Overlay.MIN_WIDTH,
+            onResize: $.proxy(this, "_updateColumnState"),
         });
     },
 
-    // See Widget.reload().
-    reload: function()
+    /**
+     * Disables and enables drag and drop sorting
+     */
+    _resetSortable: function()
     {
-        var elem = this.contentElement;
-        elem.css('padding', '8px');
-        elem.text(this.state.text || '');
-        // Convert line breaks to <br>.
-        elem.html(elem.html().replace(/\n/g, '<br>\n'));
-    }
-}));
+        this._disableSortable();
+        this._enableSortable();
+    },
+
+    /**
+     * Enables drag and drop sorting
+     */
+    _enableSortable: function()
+    {
+        this._child("td.overlay-column").sortable({
+            connectWith: "td.overlay-column",
+            handle: ".widget-header",
+            update: $.proxy(this, "_onUpdateSort"),
+        });
+    },
+
+    /**
+     * Disables drag and drop sorting
+     */
+    _disableSortable: function()
+    {
+        this._child("td.overlay-column").sortable("destroy");
+    },
+
+    /**
+     * Creates a new column.
+     * Separated from addColumn() so that the initial columns can be created
+     * with single sortable/resizable reset
+     */
+    _createColumn: function(column)
+    {
+        var index = this._child(".overlay-column").size()
+        var newcolumn = $("<td id='column_" + index + "' />");
+        newcolumn.addClass("overlay-column");
+        newcolumn.css("width", column.width + "%");
+        this._child("#overlay-columns").append(newcolumn);
+        var count = this._child("#overlay-columns > td").size();
+        this._child("#overlay-top").attr("colspan", count);
+        this._child("#overlay-header").append("<th/>");
+    },
+
+    /**
+     * Calculates the column widths and stores them in state
+     */
+    _updateColumnState: function()
+    {
+        var total = 0;
+        this._child("#overlay-columns > .overlay-column").each(function(){
+            total += $(this).width();
+        });
+        var columns = [];
+        this._child("#overlay-columns > .overlay-column").each(function(){
+            columns.push({width: Math.floor($(this).width() / total * 100)});
+        });
+        this.state.columns = columns;
+        this.stateChangeCb.fire(this.state);
+    },
+
+    /**
+     * Event handler for widget drag and drop sort
+     */
+    _onUpdateSort: function(event, ui) {
+        var column = ui.item.parent();
+        var col = Number(column.attr("id").split("_")[1]);
+        this.widgetsMovedCb.fire(col, column.sortable("toArray"));
+    },
+
+    /**
+     * Disables drag and drop sort when widget is maximized
+     */
+    _onWidgetMaximize: function(maximized)
+    {
+        if (maximized) {
+            this._disableSortable();
+        } else {
+            this._enableSortable();
+        }
+    },
+
+    /**
+     * Return any matching child elements.
+     */
+    _child: function(sel)
+    {
+        return $(sel, this.element);
+    },
+
+}, /* Class variables */ {
+    DEFAULTS: {
+        columns: [{width:33},{width:33},{width:33}],
+    },
+    MIN_WIDTH: 100,
+});
 
 
 /**
@@ -733,41 +823,40 @@ var Dashboard = Base.extend({
      *      Dashboard configuration object passed in via JSON object in
      *      dashboard.html.
      */
-    constructor: function(config)
+    constructor: function(params)
     {
-        this.stateChangeCb = new jQuery.Callbacks();
-        this.columnsChangeCb = new jQuery.Callbacks();
-        this.widgetAddedCb = new jQuery.Callbacks();
-        this.widgetRemovedCb = new jQuery.Callbacks();
-        this.notifyCb = new jQuery.Callbacks();
-        this.overlaysChangeCb = new jQuery.Callbacks();
-
-        // Widgets in the user's workspace.
+        this.initUI();
+        if (params.config) {
+            this.login = params.config.user.login;
+        }
+        this.overlay = {};
         this.widgets = [];
-        // Columns in the user's workspace.
-        this.columns = [];
-        // Integer overlay ID to save workspace changes to.
-        this.overlayId = config.overlay_id;
-        // Integer user ID.
-        this.userId = config.user_id;
-        // String user's login name.
-        this.login = config.user_login;
-        // Bool is user an admin.
-        this.isAdmin = config.is_admin;
-
-        // Description of loaded overlay. Note the 'widgets' and 'columns'
-        // properties are only used during initial load; the 'widgets' and
-        // 'columns' properties of the Dashboard object itself describe the
-        // actual state of columns and widgets.
-        this.overlay = null;
+        this.newOverlay();
     },
+
+    initUI: function()
+    {
+        var dashboard = this;
+        $("#buttons button").each(function(){
+            var $elem = $(this);
+            var name = $elem.attr("name");
+            $elem.button({
+                text: false,
+                icons: {primary: "icon-" + name.toLowerCase(),},
+            });
+            var callback = "onClick" + name[0].toUpperCase() + name.slice(1);
+            $elem.click($.proxy(dashboard, callback));
+        });
+        this.widgetSelect = $("#buttons [name='widgettype']");
+    },
+
 
     /**
      * Repopulate with the initial blank workspace (separate from constructor
      * since view classes need to subscribe before this fires any events),
      * containing some informative welcome text.
      */
-    reset: function()
+    newOverlay: function()
     {
         this.setOverlay($.extend(this._makeDefaultOverlay(),
         {
@@ -777,13 +866,12 @@ var Dashboard = Base.extend({
                 { width: 25 }
             ],
             widgets: [{
-                id: 1,
-                col: 1,
-                pos: 1,
+                col: 0,
+                pos: 0,
                 type: 'text',
-                title: 'Welcome to Dashboard',
+                name: 'Welcome to Dashboard',
                 height: 150,
-                text: $('#dashboard_welcome_text').text()
+                data :{text: $('#dash-template-welcome-text').html()}
             }]
         }));
     },
@@ -796,27 +884,10 @@ var Dashboard = Base.extend({
         return {
             name: 'Workspace',
             description: 'Unsaved changes',
-            owner: this.login,
-            user_id: this.userId,
-            id: this.overlayId,
             workspace: true,
             columns: this._makeColumns(3),
             widgets: []
         };
-    },
-
-    /**
-     * Fetch a widget given its ID. Used for drag'n'drop.
-     */
-    widgetById: function(id)
-    {
-        id = +id;
-        for(var i = 0; i < this.widgets.length; i++) {
-            var widget = this.widgets[i];
-            if(widget.state.id == id) {
-                return widget;
-            }
-        }
     },
 
     /**
@@ -828,69 +899,38 @@ var Dashboard = Base.extend({
      */
     setOverlay: function(overlay)
     {
-        this.overlay = overlay;
         while(this.widgets.length) {
             var widget = this.widgets.pop();
-            this.widgetRemovedCb.fire(widget);
+            widget.destroy();
         }
 
-        this.columns = overlay.columns;
-        this.columnsChangeCb.fire(this.columns);
-
-        for(var i = 0; i < overlay.widgets.length; i++) {
-            var widget = Widget.createInstance(this, overlay.widgets[i]);
+        while(overlay.widgets.length) {
+            var widget = Widget.createInstance(this, overlay.widgets.pop());
             this.widgets.push(widget);
-            this.widgetAddedCb.fire(widget);
         }
+        this.overlay = new Overlay(overlay);
+        this.overlay.stateChangeCb.add($.proxy(this, "_onOverlayChange"));
+        for (var i = 0; i < this.widgets.length; i++) {
+            this.overlay.insertWidget(this.widgets[i]);
+        }
+        this.overlay.widgetsMovedCb.add($.proxy(this, "_onWidgetsMoved"));
     },
 
     /**
      * Ask the server to delete an overlay.
      */
-    deleteOverlay: function(overlay)
+    deleteOverlay: function(overlay_id)
     {
-        var rpc = this.rpc('delete_overlay', {
-            user_id: overlay.user_id,
-            id: overlay.id
+        var rpc = this.rpc('overlay_delete', {
+            id: overlay_id
         });
-        rpc.done(this._onDeleteOverlayDone.bind(this, overlay));
+        rpc.done($.proxy(this, "_onDeleteOverlayDone"));
     },
 
-    _onDeleteOverlayDone: function(overlay, overlays)
+    _onDeleteOverlayDone: function(overlays)
     {
         this.setOverlays(overlays);
-        this.notifyCb.fire('Deleted overlay: ' + overlay.name);
-    },
-
-    /**
-     * Reset our notion of what overlays are available.
-     *
-     * @param overlays
-     *      Array of overlay objects, as returned by get_overlays RPC.
-     */
-    setOverlays: function(overlays)
-    {
-        // Remove this tab's workspace from the returned list.
-        var that = this;
-
-        this.overlays = $.grep(overlays, function(o)
-        {
-            return o.user_id != that.userId || o.id != that.overlayId;
-        });
-        this.overlays.sort(overlayCmp);
-        this.overlaysChangeCb.fire(this.overlays);
-    },
-
-    /**
-     * Reset our notion of what columns are available.
-     *
-     * @param columns
-     *      Array of columns objects, as returned by get_columns RPC.
-     */
-    setColumns: function(columns)
-    {
-        this.columns = columns;
-        this.columnsChangeCb.fire(columns);
+        this.notifyCb.fire('Overlay deleted');
     },
 
     /**
@@ -907,7 +947,6 @@ var Dashboard = Base.extend({
     {
         var rpc = new Rpc('Dashboard', method, params);
         rpc.fail(function(e) { alert(e.message ? e.message : e); });
-        rpc.fail(this.notifyCb.fire.bind(this.notifyCb));
         return rpc;
     },
 
@@ -920,10 +959,9 @@ var Dashboard = Base.extend({
     _makeColumns: function(count)
     {
         var cols = [];
+        var width = Math.floor(100 / count);
         for(var i = 0; i < count; i++) {
-            cols.push({
-                width: Math.floor(100 / count)
-            });
+            cols.push({width: width});
         }
         return cols;
     },
@@ -934,47 +972,14 @@ var Dashboard = Base.extend({
      */
     clear: function()
     {
+        if (this.overlay.id && this.overlay.workspace) this.deleteOverlay(this.overlay.id);
         this.setOverlay(this._makeDefaultOverlay());
-        this.deleteOverlay({
-            id: this.overlayId,
-            user_id: this.userId,
-            name: 'Unsaved changes'
-        });
     },
 
-    /**
-     * Ask the server to add a column to the workspace.
-     */
-    addColumn: function()
+    onClickAddwidget: function()
     {
-        if(this.columns.length == 4) {
-            return alert("Can't add new column, maximum reached.");
-        }
-        this.setColumns(this._makeColumns(this.columns.length + 1));
-        this.notifyCb.fire('Added a new column.');
-        this.save();
-    },
-
-    /**
-     * Reset column widths to be even.
-     */
-    resetColumns: function()
-    {
-        this.setColumns(this._makeColumns(this.columns.length));
-        this.notifyCb.fire('Column widths reset.');
-        this.save();
-    },
-
-    /**
-     * Find the first unused widget ID by examining our list of widgets.
-     */
-    _getFreeWidgetId: function()
-    {
-        var id = 1;
-        for(var i = 0; i < this.widgets.length; i++) {
-            id = Math.max(id, this.widgets[i].state.id + 1);
-        }
-        return id;
+        var type = this.widgetSelect.val();
+        this.addWidget(type);
     },
 
     /**
@@ -986,154 +991,13 @@ var Dashboard = Base.extend({
     addWidget: function(type)
     {
         var widget = Widget.createInstance(this, {
-            id: this._getFreeWidgetId(),
-            title: 'Unnamed widget',
+            name: 'Unnamed widget',
             type: type,
-            col: 0, // wtf?
-            pos: 99, // wtf?
         });
 
         this.widgets.push(widget);
-        this.notifyCb.fire('Created ' + widget.state.type + ' widget.');
-        this.widgetAddedCb.fire(widget);
-        this.save();
-        widget.edit();
-    },
-
-    /**
-     * Ask the server to delete a widget.
-     *
-     * @param widget
-     *      Widget object.
-     */
-    deleteWidget: function(widget)
-    {
-        this.widgets = $.grep(this.widgets, function(widget_)
-        {
-            return widget_ !== widget;
-        });
-
-        this.widgetRemovedCb.fire(widget);
-        this.notifyCb.fire('Deleted widget: ' + widget.state.title);
-        this.save();
-    },
-
-    /**
-     * Refresh our notion of available overlays.
-     */
-    getOverlays: function()
-    {
-        var rpc = this.rpc('get_overlays');
-        rpc.done(this._onGetOverlaysDone.bind(this));
-        return rpc;
-    },
-
-    _onGetOverlaysDone: function(overlays)
-    {
-        this.setOverlays(overlays);
-        this.notifyCb.fire('Refreshed overlay list.');
-    },
-
-    /**
-     * Ask the server to replace our workspace with the given overlay.
-     *
-     * @param overlay
-     *      One of the overlay objects from the overlay list.
-     */
-    loadOverlay: function(overlay)
-    {
-        var rpc = this.rpc('clone_overlay', {
-            user_id: overlay.user_id,
-            id: overlay.id,
-            new_id: this.overlay.id
-        });
-
-        rpc.done(this._onLoadOverlayDone.bind(this));
-        return rpc;
-    },
-
-    _onLoadOverlayDone: function(overlay)
-    {
-        this.setOverlay(overlay);
-        this.notifyCb.fire('Overlay ' + overlay.name + ' loaded.');
-    },
-
-    /**
-     * Ask the server to save out workspace as a new overlay.
-     *
-     * @param overlay
-     *      Object with the properties as defined in
-     *      WebService.pm::OVERLAY_FIELD_DEFS.
-     */
-    saveOverlay: function(overlay)
-    {
-        overlay = $.extend(this._makeOverlay(), overlay, {
-            workspace: 0,
-            id: 0
-        });
-
-        var rpc = this.rpc('set_overlay', overlay);
-        rpc.done(this._onSaveOverlayDone.bind(this, overlay));
-        return rpc;
-    },
-
-    _onSaveOverlayDone: function(overlay, response)
-    {
-        this.notifyCb.fire('Saved overlay: ' + overlay.name);
-    },
-
-    /**
-     * Ask the server to publish a user's overlay that is pending to be shared.
-     *
-     * @param overlay
-     *      One of the overlay objects from the overlay list.
-     */
-    publishOverlay: function(overlay)
-    {
-        var rpc = this.rpc('publish_overlay', overlay);
-        rpc.done(this._onPublishOverlayDone.bind(this, overlay));
-        return rpc;
-    },
-
-    _onPublishOverlayDone: function(overlay, response)
-    {
-        this.notifyCb.fire('Published overlay: ' + overlay.name);
-        this.overlaysChangeCb.fire(response);
-    },
-
-    /**
-     * Ask the server to delete a trailing column and its widgets.
-     */
-    deleteColumn: function()
-    {
-        var deleteId = this.columns.length - 1;
-        if(deleteId == 0) {
-            return alert('Cannot delete the last column.');
-        }
-
-        var that = this;
-        $.each(this.widgets, function(_, widget)
-        {
-            if(widget.state.col == deleteId) {
-                that.deleteWidget(widget);
-            }
-        });
-
-        this.setColumns(this._makeColumns(this.columns.length - 1));
-        this.notifyCb.fire('Column removed.');
-        this.save();
-    },
-
-    /**
-     * Ask the server to record some column widths.
-     *
-     * @param columns
-     *      Column objects in the format of this.columns.
-     */
-    saveColumns: function(columns)
-    {
-        this.setColumns(columns);
-        this.save();
+        this.overlay.insertWidget(widget);
+        widget.onClickEdit();
     },
 
     /**
@@ -1158,676 +1022,9 @@ var Dashboard = Base.extend({
     _makeOverlay: function()
     {
         return $.extend({}, this.overlay, {
-            columns: this.columns,
             widgets: this._getWidgetStates()
         });
     },
-
-    /**
-     * Save the current workspace state. If a save is already in progress, just
-     * set a flag telling the completion handler to start another one. This
-     * avoids races in two places:
-     *      1. Lack of locking in Bugzilla extension code.
-     *      2. An earlier request completes before a later request, which hangs
-     *         indefinitely, resulting in stale state being saved.
-     */
-    save: function()
-    {
-        this._saveAgain = true;
-        if(this._lastSaveRpc) {
-            return;
-        }
-
-        this._saveAgain = false;
-        this._lastSaveRpc = this.rpc('set_overlay', this._makeOverlay());
-        this._lastSaveRpc.done(this._onSaveDone.bind(this));
-        this._lastSaveRpc.complete(this._onSaveComplete.bind(this));
-        return this._lastSaveRpc;
-    },
-
-    /**
-     * Handle save completion by clearing _lastSaveRpc. Note this must be done
-     * for success *and* failure.
-     */
-    _onSaveComplete: function()
-    {
-        this._lastSaveRpc = null;
-    },
-
-    /**
-     * Handle successful save by checking to see if there were any more
-     * attempts to save while the last RPC was in progress. If so, save again.
-     */
-    _onSaveDone: function(overlay)
-    {
-        this._lastSaveRpc = null;
-
-        if(this._saveAgain) {
-            this.save();
-        } else {
-            // In case of updates to overlay metadata, only overwrite the
-            // frontend's metadata if another save isn't pending (e.g. user
-            // updated overlay name immediately after deleting a widget, and
-            // widget deletion RPC hasn't completed yet).
-            this.overlay = overlay;
-        }
-    }
-});
-
-
-/**
- * Manage a set of resizable columns within which resizable widgets are
- * displayed. Responds to events fired by the associated Dashboard instance to
- * update the view.
- */
-var WidgetView = Base.extend({
-    constructor: function(dashboard)
-    {
-        this._dashboard = dashboard;
-        dashboard.widgetAddedCb.add(this._onWidgetAdded.bind(this));
-        dashboard.widgetRemovedCb.add(this._onWidgetRemoved.bind(this));
-        dashboard.columnsChangeCb.add(this._onColumnsChange.bind(this));
-
-        this._maximizedWidget = null;
-        this._element = $('#columns');
-        this._columns = [];
-        this._columns[-1] = $('#column-1'); // No effect on Array.length.
-
-        $(document).keyup(this._onDocumentKeyup.bind(this));
-        $(window).on('resize', this._onWindowResize.bind(this));
-    },
-
-    /**
-     * Add or remove columns until the rendered count matches the desired
-     * count.
-     */
-    _onColumnsChange: function(columns)
-    {
-        while(this._columns.length > this._dashboard.columns.length) {
-            this._columns.pop().remove();
-        }
-
-        while(this._columns.length < this._dashboard.columns.length) {
-            var column = cloneTemplate('#column_template');
-            // Necessary for drag'n'drop code below.
-            column.data('column_id', this._columns.length);
-            this._columns.push(column);
-            this._element.append(column);
-        }
-
-        this._makeSortable();
-        this._updateColumnWidths();
-    },
-
-    /**
-     * Search the list of widgets for the widget preceeding the given one.
-     * Insert it in the DOM after that point, otherwise if no such widget is
-     * found, append it to the widget's column instead.
-     *
-     * @param widget
-     *      Widget to insert.
-     */
-    _insertWidget: function(widget)
-    {
-        var preceeding = null;
-        for(var i = 0; i < this._dashboard.widgets.length; i++) {
-            var other = this._dashboard.widgets[i];
-            if(other.state.id != widget.state.id
-               && other.state.col == widget.state.col
-               && other.state.pos < widget.state.pos) {
-                preceeding = other;
-            }
-        }
-
-        if(preceeding) {
-            preceeding.element.after(widget.element);
-        } else {
-            this._columns[widget.state.col].append(widget.element);
-        }
-    },
-
-    /**
-     * Respond to widget addition by inserting its element at the correct
-     * location.
-     */
-    _onWidgetAdded: function(widget)
-    {
-        if(widget.state.col > this._columns.length) {
-            widget.state.col = 1;
-        }
-
-        widget._child('.maximize').click(
-            this._onMaximizeClick.bind(this, widget));
-        this._insertWidget(widget);
-        widget.element.trigger('vertical_resize');
-        this._makeSortable();
-        this._updateColumnWidths();
-    },
-
-    /**
-     * Respond to widget removal by animating the widget's destruction then
-     * removing it from the DOM.
-     */
-    _onWidgetRemoved: function(widget)
-    {
-        var elem = widget.element;
-        elem.animate({ opacity: 0 }, function()
-        {
-            elem.slideUp(function()
-            {
-                elem.remove();
-                widget.destroy();
-            });
-        });
-    },
-
-    /**
-     * Respond to click on the widget's maximize button by displaying the
-     * restore hint, and applying CSS to display the widget contents full
-     * screen.
-     */
-    _onMaximizeClick: function(widget) {
-        widget.hintElement.click(this.restore.bind(this));
-        widget.hintElement.show();
-        widget.bodyElement.addClass('widget-max');
-        widget.update({
-            maximized: true
-        });
-        this._maximizedWidget = widget;
-        this._updateWidgetResizable(widget);
-        widget.element.trigger('vertical_resize');
-    },
-
-    /**
-     * Respond to window resize by triggering the vertical_resize event on the
-     * maximized widget, if any. If there is no maximized widget, then this
-     * means the columns are visisble, so recalculate their widths.
-     *
-     * TODO: this should be implemented in CSS, as installing window.onresize
-     * handlers results in extremely slow painting in every browser.
-     */
-    _onWindowResize: function()
-    {
-        if(this._maximizedWidget) {
-            this._maximizedWidget.element.trigger('vertical_resize');
-        } else {
-            this._updateColumnWidths();
-        }
-    },
-
-    /**
-     * Respond to escape key being pressed by restoring the maximized widget.
-     */
-    _onDocumentKeyup: function(e)
-    {
-        // Clear maximized widgets when ESC is pressed.
-        if(e.keyCode == 27) {
-            this.restore();
-        }
-    },
-
-    /**
-     * Restore the maximized widget, if any.
-     */
-    restore: function()
-    {
-        var widget = this._maximizedWidget;
-        if(! widget) {
-            return;
-        }
-
-        this._maximizedWidget = null;
-
-        widget.hintElement.hide();
-        widget.bodyElement.removeClass('widget-max');
-
-        widget.update({
-            maximized: false
-        });
-
-        this._updateWidgetResizable(widget);
-        this._updateColumnWidths();
-    },
-
-    /**
-     * Update a widget's jQuery resizable() state, destroying it if the widget
-     * is marked as maximized, otherwise (re)creating it.
-     */
-    _updateWidgetResizable: function(widget)
-    {
-        if(widget.state.maximized) {
-            if(widget.bodyElement.data('resizable')) {
-                widget.bodyElement.resizable('destroy');
-            }
-        } else {
-            widget.bodyElement.resizable({
-                handles: 'e, s, se',
-                minHeight: Widget.MIN_HEIGHT,
-                minWidth: 75,
-                maxWidth: this._getMaxWidth(widget.state.col),
-                helper: 'widget-state-highlight',
-                start: this._disableIframes,
-                stop: this._onWidgetResizeStop.bind(this, widget)
-            });
-        }
-    },
-
-    /**
-     * Set a column's width to a new value, adjusting other columns to
-     * compensate for the size change.
-     *
-     * @param idx
-     *      Column index (0..Dashborad.columns.length).
-     * @param newPct
-     *      Integer width in percent.
-     */
-    _setColumnWidth: function(idx, newPct)
-    {
-        if(idx == -1) {
-            return;
-        }
-
-        // Make a new column information structure and save it on the server.
-        // saveColumns() will fire columnsChangeCb on success, which will cause
-        // the actual resize to occur.
-        var deltaPct = this._dashboard.columns[idx].width - newPct;
-        var cols = $.extend(true, [], this._dashboard.columns);
-        cols[idx].width -= deltaPct;
-        cols[cols.length - 1].width += deltaPct;
-        this._dashboard.saveColumns(cols);
-    },
-
-    /**
-     * On Firefox/Windows, cross-domain iframes will swallow mousemove events,
-     * making sortable() feel horrible. So hide the IFRAMEs while dragging.
-     */
-    _disableIframes: function()
-    {
-        $('iframe').css('visibility', 'hidden');
-    },
-
-    /**
-     * Undo _onWidgetResizeStart() IFRAME hide.
-     */
-    _enableIframes: function()
-    {
-        $('iframe').css('visibility', '');
-    },
-
-    /**
-     * Handle a widget's content area being resized by updating the width of
-     * the widget's column and storing the height of the widget itself.
-     *
-     * @param widget
-     *      Widget object passed from _updateWidgetResizable().
-     */
-    _onWidgetResizeStop: function(widget)
-    {
-        this._enableIframes();
-
-        var content = widget.contentElement;
-        var newPct = Math.floor(100 * (content.width() / (55 + this._element.width())));
-        content.css('width', '');
-
-        var height = content.height() + widget.headElement.outerHeight();
-        content.css('height', '');
-        widget.update({ height: height });
-        this._setColumnWidth(widget.state.col, newPct);
-        this._dashboard.save();
-    },
-
-    /**
-     * Handle a column's element being resized by updating the stored width.
-     *
-     * @param idx
-     *      Column index, passed from _updateColumnWidths().
-     */
-    _onColumnResizeStop: function(idx)
-    {
-        this._enableIframes();
-
-        var helper = $('.column_helper', this._columns[idx]);
-        var newPct = Math.floor(100 * (helper.width() / this._element.width()));
-        helper.css('width', '100%');
-        this._setColumnWidth(idx, newPct);
-    },
-
-    MIN_WIDTH: 100,
-
-    /**
-     * Compute the maximum any column but the last may grow by. This is the
-     * difference between the last column's current size and its minimum size.
-     */
-    _getMaxWidth: function(idx)
-    {
-        if(idx == -1) {
-            return this._element.width();
-        }
-
-        var last = this._columns[this._columns.length - 1];
-        var maxGrowth = Math.max(0, last.width() - this.MIN_WIDTH);
-        var pct = (this._element.width() - 4) / 100;
-        return (this._dashboard.columns[idx].width * pct) + maxGrowth;
-    },
-
-    /**
-     * After a resize (and manually at various other times), reset the column
-     * widths proportional to the new container size.
-     */
-    _updateColumnWidths: function()
-    {
-        this._dashboard.widgets.forEach(this._updateWidgetResizable, this);
-
-        for(var i = 0; i < this._columns.length; i++) {
-            var notLast = (i + 1) != this._columns.length;
-
-            var column = this._columns[i];
-            var helper = $('.column_helper', column);
-
-            $('.arrow_left', helper).toggle(i != 0);
-            $('.arrow_right', helper).toggle(notLast);
-
-            var info = this._dashboard.columns[i];
-            column.width(info.width + '%');
-
-            if(notLast) {
-                helper.resizable({
-                    handles: 'e',
-                    minWidth: this.MIN_WIDTH,
-                    maxWidth: this._getMaxWidth(i),
-                    helper: 'column-state-highlight',
-                    start: this._disableIframes,
-                    stop: this._onColumnResizeStop.bind(this, i)
-                });
-            }
-        }
-    },
-
-    /**
-     * Return a jQuery object containing widget elements that should be
-     * resizable.
-     */
-    _getSortableWidgetElements: function()
-    {
-        var sortable = $();
-        for(var i = 0; i < this._dashboard.widgets.length; i++) {
-            var widget = this._dashboard.widgets[i];
-            sortable.push(widget.element);
-        }
-        return sortable;
-    },
-
-    /**
-     * Configure jQuery UI sortable() on all the column elements. Called when
-     * the set of widgets or columns changes.
-     */
-    _makeSortable: function()
-    {
-        var sortable = this._getSortableWidgetElements();
-        var heads = $('.widget-head', sortable);
-
-        $('.column').sortable({
-            connectWith: $('.column'),
-            containment: 'document',
-            delay: 100,
-            forcePlaceholderSize: true,
-            handle: '.widget-head',
-            items: sortable,
-            opacity: 0.8,
-            placeholder: 'widget-placeholder',
-            revert: 300,
-            start: this._onSortStart.bind(this),
-            stop: this._onSortStop.bind(this),
-            tolerance: 'pointer'
-        });
-    },
-
-    /**
-     * When a 'sort' (aka. widget move) starts, set the moved widget's width to
-     * a rough approximation of the column size; to improve usability for
-     * widgets being moved from the top column.
-     */
-    _onSortStart: function(e, ui) {
-        this._disableIframes();
-        var width = this._element.width() / this._columns.length;
-        ui.item.css('width', Math.min(300, width));
-    },
-
-    /**
-     * When a widget mode ends, reset the moved widget's width to inherit from
-     * the CSS rules, and update its state to reflect the column it was dragged
-     * to.
-     */
-    _onSortStop: function(e, ui) {
-        this._enableIframes();
-        ui.item.css('width', '');
-        var columnId = ui.item.parent('.column').data('column_id');
-        var widgetId = ui.item.data('widgetId');
-        var widget = this._dashboard.widgetById(widgetId);
-        widget.update({
-            col: columnId
-        });
-        $(window).trigger("resize");
-        this._makeSortable();
-        this._dashboard.save();
-    }
-});
-
-
-/**
- * Renders the list of overlays available to load.
- */
-var OverlayView = Base.extend({
-    constructor: function(dashboard)
-    {
-        this._dashboard = dashboard;
-        dashboard.overlaysChangeCb.add(this._onOverlaysChange.bind(this));
-        this._setupUi();
-    },
-
-    _setupUi: function()
-    {
-        this._element = $('#overlay_page');
-
-        var saveButton = $('#overlay_save_button');
-        saveButton.click(this._onSaveClick.bind(this));
-
-        this._saveSpinner = cloneTemplate('#loader_template img');
-        this._saveSpinner.hide();
-        saveButton.after(this._saveSpinner);
-
-        if(this._dashboard.isAdmin) {
-            // Hide "requires approval labels" for admins.
-            $('.requires-admin', this._element).remove();
-        }
-    },
-
-    open: function()
-    {
-        $.colorbox({
-            inline: true,
-            width: '700px',
-            height: '562px',
-            href: '#overlay_page'
-        });
-    },
-
-    _makeTr: function(overlay)
-    {
-        var title = 'Created ' + formatTime(overlay.created);
-        var url = makeSelfUrl({
-            action: 'load',
-            user_id: overlay.user_id,
-            id: overlay.id
-        });
-
-        var tr = cloneTemplate('#overlay_template');
-        $('a', tr).attr('href', 'javascript:;');
-
-        $('.name', tr).text(overlay.name);
-        $('.description', tr).text(overlay.description || '(none)');
-        $('.login', tr).text(overlay.user_login || 'Unknown');
-        $('.modified', tr).text(formatTime(overlay.modified));
-        $('.modified', tr).attr('title', title);
-        $('.publish_link', tr).click(this._onPublishClick.bind(this, overlay));
-        $('.load_link', tr).click(this._onLoadClick.bind(this, overlay));
-        $('.load_link', tr).attr('href', url);
-        $('.delete_link', tr).click(this._onDeleteClick.bind(this, overlay));
-
-        return tr;
-    },
-
-    _onPublishClick: function(overlay)
-    {
-        if(confirm('Are you sure you want to publish "' + overlay.name + '"?')) {
-            this._dashboard.publishOverlay(overlay);
-        }
-    },
-
-    _onDeleteClick: function(overlay)
-    {
-        if(confirm('Are you sure you want to delete "' + overlay.name + '"?')) {
-            this._dashboard.deleteOverlay(overlay);
-        }
-    },
-
-    /**
-     * Fired when Dashboard's idea of available overlays changes, e.g. at page
-     * load or after get_overlays().
-     */
-    _onOverlaysChange: function(overlays)
-    {
-        var tbody = $('#overlay_load_box tbody', this._element);
-        tbody.children().remove();
-
-        var login = this._dashboard.login;
-        var isAdmin = this._dashboard.isAdmin;
-
-        for(var i = 0; i < overlays.length; i++) {
-            var overlay = overlays[i];
-            var tr = this._makeTr(overlay);
-
-            if(login != overlay.user_login && !isAdmin) {
-                $('.can-delete', tr).remove();
-            }
-
-            if(! overlay.workspace) {
-                $('span', tr).removeClass('is-workspace');
-            }
-
-            if(! overlay.pending) {
-                $('.can-publish', tr).remove();
-            }
-            tr.appendTo(tbody);
-        }
-    },
-
-    _onSaveClick: function()
-    {
-        this._saveSpinner.show();
-        var rpc = this._dashboard.saveOverlay({
-            name: $('#overlay_name').val(),
-            description: $('#overlay_description').val(),
-            shared: $('#overlay_shared')[0].checked
-        });
-        rpc.complete(this._onSaveComplete.bind(this));
-    },
-
-    _onSaveComplete: function(rpc)
-    {
-        this._saveSpinner.hide();
-        if(! rpc.error) {
-            $('#overlay_save_box input').val('');
-            $.colorbox.close();
-        }
-    },
-
-    _onLoadClick: function(overlay)
-    {
-        var rpc = this._dashboard.loadOverlay(overlay);
-        rpc.done(this._onLoadDone.bind(this));
-    },
-
-    _onLoadDone: function()
-    {
-        $.colorbox.close();
-    }
-});
-
-
-/**
- * Manages the general Dashboard user interface, including buttons and links
- * for adding/removing widgets to the WidgetView, the main setting dialog, and
- * notifications from the Dashboard instance to signal failures.
- */
-var DashboardView = Base.extend({
-    constructor: function(dashboard)
-    {
-        this._dashboard = dashboard;
-        dashboard.notifyCb.add(this.notify.bind(this));
-        this._overlayView = new OverlayView(dashboard);
-
-        window.onbeforeunload = this._onWindowBeforeUnload.bind(this);
-
-        this._setupUi();
-    },
-
-    /**
-     * Handle user attempting to close the window/tab by requesting the browser
-     * show a confirmation prompt, if the current workspace is unsaved.
-     *
-     * @param e
-     *      BeforeUnload event object.
-     */
-    _onWindowBeforeUnload: function(e)
-    {
-        if(! this._dashboard.dirty) {
-            return;
-        }
-
-        // Stupid evolved interface requires that this handler both set
-        // returnValue and return a string, but despite that, both strings are
-        // ignored (at least in Firefox) for security reasons.
-        e.returnValue = 'You have unsaved changes.';
-        return e.returnValue;
-    },
-
-    _setupUi: function()
-    {
-        $('a[id,class]:not([href]):').attr('href', 'javascript:;');
-
-        var dash = this._dashboard;
-
-        $('#button-overlay').click(this._onOpenOverlayClick.bind(this));
-        $('#button-save-widgets').click(dash.save.bind(dash));
-        $('#button-clear-workspace').click(this._onClearClick.bind(this));
-        $('#button-add-column').click(dash.addColumn.bind(dash));
-        $('#button-del-column').click(dash.deleteColumn.bind(dash));
-        $('#button-reset-columns').click(dash.resetColumns.bind(dash));
-        $('#button-new-url').click(dash.addWidget.bind(dash, 'url'));
-        $('#button-new-mybugs').click(dash.addWidget.bind(dash, 'mybugs'));
-        $('#button-new-rss').click(dash.addWidget.bind(dash, 'rss'));
-        $('#button-new-text').click(dash.addWidget.bind(dash, 'text'));
-        $('#button-new-bugs').click(dash.addWidget.bind(dash, 'bugs'));
-    },
-
-    _onClearClick: function()
-    {
-        if(confirm('Are you sure you want to clear your workspace?')) {
-            this._dashboard.clear();
-        }
-    },
-
-    notify: function(message)
-    {
-        $('#dashboard_notify').text(message);
-    },
-
-    _onOpenOverlayClick: function()
-    {
-        this._dashboard.getOverlays();
-        this._overlayView.open();
-    }
 });
 
 
@@ -1860,21 +1057,8 @@ function checkBrowserQuality()
 function main()
 {
     checkBrowserQuality();
-
-    dashboard = new Dashboard(DASHBOARD_CONFIG);
-    view = new DashboardView(dashboard);
-    widgetView = new WidgetView(dashboard);
-
-    dashboard.reset();
-    dashboard.setOverlays(DASHBOARD_CONFIG.overlays);
-
-    var params = getAnchorParams();
-    if(params.action == 'load') {
-        dashboard.loadOverlay({
-            id: +params.id,
-            user_id: +params.user_id
-        });
-    }
+    var params = $.extend({config: BB_CONFIG}, getAnchorParams());
+    dashboard = new Dashboard(params);
     window.location.hash = '';
 }
 

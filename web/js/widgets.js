@@ -1,4 +1,142 @@
 /**
+ * URL widget implementation.
+ */
+Widget.addClass('url', Widget.extend({
+    // See Widget.render().
+    render: function()
+    {
+        this.base();
+        this._iframe = this._child('iframe')
+        this._iframe.load(this._onIframeLoad.bind(this));
+    },
+
+    /**
+     * Handle completion of IFRAME load by attempting to modify (and replace)
+     * the child document using the elements matched by the configured CSS
+     * selector, if any. This may fail due to browser same-origin policy (e.g.
+     * different domain).
+     */
+    _onIframeLoad: function()
+    {
+        if(this.state.maximized || !this.state.selector) {
+            return;
+        }
+
+        try {
+            // Any property access will throw if same origin policy in effect.
+            var location = this._iframe[0].contentDocument.location;
+        } catch(e) {
+            if(window.console) {
+                console.error('_onIframeLoad: can\'t apply CSS: %o', e);
+            }
+            return;
+        }
+
+        var body = $('body', this._iframe[0].contentDocument);
+        var matched = $(this.state.selector, body);
+        body.children().remove();
+        matched.appendTo(body);
+        matched.css('padding', '0px');
+        body.css('margin', '0px');
+        $('html', this._iframe).css('margin', '0px');
+    },
+
+    onClickLoadurl: function()
+    {
+        var url = this.settingsDialog.find("[name='url']").val()
+        this.reload(url);
+    },
+
+    reload: function(url)
+    {
+        var url = !url ? this.state.data.url : url;
+        this._iframe.attr("src", url);
+    },
+
+}));
+
+
+/**
+ * RSS widget implementation.
+ */
+Widget.addClass('rss', Widget.extend({
+
+    // See Widget.reload().
+    reload: function()
+    {
+        this.loader(true);
+        if(! this.state.data.url) {
+            this.error('Please set a feed URL.');
+            return;
+        }
+        var rpc = new Rpc('Dashboard', 'get_feed', { url: this.state.data.url });
+        rpc.fail($.proxy(this, "error"));
+        rpc.done($.proxy(this, "_onReloadDone"));
+    },
+
+    /**
+     * Populate our template with the feed contents.
+     *
+     * @param feed
+     *      Feed JSON object, as returned by get_feed RPC.
+     */
+    _onReloadDone: function(feed)
+    {
+        this.loader(false);
+        var items = this.contentElement.find(".feed-items");
+        items.empty();
+
+        if(feed.link) {
+            $('h2 a', this.contentElement).attr('href', feed.link);
+        } else {
+            $('h2 a', this.contentElement).attr('href', "");
+        }
+        $('h2 a', this.contentElement).text(feed.title);
+
+        var length = Math.min(feed.items.length,
+            DASHBOARD_CONFIG.rss_max_items);
+        for(var i = 0; i < length; i++) {
+            items.append(this._formatItem(feed.items[i]));
+        }
+    },
+
+    /**
+     * Format a single item.
+     *
+     * @param item
+     *      Item JSON object as returned by get_feed RPC.
+     */
+    _formatItem: function(item)
+    {
+        var template = cloneTemplate('#rss-template-item');
+        $('h3 a', template).text(item.title);
+        $('h3 a', template).attr('href', item.link);
+        $('.updated-text', template).text(item.modified);
+        $('.description-text', template).text(this._sanitize(item.description));
+        return template;
+    },
+
+    _sanitize: function(html)
+    {
+        // TODO
+        html = html || '';
+        var s = html.replace(/^<.+>/, '');
+        return s.replace(/<.+/g, '');
+    },
+}));
+
+
+/**
+ * Text widget implementation.
+ */
+Widget.addClass('text', Widget.extend({
+    reload: function()
+    {
+        this.contentElement.find("div.text").html(this.state.data.text);
+    },
+}));
+
+/**
  * Confirmation support to colorbox.close()
  *
  * Adds new configuration option to colorbox
@@ -90,11 +228,8 @@ function stripBugzillaPage(frame)
  */
 var BugsWidget = Widget.extend(
 {
-    // Default query string
-    DEFAULT_QUERY: "",
-
-    // See Widget.renderSettings().
-    renderSettings: function()
+    // See Widget.render().
+    render: function()
     {
         this.base();
         this._queryField = this._child("input[name='query']");
@@ -149,54 +284,22 @@ var BugsWidget = Widget.extend(
         }
     },
 
-    // See Widget._restore().
-    _restore: function()
-    {
-        this.base();
-        var settings = {}
-        if (this.state.text) settings = JSON.parse(this.state.text);
-        if (settings.query){
-            this._query = settings.query;
-            this._queryButton.data().colorbox.href = "buglist.cgi" + this._query;
-            this._queryField.val(this._query);
-        }
-    },
-
-    // See Widget._apply().
-    _apply: function()
-    {
-        this.base();
-        this.update({
-            text: JSON.stringify({query: this._queryField.val()})
-        });
-    },
-
-    // See Widget.setState().
-    setState: function(state)
-    {
-        this.base(state);
-        var settings = {}
-        if (state.text) settings = JSON.parse(state.text);
-        this._query = settings.query ?
-            settings.query :
-            this.DEFAULT_QUERY;
-    },
-
     // See Widget.reload().
     reload: function()
     {
-        if (this._query) {
+        this.loader(true);
+        if (this.state.data.query) {
             // display loader animation
             this.contentElement.html(cloneTemplate('#loader_template'));
             // set ctype to csv in query parameters
-            params = getQueryParams(this._query);
+            params = getQueryParams(this.state.data.query);
             params.ctype = "csv";
             // Create request to fetch the data and set result callbacks
             var jqxhr = $.get("buglist.cgi" + getQueryString(params), {});
             jqxhr.success(this._onReloadDone.bind(this));
             jqxhr.error(this._onReloadFail.bind(this));
         } else {
-            this.contentElement.html("Set the query string in widget options");
+            this.error("Set the query string in widget options");
         }
     },
 
@@ -208,7 +311,7 @@ var BugsWidget = Widget.extend(
      */
     _onReloadFail: function(error)
     {
-        this.contentElement.html("<p class='error'>" + error + "</p>");
+        this.error(error);
     },
 
     /**
@@ -219,7 +322,13 @@ var BugsWidget = Widget.extend(
      */
     _onReloadDone: function(data)
     {
-        var buglist = $.csv()(data);
+        this.loader(false);
+        try {
+            var buglist = $.csv()(data);
+        } catch(e) {
+            this.error("Failed to parse bug list");
+            return;
+        }
         if (buglist.length == 1) {
             var content = $("<p>Sorry, no bugs found</p>");
         } else {
@@ -259,10 +368,12 @@ Widget.addClass('bugs', BugsWidget);
  */
 var MyBugsWidget = BugsWidget.extend({
 
+    TEMPLATE_TYPE: "bugs",
+
     constructor: function(dashboard, state)
     {
         this.base(dashboard, state);
-        this.DEFAULT_QUERY = getQueryString({
+        this.state.data.query = getQueryString({
             bug_status: ['NEW', 'ASSIGNED', 'NEED_INFO', 'REOPENED', 'WAITING',
                     'RESOLVED', 'RELEASED'],
             email1: this._dashboard.login,
@@ -278,6 +389,10 @@ var MyBugsWidget = BugsWidget.extend({
             'value0-0-1': this._dashboard.login
         });
     },
-
+    render: function()
+    {
+        this.base();
+        this.settingsDialog.find("[name*='query']").attr("disabled", "disabled");
+    },
 });
 Widget.addClass('mybugs', MyBugsWidget);

@@ -28,19 +28,25 @@
     Dashboard
     <span id="buttons">
         &nbsp;
-        <a id="button-overlay" title="Open Overlay"></a>
-        <a id="button-save-widgets" title="Save Overlay"></a>
-        <a id="button-clear-workspace" title="Clear workspace"></a>
+        <button name="newoverlay" type="button">New Overlay</button>
+        <button name="openoverlay" type="button">Open Overlay</button>
+        <button name="saveoverlay" type="button">Save Overlay</button>
+        <button name="saveoverlayas" type="button">Save Overlay As...</button>
         &nbsp;&nbsp;
-        <a id="button-new-url" title="New URL"></a>
-        <a id="button-new-bugs" title="New Bugs"></a>
-        <a id="button-new-mybugs" title="New My Bugs"></a>
-        <a id="button-new-rss" title="New RSS"></a>
-        <a id="button-new-text" title="New Text"></a>
+        <select name="widgettype" title="Add widget"
+            class="ui-widget ui-corner-all">
+            <option value="url">URL</option>
+            <option value="rss">RSS</option>
+            <option value="bugs">Bug list</option>
+            <option value="mybugs">My Bugs</option>
+            <option value="text">Text</option>
+            [% Hook.process("widget-type") %]
+        </select>
+        <button name="addwidget" >Add widget</button>
         &nbsp;&nbsp;
-        <a id="button-add-column" title="Add column"></a>
-        <a id="button-del-column" title="Delete column"></a>
-        <a id="button-reset-columns" title="Reset column widths"></a>
+        <button name="addcolumn" >Add column</button>
+        <button name="removecolumn" >Remove column</button>
+        <button name="resetcolumns" >Reset column widths</button>
     </span>
 
     &nbsp;
@@ -64,10 +70,10 @@
         "extensions/Dashboard/web/js/jquery.tablesorter.min.js",
         "extensions/Dashboard/web/js/jquery.csv.min.js",
         "extensions/Dashboard/web/js/dashboard.js",
-        "extensions/Dashboard/web/js/widget_bugs.js"]
+        "extensions/Dashboard/web/js/widgets.js"]
 %]
 
-<table id="overlay" style="width:90%;">
+<table id="overlay">
 <tr id="overlay-header"></tr>
 <tr>
     <td id="overlay-top" class="overlay-column" valign="top"></td>
@@ -79,9 +85,7 @@
 
 
 <div style="display: none;"> <!-- hide templates -->
-    <div align="center" id="dash-template-loader">
-        <img class="loader"
-            src="extensions/Dashboard/web/css/img/ajax-loader.gif">
+    <div align="center" id="dash-template-loader" class="loader ui-corner-all">
     </div>
 
     <!-- Overlay templates -->
@@ -106,79 +110,61 @@
         <p>The current workspace available in this session will not be saved
         until you explicitly write the changes to a new or existing overlay,
         using the Save icon above.</p>
-    <div>
-
-    <div id="dash-overlay-open">
-        <strong>Load Overlay</strong>
-        <table class="overlay-list" width="100%"><tbody></tbody></table>
     </div>
 
-    <table id="dash-template-overlay-entry">
-    <tr>
-        <td align="right" valign="top">
-            <a class="load_link"><span class="name"></span></a>
-            <span class="can-publish">[<a class="publish_link">ok</a>]</span>
-        </td>
-        <td valign="top">
-            <span class="description is-workspace"></span>
-            <br>
-            <small>
-                <span class="modified"></span>,
-                <span class="login"></span>
-            </small>
-            <span class="can-publish">
-            </span>
-        </td>
-    </tr>
-    </table>
+    <div id="overlay-open">
+        <strong>Load Overlay</strong>
+        <ul class="overlay-list" width="100%"></ul>
+    </div>
 
-    <div id="overlay-save">
-        <strong>Save Overlay</strong>
-        <form name="overlay-save">
-            <table>
-                <tr>
-                    <th>Overlay name:</th>
-                    <td><input name="name" size="32"></td>
-                </tr>
-
-                <tr>
-                    <th>Description:</th>
-                    <td><input name="description" size="32"></td>
-                </tr>
-                <tr>
-                    <th>Shared</th>
-                    <td>
-                        <input id="overlay_shared" type="checkbox"/>
-                        <div class="requires-admin">
-                            <small><br>requires<br>admin<br>approval</small>
-                        </div>
-                    </td>
-                </tr>
-            </table>
+    <li id="template-overlay-entry" class="everlay-entry">
+        <div>
+            <button name="name"></button><span class="owner"></span>
+            <button name="delete">Delete</button>
+            <button name="delete">Publish</button>
+        </div>
+        <div>
+            <span class="description"></span> - <span class="modified"></span>
+        </div>
+    </li>
+    
+    <div id="overlay-settings" title="Overlay setings">
+        <form>
+        <fieldset name="common">
+            <legend>Overlay</legend>
+            <ul class="settings">
+            <li>
+                <label>Name:</label>
+                <input name="name" class="settings-field"/>
+            </li>
+            <li>
+                <label>Description:</label>
+                <input name="description" class="settings-field" />
+            </li>
+            <li>
+                <label>Shared:</label>
+                <input name="shared" type="checkbox" class="settings-field" />
+            </li>
+            </ul>
+        </fieldset>
         </form>
     </div>
 
 
     <!-- Widget templates -->
 
-    <div class="ui-widget" id="widget-template">
-        <div class="ui-widget-header">
-            <div class="widget-title"></div>
-            <button name="maximize" title="Maximize"
-                class="ui-icon ui-icon-circle-plus ui-corner-all">+</button>
-            <button name="minimize" title="Minimize"
-                class="ui-icon ui-icon-circle-minus ui-corner-all">-</button>
-            <button name="remove" title="Remove"
-                class="ui-icon ui-icon-circle-close ui-corner-all">X</button>
-            <button name="refresh" title="Refresh"
-                class="ui-icon ui-icon-refresh ui-corner-all">R</button>
-            <button name="edit" title="Edit"
-                class="ui-icon ui-icon-pencil ui-corner-all">E</button>
+    <div class="widget ui-widget ui-corner-all" id="widget-template">
+        <div class="widget-header ui-widget-header ui-corner-top">
+            <span class="widget-title"></span>
+            <span class="widget-buttons">
+                <button name="maximize" title="Maximize">+</button>
+                <button name="minimize" title="Minimize">-</button>
+                <button name="remove" title="Remove">X</button>
+                <button name="edit" title="Edit">E</button>
+                <button name="refresh" title="Refresh">R</button>
+            </span>
         </div>
-        <div class="ui-widget-content">
-        </div>
-
-        <div class="widget-settings">
+        <div class="widget-settings" title="Widget setings" style="display:none;">
             <form>
             <fieldset name="common">
                 <legend>Widget</legend>
@@ -189,7 +175,6 @@
                 <li>
                     <label>Color:</label>
                     <select name="color" class="settings-field">
-                        <option value="">None</option>
                     </select>
                 </li>
                 <li>
@@ -205,17 +190,21 @@
                 </li>
             </fieldset>
             </form>
-
+        </div>
+        <div class="widget-container ui-widget-content ui-corner-bottom">
+            <div class="widget-status"></div>
+            <div class="widget-content"></div>
         </div>
     </div>
 
-    <div id="widget-error-template">
-        <p class="error">
+    <p class="ui-state-error" id="widget-error-template">
         Error occured: <span class="error-text"></span>
-        </p>
-    </div>
+    </p>
 
     <!-- Text widget -->
+    <div class="text" id="widget-template-text">
+    </div>
+
     <fieldset id="widget-settings-template-text">
         <legend>Text</legend>
         <textarea style="width: 100%; height: 10em;" name="text"
@@ -223,10 +212,9 @@
     </fieldset>
 
     <!-- URL widget -->
-    <div id="widget-template-url">
-        <iframe target="new" class="widget_iframe" frameborder="0"
-            scrolling="auto"></iframe>
-    </div>
+    <iframe id="widget-template-url" target="new" class="widget_iframe"
+            frameborder="0" scrolling="auto">
+    </iframe>
 
     <fieldset id="widget-settings-template-url">
         <legend>URL options</legend>
@@ -247,7 +235,7 @@
         </li>
 
         <li>
-            <"button" name="loadurl">Load URL</button>
+            <button name="loadurl">Load URL</button>
         </li>
     </fieldset>
 
@@ -270,6 +258,7 @@
 
     <div id="widget-template-rss" class="rss">
         <h2><a target="_new"></a></h2>
+        <div class="feed-items"></div>
     </div>
 
     <div id="rss-template-item">
@@ -297,6 +286,8 @@
             <label>Columns:</label><b>* Not supported yet *</b>
         </li>
     </fieldset>
+
+    [% Hook.process("widget-template") %]
 
 </div> <!-- /hide templates -->
 
