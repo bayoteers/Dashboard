@@ -38,8 +38,12 @@
 }
 
 .overlay-column {
-    border: dotted 1px;
+    border: 1px solid transparent;
     vertical-align: top;
+}
+.overlay-column-hint {
+    border: 1px dotted gray;
+    border-radius: 5px;
 }
 
 .loader {

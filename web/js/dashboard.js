@@ -717,7 +717,9 @@ var Overlay = Base.extend({
         this._child("td.overlay-column").sortable({
             connectWith: "td.overlay-column",
             handle: ".widget-header",
-            update: $.proxy(this, "_onUpdateSort"),
+            update: $.proxy(this, "_onSortUpdate"),
+            start: $.proxy(this, "_onSortStart"),
+            stop: $.proxy(this, "_onSortStop"),
         });
     },
 
@@ -766,13 +768,20 @@ var Overlay = Base.extend({
     },
 
     /**
-     * Event handler for widget drag and drop sort
+     * Event handlers for drag and drop sort
      */
-    _onUpdateSort: function(event, ui) {
+    _onSortUpdate: function(event, ui) {
         var column = ui.item.parent();
         var col = Number(column.attr("id").split("_")[1]);
         this.widgetsMovedCb.fire(col, column.sortable("toArray"));
     },
+    _onSortStart: function() {
+        this._child("td.overlay-column").addClass("overlay-column-hint");
+    },
+    _onSortStop: function() {
+        this._child("td.overlay-column").removeClass("overlay-column-hint");
+    },
+
 
     /**
      * Disables drag and drop sort when widget is maximized
