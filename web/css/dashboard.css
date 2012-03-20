@@ -6,6 +6,33 @@
     height: 20px;
 }
 
+#overlay-header .resize-guide {
+    background: url(images/sizer_mid.png) repeat-x;
+    height:16px;
+    position: relative;
+    content: "";
+}
+
+#overlay-header .resize-guide:after {
+    background: url(images/sizer_left.png) no-repeat;
+    height:16px;
+    width:16px;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    content: "";
+}
+
+#overlay-header .resize-guide:before {
+    background: url(images/sizer_right.png) no-repeat;
+    height:16px;
+    width:16px;
+    position: absolute;
+    top: 0px;
+    right: 0px;
+    content: "";
+}
+
 #overlay-columns .overlay-column {
     height: 200px;
 }

@@ -598,6 +598,7 @@ var Overlay = Base.extend({
         this._disableSortable();
         this._child("#overlay-top").empty();
         this._child("#overlay-columns").empty();
+        this._child("#overlay-header").empty();
     },
 
     setState: function(state)
@@ -735,14 +736,16 @@ var Overlay = Base.extend({
      */
     _createColumn: function(column)
     {
+        var total = this.element.width();
         var index = this._child(".overlay-column").size()
         var newcolumn = $("<td id='column_" + index + "' />");
         newcolumn.addClass("overlay-column");
-        newcolumn.css("width", column.width + "%");
         this._child("#overlay-columns").append(newcolumn);
         var count = this._child("#overlay-columns > td").size();
         this._child("#overlay-top").attr("colspan", count);
-        this._child("#overlay-header").append("<th/>");
+        var header = $("<th><div class='resize-guide'/></th>");
+        header.css("width", column.width + "%");
+        this._child("#overlay-header").append(header);
     },
 
     /**
@@ -850,6 +853,16 @@ var Dashboard = Base.extend({
         this.widgetSelect = $("#buttons [name='widgettype']");
     },
 
+    onClickNewoverlay: function()
+    {
+        this.setOverlay(this._makeDefaultOverlay());
+    },
+
+    onClickAddwidget: function()
+    {
+        var type = this.widgetSelect.val();
+        this.addWidget(type);
+    },
 
     /**
      * Repopulate with the initial blank workspace (separate from constructor
@@ -908,7 +921,7 @@ var Dashboard = Base.extend({
             var widget = Widget.createInstance(this, overlay.widgets.pop());
             this.widgets.push(widget);
         }
-        this.overlay = new Overlay(overlay);
+        this.overlay = new Overlay(this, overlay);
         this.overlay.stateChangeCb.add($.proxy(this, "_onOverlayChange"));
         for (var i = 0; i < this.widgets.length; i++) {
             this.overlay.insertWidget(this.widgets[i]);
@@ -974,12 +987,6 @@ var Dashboard = Base.extend({
     {
         if (this.overlay.id && this.overlay.workspace) this.deleteOverlay(this.overlay.id);
         this.setOverlay(this._makeDefaultOverlay());
-    },
-
-    onClickAddwidget: function()
-    {
-        var type = this.widgetSelect.val();
-        this.addWidget(type);
     },
 
     /**
