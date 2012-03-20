@@ -572,21 +572,18 @@ var Widget = Base.extend({
  *
  * Provides two callbacks
  *
- * stateChangeCb - fired when columns change
+ * columnChangeCb - fired when columns change
  * widgetsMovedCb - fired when widget order has been changed
  *
  */
 var Overlay = Base.extend({
-    constructor: function(dashboard, state)
+    constructor: function(dashboard, columns)
     {
-        this.stateChangeCb = new jQuery.Callbacks();
+        this.columnChangeCb = new jQuery.Callbacks();
         this.widgetsMovedCb = new jQuery.Callbacks();
         this.dashboard = dashboard;
         this.element = $("table#overlay");
-        $("#button-add-column").click($.proxy(this, "addColumn"));
-        $("#button-remove-column").click($.proxy(this, "removeColumn"));
-        $("#button-reset-columns").click($.proxy(this, "resetColumns"));
-        this.setState(state);
+        this.setColumns(columns);
     },
 
     /**
@@ -601,16 +598,16 @@ var Overlay = Base.extend({
         this._child("#overlay-header").empty();
     },
 
-    setState: function(state)
+    setColumns: function(columns)
     {
         // Reset
         this.destroy();
 
         // Re initialize
-        this.state = $.extend({}, Overlay.DEFAULTS, state);
+        this.columns = $.extend([], Overlay.DEFAULT_COLUMNS, columns);
 
-        for (var i = 0; i < this.state.columns.length; i++) {
-            this._createColumn(this.state.columns[i]);
+        for (var i = 0; i < this.columns.length; i++) {
+            this._createColumn(this.columns[i]);
         }
         this._resetResizable();
     },
@@ -618,13 +615,22 @@ var Overlay = Base.extend({
     /**
      * Adds new column at the end
      */
-    addColumn: function(column)
+    addColumn: function()
     {
-        if (this.state.columns.length >= Overlay.MAX_COLUMNS) {
+        if (this.columns.length >= Overlay.MAX_COLUMNS) {
             alert("Maximum of " + Overlay.MAX_COLUMNS + " columns reached");
             return;
         }
-        this._createColumn(column);
+        var width = Math.floor(100 / (this.columns.length + 1));
+        var shrink = Math.floor(width / this.columns.length);
+        var total = 0;
+        this._child("#overlay-header th").each(function(){
+            total += $(this).width();
+        });
+        this._child("#overlay-header th").each(function(){
+            $(this).css("width", "-=" + Math.ceil(total * (shrink / 100)));
+        });
+        this._createColumn(width);
         this._updateColumnState();
         this._resetResizable();
         this._resetSortable();
@@ -635,12 +641,15 @@ var Overlay = Base.extend({
      */
     removeColumn:function()
     {
-        if (this.state.columns.legth == 1) return;
+        if (this.columns.length <= 1) {
+            alert("Cant remove the last column");
+            return;
+        }
         var removeColumn = this._child("#overlay-columns > td").last();
         var lastColumn = removeColumn.prev(".overlay-column");
         if (removeColumn.children().size()) {
             lastColumn.append(removeColumn.children());
-            this.widgetsMovedCb.fire(this.state.columns.length - 1,
+            this.widgetsMovedCb.fire(this.columns.length - 1,
                     lastColumn.sortable("toArray"));
         }
         removeColumn.sortable("destroy").remove();
@@ -657,8 +666,8 @@ var Overlay = Base.extend({
      */
     resetColumns: function()
     {
-        var width = Math.floor(100 / this.state.columns.length);
-        this._child("#overlay-columns > td").css("width", width + "%");
+        var width = Math.floor(100 / this.columns.length);
+        this._child("#overlay-header > th").css("width", width + "%");
         this._updateColumnState();
         this._resetResizable();
     },
@@ -736,7 +745,7 @@ var Overlay = Base.extend({
      * Separated from addColumn() so that the initial columns can be created
      * with single sortable/resizable reset
      */
-    _createColumn: function(column)
+    _createColumn: function(width)
     {
         var total = this.element.width();
         var index = this._child(".overlay-column").size()
@@ -746,7 +755,7 @@ var Overlay = Base.extend({
         var count = this._child("#overlay-columns > td").size();
         this._child("#overlay-top").attr("colspan", count);
         var header = $("<th><div class='resize-guide'/></th>");
-        header.css("width", column.width + "%");
+        header.css("width", width + "%");
         this._child("#overlay-header").append(header);
     },
 
@@ -756,15 +765,18 @@ var Overlay = Base.extend({
     _updateColumnState: function()
     {
         var total = 0;
-        this._child("#overlay-columns > .overlay-column").each(function(){
+        this._child("#overlay-columns > td").each(function(){
             total += $(this).width();
         });
         var columns = [];
-        this._child("#overlay-columns > .overlay-column").each(function(){
-            columns.push({width: Math.floor($(this).width() / total * 100)});
+        this._child("#overlay-columns > td").each(function(){
+            columns.push(Math.floor($(this).width() / total * 100));
         });
-        this.state.columns = columns;
-        this.stateChangeCb.fire(this.state);
+        this.columns = columns;
+        this.columnChangeCb.fire(this.columns);
+        if(window.console) {
+            console.log(this.columns);
+        }
     },
 
     /**
@@ -804,9 +816,8 @@ var Overlay = Base.extend({
     },
 
 }, /* Class variables */ {
-    DEFAULTS: {
-        columns: [{width:33},{width:33},{width:33}],
-    },
+    DEFAULT_COLUMNS: [100],
+    MAX_COLUMNS: 4,
     MIN_WIDTH: 100,
 });
 
@@ -873,6 +884,34 @@ var Dashboard = Base.extend({
         this.addWidget(type);
     },
 
+    onClickSaveoverlay: function()
+    {
+        alert("Not implemented");
+    },
+    
+    onClickSaveoverlayas: function()
+    {
+        alert("Not implemented");
+    },
+    
+    onClickOpenoverlay: function()
+    {
+        alert("Not implemented");
+    },
+
+    onClickAddcolumn: function()
+    {
+        this.overlay.addColumn();
+    },
+    onClickRemovecolumn: function()
+    {
+        this.overlay.removeColumn();
+    },
+    onClickResetcolumns: function()
+    {
+        this.overlay.resetColumns();
+    },
+
     /**
      * Repopulate with the initial blank workspace (separate from constructor
      * since view classes need to subscribe before this fires any events),
@@ -882,11 +921,7 @@ var Dashboard = Base.extend({
     {
         this.setOverlay($.extend(this._makeDefaultOverlay(),
         {
-            columns: [
-                { width: 25 },
-                { width: 50 },
-                { width: 25 }
-            ],
+            columns: [25, 50, 25],
             widgets: [{
                 col: 0,
                 pos: 0,
@@ -930,8 +965,8 @@ var Dashboard = Base.extend({
             var widget = Widget.createInstance(this, overlay.widgets.pop());
             this.widgets.push(widget);
         }
-        this.overlay = new Overlay(this, overlay);
-        this.overlay.stateChangeCb.add($.proxy(this, "_onOverlayChange"));
+        this.overlay = new Overlay(this, overlay.columns);
+        this.overlay.columnChangeCb.add($.proxy(this, "_onOverlayChange"));
         for (var i = 0; i < this.widgets.length; i++) {
             this.overlay.insertWidget(this.widgets[i]);
         }
@@ -983,7 +1018,7 @@ var Dashboard = Base.extend({
         var cols = [];
         var width = Math.floor(100 / count);
         for(var i = 0; i < count; i++) {
-            cols.push({width: width});
+            cols.push(width);
         }
         return cols;
     },

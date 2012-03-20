@@ -117,16 +117,16 @@ div.widget {
     background-position: -16px -128px;
 }
 
+/* TODO: draw matching icons which describe better the column actions */
 .ui-icon.icon-addcolumn {
-    background-image: url(images/icon_add_column.png);
-}
-.ui-icon.icon-resetcolumns {
-    background-image: url(images/icon_reset_columns.png);
+    background-position: -208px -32px;
 }
 .ui-icon.icon-removecolumn {
-    background-image: url(images/icon_del_column.png);
+    background-position: -240px -32px;
 }
-
+.ui-icon.icon-resetcolumns {
+    background-position: -160px -32px;
+}
 
 .widget-header-maximized {
     padding: 4px;
