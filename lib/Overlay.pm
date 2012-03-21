@@ -125,14 +125,47 @@ sub set_shared      { $_[0]->set('shared', $_[1]); }
 sub set_workspace   { $_[0]->set('workspace', $_[1]); }
 sub set_columns     { $_[0]->set('columns', $_[1]); }
 
-sub set_owner {
-    my ($self, $owner) = @_;
-    if (! ref($owner) eq 'Bugzilla::User') {
-        $owner = Bugzilla::User->new($owner);
+# These are here so that we can just pass nice hash to set_all
+sub set_created     { }
+sub set_modified    { }
+sub set_owner       { }
+
+sub set_widgets {
+    my ($self, $widgets) = @_;
+
+    # Sort incoming to existing and new widgets
+    my %existing_widgets;
+    my @new_widgets;
+    foreach my $widget (@{$widgets}) {
+        if (!defined $widget->{id} || $widget->{overlay_id} != $self->id) {
+            push(@new_widgets, $widget);
+        } else {
+            $existing_widgets{$widget->{id}} = $widget;
+        }
     }
-    $self->set('owner_id', $owner->{id});
-    $self->{owner} = $owner;
+
+    # Update existing widgets and delete those not listed
+    foreach my $db_widget (@{$self->widgets}) {
+        my $params = $existing_widgets{$db_widget->id};
+        if (defined $params) {
+            delete $params->{id};
+            delete $params->{overlay_id};
+            $db_widget->set_all($params);
+            $db_widget->update();
+        } else {
+            $db_widget->remove_from_db();
+        }
+    }
+
+    # Create new widgets
+    foreach my $params (@new_widgets) {
+        delete $params->{id};
+        $params->{overlay_id} = $self->id;
+        my $widget = Bugzilla::Extension::Dashboard::Widget->create($params);
+        push(@{$self->{widgets}}, $widget);
+    }
 }
+
 
 ##############
 # Validators #
@@ -143,9 +176,9 @@ sub _check_columns {
     ThrowCodeError("zero_columns_in_overlay") if (! @{$columns});
 
     # If column totals don't add up to 100%, spread the difference out.
-    my $total = sum map { $_->{width} } @{ $columns };
+    my $total = sum @{ $columns };
     my $delta = int((100 - $total) / @{ $columns });
-    map { $_->{width} += $delta } @{ $columns };
+    map { $_ += $delta } @{ $columns };
 
     return JSON->new->utf8->encode($columns);
 }
@@ -162,17 +195,14 @@ sub create {
         'SELECT LOCALTIMESTAMP(0)');
     $params->{modified} = $params->{created};
     $params->{owner_id} = Bugzilla->user->id;
+    $params->{pending} = 1;
 
     # Set default columns if not provided
     if (!$params->{columns}) {
-        $params->{columns} = [
-            {width => 33},
-            {width => 33},
-            {width => 33},
-        ];
+        $params->{columns} = [33, 33, 33];
     }
 
-    my @widgets = @{delete $params->{widgets}} if exists $params->{widgets};
+    my @widgets = @{delete $params->{widgets} || []};
     my $overlay = $class->SUPER::create($params);
 
     # Create widgets if provided

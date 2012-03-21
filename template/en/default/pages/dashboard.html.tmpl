@@ -112,23 +112,34 @@
         using the Save icon above.</p>
     </div>
 
-    <div id="overlay-open">
-        <strong>Load Overlay</strong>
-        <ul class="overlay-list" width="100%"></ul>
+    <div id="overlay-open" title="Load Overlay" class="settings-dialog">
+        <b>Shared overlays</b>
+        <ul class="overlay-list shared" width="100%"></ul>
+        <b>My overlays</b>
+        <ul class="overlay-list owner" width="100%"></ul>
+
     </div>
 
-    <li id="template-overlay-entry" class="everlay-entry">
+    <li id="template-overlay-entry" class="overlay-entry">
         <div>
-            <button name="name"></button><span class="owner"></span>
-            <button name="delete">Delete</button>
-            <button name="delete">Publish</button>
+            <div>
+                <button class="name"></button><button>Details</button>
+            </div>
+            <div class="details">
+                <div class="states">
+                    <span class="workspace">(workspace)</span>
+                    <span class="shared">(shared)</span>
+                    <span class="pending">(pending)</span>
+                </div>
+                <div class="description"></div>
+                <span class="modified"></span> - <span class="owner"></span>
+            </div>
         </div>
         <div>
-            <span class="description"></span> - <span class="modified"></span>
         </div>
     </li>
     
-    <div id="overlay-settings" title="Overlay setings">
+    <div id="overlay-settings" title="Overlay setings" class="settings-dialog">
         <form>
         <fieldset name="common">
             <legend>Overlay</legend>
@@ -144,6 +155,10 @@
             <li>
                 <label>Shared:</label>
                 <input name="shared" type="checkbox" class="settings-field" />
+            </li>
+            <li>
+                <label>Workspace:</label>
+                <input name="workspace" type="checkbox" class="settings-field" />
             </li>
             </ul>
         </fieldset>
@@ -164,7 +179,7 @@
                 <button name="refresh" title="Refresh">R</button>
             </span>
         </div>
-        <div class="widget-settings" title="Widget setings" style="display:none;">
+        <div class="settings-dialog" title="Widget setings" style="display:none;">
             <form>
             <fieldset name="common">
                 <legend>Widget</legend>

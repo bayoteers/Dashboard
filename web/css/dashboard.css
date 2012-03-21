@@ -46,6 +46,28 @@
     border-radius: 5px;
 }
 
+.overlay-entry .details {
+    display: none;
+}
+.overlay-entry .states {
+    font-size: small;
+}
+.overlay-entry .states span {
+    display: none;
+}
+.overlay-entry .owner {
+    font-size: small;
+    font-style: italic;
+}
+.overlay-entry .modified {
+    font-size: small;
+    font-style: italic;
+}
+.overlay-entry .name {
+    width: 80%;
+    text-align: left;
+}
+
 .loader {
     background: url(images/ajax-loader.gif) repeat-x;
 }
@@ -61,17 +83,16 @@ div.widget {
     height: 100%;
 }
 
-.widget-settings li {
+.settings-dialog li {
     list-style-type: none;
 }
 
-.widget-settings label {
+.settings-dialog label {
     width: 100px;
     float: left;
 }
 
 .widget-title {
-    color: #000;
     overflow: hidden;
     cursor: move;
     width: 100%;

@@ -100,7 +100,7 @@ sub data {
     my $self = shift;
     my $data = $self->{'data'};
     $data = "null" unless defined $data;
-    $self->{'parsed_data'} ||= JSON->new->utf8->allow_nonref->decode($data);
+    $self->{'parsed_data'} ||= JSON->new->utf8->decode($data);
     return $self->{'parsed_data'};
 }
 
@@ -117,9 +117,12 @@ sub set_height    { $_[0]->set('height', $_[1]); }
 sub set_minimized { $_[0]->set('minimized', $_[1]); }
 sub set_refresh   { $_[0]->set('refresh', $_[1]); }
 
+# These are here so that we can just pass nice hash to set_all
+sub set_overlay_id { }
+
 sub set_data {
     my ($self, $data) = @_;
-    $self->set('data', JSON->new->utf8->allow_nonref->encode($data));
+    $self->set('data', JSON->new->utf8->encode($data));
     $self->{'parsed_data'} = $data;
 }
 
@@ -137,6 +140,12 @@ sub create {
     # set some defaults
     $params->{color} ||= "grey";
 
+    my $data = delete $params->{data};
+    $data = {} unless defined $data;
+    if(ref($data)) {
+        $data = JSON->new->utf8->encode($data);
+    }
+    $params->{data} = $data;
     return $class->SUPER::create($params);
 }
 

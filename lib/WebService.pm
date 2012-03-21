@@ -107,7 +107,7 @@ sub overlay_save {
 
 sub overlay_get {
     my ($self, $params) = @_;
-    Bugzilla->login(LOGIN_REQUIRED);
+    my $user = Bugzilla->login(LOGIN_REQUIRED);
 
     ThrowCodeError('param_required', {
             function => 'Dashboard.overlay.get',
@@ -118,7 +118,8 @@ sub overlay_get {
     ThrowCodeError("dashboard_object_access_denied", {
             class => 'Overlay', id => $params->{id} })
         unless $overlay->user_is_owner ||
-                ($overlay->shared && !$overlay->pending);
+                ($overlay->shared &&
+                    (!$overlay->pending || $user->in_group('admin')));
     return $self->_overlay_to_hash($overlay);
 }
 
@@ -127,16 +128,22 @@ sub overlay_list {
     my $user = Bugzilla->login(LOGIN_REQUIRED);
 
     my @overlays;
-    my $match = {};
-    $match->{shared} = 1;
-    $match->{pending} = 1;
+    my @matches;
 
     # Shared overlays and the ones pending publishing if user is admin
-    push @overlays, @{Bugzilla::Extension::Dashboard::Overlay->match({
-            shared => 1, pending => $user->in_group('admin')})};
+    push(@matches, @{Bugzilla::Extension::Dashboard::Overlay->match({
+            shared => 1, pending => $user->in_group('admin')})});
     # Users own overlays
-    push @overlays, @{Bugzilla::Extension::Dashboard::Overlay->match({
-            owner_id => $user->id})};
+    push(@matches, @{Bugzilla::Extension::Dashboard::Overlay->match({
+            owner_id => $user->id})});
+    # Remove duplicates
+    my %ids;
+    while (my $overlay = shift @matches) {
+        if (!defined $ids{$overlay->id}) {
+            push(@overlays, $overlay);
+            $ids{$overlay->id} = 1;
+        }
+    }
     # No need to get widgets for the list
     @overlays = map { $self->_overlay_to_hash($_, {widgets=>1}) } @overlays;
     return \@overlays;
@@ -274,7 +281,7 @@ sub _overlay_to_hash {
     my ($self, $overlay, $exclude) = @_;
     my %result;
     while (my ($field, $type) = each %{(OVERLAY_FIELDS)}) {
-        next if $exclude->{$field} == 1;
+        next if $exclude->{$field};
         $result{$field} = $self->type($type, $overlay->$field);
     }
     # owner, columns and widgets are special cases
@@ -288,9 +295,7 @@ sub _overlay_to_hash {
     if (!$exclude->{columns}) {
         my @columns;
         foreach my $col (@{$overlay->columns}) {
-            push(@columns, {
-                    width => $self->type('int', $col->{width})
-                });
+            push(@columns, $self->type('int', $col));
         }
         $result{columns} = \@columns;
     }
@@ -310,7 +315,7 @@ sub _widget_to_hash {
     my ($self, $widget, $exclude) = @_;
     my %result;
     while (my ($field, $type) = each %{(WIDGET_FIELDS)}) {
-        next if $exclude->{$field} == 1;
+        next if $exclude->{$field};
         $result{$field} = $self->type($type, $widget->$field);
     }
     $result{data} = $widget->data;

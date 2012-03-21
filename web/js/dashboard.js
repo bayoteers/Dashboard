@@ -167,7 +167,7 @@ function now()
  * attribute 'name' is bound to onClick<Name>() method, where <Name> is the
  * value of name attribute with first letter capitalized.
  *
- * 
+ *
  */
 var Widget = Base.extend({
     /**
@@ -210,6 +210,9 @@ var Widget = Base.extend({
         this.applyState();
     },
 
+    // TODO implement updateState which checks if there actually is changes and
+    // fires stateChangeCb. All changes should go through that method
+
     /**
      * Renders the widget ui from templates.
      */
@@ -241,10 +244,10 @@ var Widget = Base.extend({
         // Populate content element with widget's template, if one exists.
         var sel = '#widget-template-' + this.TEMPLATE_TYPE;
         this.contentElement.append(cloneTemplate(sel));
-        
+
 
         // Prepare settings dialog
-        this.settingsDialog = this._child('.widget-settings');
+        this.settingsDialog = this._child('.settings-dialog');
         this.settingsDialog.attr("id", "widget_settings_" + this.id);
         var colorSelect = $("[name='color']", this.settingsDialog);
         for(var bg in Widget.COLORS) {
@@ -304,6 +307,7 @@ var Widget = Base.extend({
     {
         this.element.toggleClass("widget-max");
         this.headerElement.toggleClass("widget-header-maximized");
+        this._child("button[name='remove']").toggle();
         this._child("button[name='minimize']").toggle();
         this._child("button[name='maximize'] .ui-button-icon-primary").toggleClass(
                 "ui-icon-circle-plus ui-icon-arrowthick-1-sw");
@@ -317,7 +321,7 @@ var Widget = Base.extend({
         }
 
     },
-    
+
     /**
      * Widget title bar minimize button click
      */
@@ -333,18 +337,18 @@ var Widget = Base.extend({
             this.state.minimized = true;
         }
     },
-    
+
     /**
      * Widget title bar remove button click
      */
     onClickRemove: function()
     {
         if (confirm("Do you really want to remove this widget?")) {
-            this.onRemoveCb.fire(this);
             this.destroy();
+            this.onRemoveCb.fire(this);
         }
     },
-    
+
     /**
      * Widget title bar refresh button click
      */
@@ -352,7 +356,7 @@ var Widget = Base.extend({
     {
         this.reload();
     },
-    
+
     /**
      * Widget title bar edit button click
      */
@@ -410,7 +414,7 @@ var Widget = Base.extend({
         this.applyState();
         this.reload();
     },
-    
+
     /**
      * Aplies the widget specific settings from the settings dialog.
      *
@@ -431,7 +435,7 @@ var Widget = Base.extend({
     },
 
     /**
-     * 
+     *
      */
     applyState: function()
     {
@@ -452,6 +456,11 @@ var Widget = Base.extend({
         this._child(".widget-title").html(this.state.name);
 
         this.containerElement.css("height", this.state.height);
+
+        if (this.state.minimized) {
+            this.headerElement.addClass("ui-corner-bottom");
+            this.containerElement.hide();
+        }
 
         this._applyCustomState();
     },
@@ -609,9 +618,10 @@ var Overlay = Base.extend({
         for (var i = 0; i < this.columns.length; i++) {
             this._createColumn(this.columns[i]);
         }
+        this._enableSortable();
         this._resetResizable();
     },
-    
+
     /**
      * Adds new column at the end
      */
@@ -645,14 +655,14 @@ var Overlay = Base.extend({
             alert("Cant remove the last column");
             return;
         }
-        var removeColumn = this._child("#overlay-columns > td").last();
-        var lastColumn = removeColumn.prev(".overlay-column");
-        if (removeColumn.children().size()) {
-            lastColumn.append(removeColumn.children());
+        var toBeRemoved = this._child("#overlay-columns > td").last();
+        var lastColumn = toBeRemoved.prev(".overlay-column");
+        if (toBeRemoved.children().size()) {
+            lastColumn.append(toBeRemoved.children());
             this.widgetsMovedCb.fire(this.columns.length - 1,
                     lastColumn.sortable("toArray"));
         }
-        removeColumn.sortable("destroy").remove();
+        toBeRemoved.sortable("destroy").remove();
         this._child("#overlay-header > th").last().remove();
         var count = this._child("#overlay-columns > td").size();
         this._child("#overlay-top").attr("colspan", count);
@@ -660,7 +670,7 @@ var Overlay = Base.extend({
         this._resetResizable();
         this._resetSortable();
     },
-    
+
     /**
      * Reset column widths to be even.
      */
@@ -774,17 +784,15 @@ var Overlay = Base.extend({
         });
         this.columns = columns;
         this.columnChangeCb.fire(this.columns);
-        if(window.console) {
-            console.log(this.columns);
-        }
     },
 
     /**
      * Event handlers for drag and drop sort
      */
     _onSortUpdate: function(event, ui) {
-        var column = ui.item.parent();
-        var col = Number(column.attr("id").split("_")[1]);
+        var column = $(event.target)
+        // TODO change the top column id to 'column_0'
+        var col = Number(column.attr("id").split("_")[1] || 0);
         this.widgetsMovedCb.fire(col, column.sortable("toArray"));
     },
     _onSortStart: function() {
@@ -840,7 +848,7 @@ var Overlay = Base.extend({
  */
 var Dashboard = Base.extend({
     /**
-     * Create an instance. 
+     * Create an instance.
      *
      * @param config
      *      Dashboard configuration object passed in via JSON object in
@@ -853,7 +861,7 @@ var Dashboard = Base.extend({
             this.login = params.config.user.login;
         }
         this.overlay = {};
-        this.widgets = [];
+        this.widgets = {};
         this.newOverlay();
     },
 
@@ -871,6 +879,8 @@ var Dashboard = Base.extend({
             $elem.click($.proxy(dashboard, callback));
         });
         this.widgetSelect = $("#buttons [name='widgettype']");
+        this.overlaySettings = $("#overlay-settings");
+        this.overlayList = $("#overlay-open");
     },
 
     onClickNewoverlay: function()
@@ -881,35 +891,80 @@ var Dashboard = Base.extend({
     onClickAddwidget: function()
     {
         var type = this.widgetSelect.val();
-        this.addWidget(type);
+
+        var widget = this._createWidget({
+            name: 'Unnamed widget',
+            type: type,
+        });
+        widget.onClickEdit();
+    },
+
+    _createWidget: function(state)
+    {
+        var widget = Widget.createInstance(this, state);
+        widget.onRemoveCb.add($.proxy(this, "_onWidgetRemove"));
+        this.widgets[widget.id] = widget;
+        this.overlayUI.insertWidget(widget);
+        return widget;
     },
 
     onClickSaveoverlay: function()
     {
-        alert("Not implemented");
+        if (!this.overlay.id) {
+            this.onClickOverlaysettings();
+            return;
+        } else {
+            this.saveOverlay();
+        }
     },
-    
+
     onClickSaveoverlayas: function()
     {
         alert("Not implemented");
     },
-    
+
     onClickOpenoverlay: function()
     {
-        alert("Not implemented");
+        if (this._unsaved) {
+            if (!confirm("There is unsaved changes. Continue?")) return;
+        }
+        this.rpc("overlay_list").done($.proxy(this, "_openOverlayList"));
     },
 
+    // TODO Overlay UI object should bind directly to these buttons
     onClickAddcolumn: function()
     {
-        this.overlay.addColumn();
+        this.overlayUI.addColumn();
     },
     onClickRemovecolumn: function()
     {
-        this.overlay.removeColumn();
+        this.overlayUI.removeColumn();
     },
     onClickResetcolumns: function()
     {
-        this.overlay.resetColumns();
+        this.overlayUI.resetColumns();
+    },
+
+    onClickOverlaysettings: function()
+    {
+        var overlay = this.overlay;
+        this.overlaySettings.find(".settings-field").each(function(){
+            var field = $(this);
+            var name = field.attr("name");
+            if (field.attr("type") == "checkbox") {
+                field.prop("checked", Boolean(overlay[name]));
+            } else {
+                field.val(overlay[name]);
+            }
+        });
+        this.overlaySettings.dialog({
+            width: 500,
+            zIndex: 9999,
+            buttons: {
+                "Save": $.proxy(this, "saveOverlay"),
+                "Cancel": function(){ $(this).dialog("destroy") }
+            },
+        });
     },
 
     /**
@@ -941,10 +996,89 @@ var Dashboard = Base.extend({
         return {
             name: 'Workspace',
             description: 'Unsaved changes',
-            workspace: true,
+            workspace: false,
             columns: this._makeColumns(3),
             widgets: []
         };
+    },
+
+    saveOverlay: function()
+    {
+        this.overlaySettings.dialog("destroy");
+        var overlay = this.overlay;
+        this.overlaySettings.find(".settings-field").each(function(){
+            var field = $(this);
+            var name = field.attr("name");
+            if (field.attr("type") == "checkbox") {
+                overlay[name] = field.prop("checked");
+            } else {
+                overlay[name] = field.val();
+            }
+        });
+        var rpc = this.rpc("overlay_save", this._makeOverlay());
+        rpc.done($.proxy(this, "_saveDone"));
+    },
+
+    _saveDone: function(result)
+    {
+        alert("Overlay saved");
+        this.setOverlay(result.overlay);
+    },
+
+    _openOverlayList: function(overlays)
+    {
+        this.overlayList.find("ul").empty();
+        this.overlayList.dialog({
+            width: 500,
+            zIndex: 9999,
+        });
+        var list = this.overlayList.find("ul.shared");
+        for (var i = 0; i < overlays.length; i++) {
+            if (!overlays[i].shared) continue;
+            list.append(this._createOverlayEntry(overlays[i]));
+        }
+        var list = this.overlayList.find("ul.owner");
+        list.empty();
+        for (var i = 0; i < overlays.length; i++) {
+            if (overlays[i].owner.login != this.login) continue;
+            list.append(this._createOverlayEntry(overlays[i]));
+        }
+    },
+
+    _createOverlayEntry: function(overlay)
+    {
+        var elem = cloneTemplate("#template-overlay-entry");
+        var openButton = $(".name", elem);
+        openButton.html(overlay.name || "<i>-no name-</i>");
+        openButton.button({
+            icons:{primary:"ui-icon-folder-open"}
+        }).click({id: overlay.id}, $.proxy(this, "_onClickLoad"));
+
+        openButton.next().button({
+            text: false,
+            icons:{primary:"ui-icon-triangle-1-s"}
+        }).click(function(){
+            $(this).parent().next().slideToggle("fast");
+        });
+
+        openButton.parent().buttonset();
+
+        // jQuery.show() does not seem to work for some reason...
+        if (overlay.workspace) $("span.workspace", elem).css("display", "inline");
+        if (overlay.shared) {
+            $("span.shared", elem).css("display", "inline");
+            if (overlay.pending) $("span.pending", elem).css("display", "inline");
+        }
+        $(".owner", elem).text(overlay.owner.name);
+        $(".description", elem).text(overlay.description);
+        $(".modified", elem).text(overlay.modified);
+        return elem;
+    },
+
+    _onClickLoad: function(event, ui) {
+        this.overlayList.dialog("close");
+        this.rpc("overlay_get", {id: event.data.id}).done(
+                $.proxy(this, "setOverlay"));
     },
 
     /**
@@ -956,21 +1090,39 @@ var Dashboard = Base.extend({
      */
     setOverlay: function(overlay)
     {
-        while(this.widgets.length) {
-            var widget = this.widgets.pop();
-            widget.destroy();
+        this.overlay = overlay;
+
+        // Destroy old widgets
+        for(var id in this.widgets) {
+            this.widgets[id].destroy();
+            delete this.widgets[id];
         }
 
+        // Create overlay UI
+        this.overlayUI = new Overlay(this, overlay.columns);
+        this.overlayUI.columnChangeCb.add($.proxy(this, "_onColumnChange"));
+        // Create new widgets
         while(overlay.widgets.length) {
-            var widget = Widget.createInstance(this, overlay.widgets.pop());
-            this.widgets.push(widget);
+            this._createWidget(overlay.widgets.pop());
         }
-        this.overlay = new Overlay(this, overlay.columns);
-        this.overlay.columnChangeCb.add($.proxy(this, "_onOverlayChange"));
-        for (var i = 0; i < this.widgets.length; i++) {
-            this.overlay.insertWidget(this.widgets[i]);
+        this.overlayUI.widgetsMovedCb.add($.proxy(this, "_onWidgetsMoved"));
+    },
+
+    _onWidgetsMoved: function(col, widget_ids)
+    {
+        for (var i = 0; i < widget_ids.length; i++) {
+            var id = widget_ids[i].split("_")[1];
+            this.widgets[id].state.col = col;
+            this.widgets[id].state.pos = i;
         }
-        this.overlay.widgetsMovedCb.add($.proxy(this, "_onWidgetsMoved"));
+    },
+    _onWidgetRemove: function(widget)
+    {
+        delete this.widgets[widget.id]
+    },
+    _onColumnChange: function(columns)
+    {
+        this.overlay.columns = columns;
     },
 
     /**
@@ -1024,34 +1176,6 @@ var Dashboard = Base.extend({
     },
 
     /**
-     * Clear the user's workspace, deleting the temporary workspace overlay on
-     * the server simultaneously.
-     */
-    clear: function()
-    {
-        if (this.overlay.id && this.overlay.workspace) this.deleteOverlay(this.overlay.id);
-        this.setOverlay(this._makeDefaultOverlay());
-    },
-
-    /**
-     * Ask the server to add a widget to the workspace.
-     *
-     * @param type
-     *      One of the supported widget types.
-     */
-    addWidget: function(type)
-    {
-        var widget = Widget.createInstance(this, {
-            name: 'Unnamed widget',
-            type: type,
-        });
-
-        this.widgets.push(widget);
-        this.overlay.insertWidget(widget);
-        widget.onClickEdit();
-    },
-
-    /**
      * Return an array describing state of widgets in the workspace, as
      * understood by 'save_workspace' RPC.
      *
@@ -1060,10 +1184,11 @@ var Dashboard = Base.extend({
      */
     _getWidgetStates: function()
     {
-        return $.map(this.widgets, function(widget)
-        {
-            return widget.state;
-        });
+        var states = [];
+        for (var id in this.widgets) {
+            states.push($.extend({}, this.widgets[id].state));
+        }
+        return states;
     },
 
     /**
