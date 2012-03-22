@@ -261,9 +261,14 @@ var BugsWidget = Widget.extend(
      */
     _getSearchQuery: function()
     {
-        var loc = $("#cboxContent iframe").contents().get(0).location;
-        if (loc.pathname.match("buglist.cgi")) {
-            this._queryField.val(loc.search);
+        try {
+            var loc = $("#cboxContent iframe").contents()[0].location;
+            if (loc.pathname.match("buglist.cgi")) {
+                this._queryField.val(loc.search);
+            }
+        } catch(e) {
+            if (window.console) console.error(e);
+            alert("Failed to get the query string");
         }
     },
 
@@ -272,8 +277,14 @@ var BugsWidget = Widget.extend(
      */
     _confirmQueryClose: function()
     {
-        var page = $("#cboxContent iframe").contents()[0].location.pathname;
-        if (page.match("buglist.cgi") == null) {
+        var path = "";
+        try {
+            path = $("#cboxContent iframe").contents()[0].location.pathname;
+        } catch(e) {
+            if (window.console) console.error(e);
+            return true;
+        }
+        if (path.match("buglist.cgi") == null) {
             return confirm(
                 "After entering the search parameters, "
                 + "you need to click 'search' to open "
