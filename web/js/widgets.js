@@ -383,26 +383,25 @@ var MyBugsWidget = BugsWidget.extend({
     constructor: function(dashboard, state)
     {
         this.base(dashboard, state);
+        // Exact same query as the default "My bugs" search
         this.state.data.query = getQueryString({
-            bug_status: ['NEW', 'ASSIGNED', 'NEED_INFO', 'REOPENED', 'WAITING',
-                    'RESOLVED', 'RELEASED'],
+            bug_status: ['UNCONFIRMED', 'NEW', 'ASSIGNED', 'REOPENED'],
             email1: this._dashboard.config.user_login,
             emailassigned_to1: 1,
-            email_reporter1: 1,
+            emailreporter1: 1,
             emailtype1: 'exact',
             'field0-0-0': 'bug_status',
-            'field0-0-1': 'reporter',
-            query_format: 'advanced',
             'type0-0-0': 'notequals',
-            'type0-0-1': 'equals',
             'value0-0-0': 'UNCONFIRMED',
-            'value0-0-1': this._dashboard.config.user_login
+            'field0-0-1': 'reporter',
+            'type0-0-1': 'equals',
+            'value0-0-1': this._dashboard.config.user_login,
         });
     },
     render: function()
     {
         this.base();
-        this.settingsDialog.find("[name*='query']").attr("disabled", "disabled");
+        this.settingsDialog.find(".buglist-query-entry").hide();
     },
 });
 Widget.addClass('mybugs', MyBugsWidget);
