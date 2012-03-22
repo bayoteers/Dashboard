@@ -63,6 +63,8 @@ use constant OVERLAY_FIELDS => {
     shared => 'boolean',
     pending => 'boolean',
     workspace => 'boolean',
+    user_can_edit => 'boolean',
+    user_can_publish => 'boolean',
 };
 
 
@@ -130,9 +132,16 @@ sub overlay_list {
     my @overlays;
     my @matches;
 
+    # TODO Make this a single query to get the ids and use new_from_list()
+    #
     # Shared overlays and the ones pending publishing if user is admin
-    push(@matches, @{Bugzilla::Extension::Dashboard::Overlay->match({
-            shared => 1, pending => $user->in_group('admin')})});
+    if ($user->in_group('admin')) {
+        push(@matches, @{Bugzilla::Extension::Dashboard::Overlay->match({
+                shared => 1})});
+    } else {
+        push(@matches, @{Bugzilla::Extension::Dashboard::Overlay->match({
+                shared => 1, pending => 0})});
+    }
     # Users own overlays
     push(@matches, @{Bugzilla::Extension::Dashboard::Overlay->match({
             owner_id => $user->id})});
@@ -181,7 +190,7 @@ sub overlay_publish {
 
     my $overlay = $self->_get_overlay($params->{id});
 
-    if ($overlay->pending) {
+    if ($overlay->shared && $overlay->pending) {
         $overlay->set_pending(0);
         $overlay->update();
     }

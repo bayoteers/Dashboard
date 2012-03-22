@@ -121,14 +121,25 @@ sub widgets {
 sub set_name        { $_[0]->set('name', $_[1]); }
 sub set_description { $_[0]->set('description', $_[1]); }
 sub set_pending     { $_[0]->set('pending', $_[1]); }
-sub set_shared      { $_[0]->set('shared', $_[1]); }
 sub set_workspace   { $_[0]->set('workspace', $_[1]); }
 sub set_columns     { $_[0]->set('columns', $_[1]); }
+
+sub set_shared {
+    my ($self, $value) = @_;
+    if (!$self->shared && $value) {
+        $self->set('pending', 1);
+    } elsif ($self->shared && !$value) {
+        $self->set('pending', 0);
+    }
+    $self->set('shared', $value);
+}
 
 # These are here so that we can just pass nice hash to set_all
 sub set_created     { }
 sub set_modified    { }
 sub set_owner       { }
+sub set_user_can_edit    { }
+sub set_user_can_publish { }
 
 sub set_widgets {
     my ($self, $widgets) = @_;
@@ -240,6 +251,19 @@ sub user_is_owner {
     return 0 unless defined $user;
     return $user->id == $self->owner_id;
 }
+
+sub user_can_edit {
+    my $self = shift;
+    return $self->user_is_owner;
+}
+
+sub user_can_publish {
+    my $self = shift;
+    my $user = Bugzilla->user;
+    return 0 unless defined $user;
+    return $self->shared && $self->pending && $user->in_group('admin');
+}
+
 
 ## Old storable stuff
 #

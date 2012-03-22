@@ -132,6 +132,14 @@ div.widget {
     /* jQuery UI folder open */
     background-position: -16px -96px;
 }
+.ui-icon.icon-deleteoverlay {
+    /* jQuery UI trash */
+    background-position: -176px -96px;
+}
+.ui-icon.icon-publishoverlay {
+    /* jQuery UI check */
+    background-position: -64px -144px;
+}
 
 .ui-icon.icon-addwidget {
     /* jQuery UI plus */

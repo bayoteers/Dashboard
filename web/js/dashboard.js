@@ -856,12 +856,13 @@ var Dashboard = Base.extend({
      */
     constructor: function(params)
     {
+        this.overlay = {};
+        this.widgets = {};
+        this.buttons = {};
         this.initUI();
         if (params.config) {
             this.login = params.config.user.login;
         }
-        this.overlay = {};
-        this.widgets = {};
         this.newOverlay();
     },
 
@@ -871,6 +872,7 @@ var Dashboard = Base.extend({
         $("#buttons button").each(function(){
             var $elem = $(this);
             var name = $elem.attr("name");
+            dashboard.buttons[name] = $elem;
             $elem.button({
                 text: false,
                 icons: {primary: "icon-" + name.toLowerCase(),},
@@ -881,6 +883,7 @@ var Dashboard = Base.extend({
         this.widgetSelect = $("#buttons [name='widgettype']");
         this.overlaySettings = $("#overlay-settings");
         this.overlayList = $("#overlay-open");
+        this.notify = $("#dashboard_notify");
     },
 
     onClickNewoverlay: function()
@@ -911,6 +914,7 @@ var Dashboard = Base.extend({
     onClickSaveoverlay: function()
     {
         if (!this.overlay.id) {
+            // TODO Make overlay settings modifiable
             this.onClickOverlaysettings();
             return;
         } else {
@@ -929,6 +933,40 @@ var Dashboard = Base.extend({
             if (!confirm("There is unsaved changes. Continue?")) return;
         }
         this.rpc("overlay_list").done($.proxy(this, "_openOverlayList"));
+    },
+
+    onClickDeleteoverlay: function()
+    {
+        if(!confirm("Do you really want to delete this overlay")) return;
+        var rpc = this.rpc('overlay_delete', {
+            id: this.overlay.id
+        });
+        rpc.done($.proxy(this, "_onDeleteOverlayDone"));
+    },
+
+    _onDeleteOverlayDone: function(overlays)
+    {
+        this.onClickNewoverlay();
+        this.notify.text("Overlay deleted");
+    },
+
+    onClickPublishoverlay: function()
+    {
+        if (!this.overlay.user_can_publish) {
+            alert("You are not allowed to publish this overlay!");
+            return;
+        }
+        var rpc = this.rpc('overlay_publish', {
+            id: this.overlay.id
+        });
+        rpc.done($.proxy(this, "_onPublishOverlayDone"));
+
+    },
+    _onPublishOverlayDone: function(pending)
+    {
+        this.overlay.pending = pending;
+        this.buttons.publishoverlay.toggle(pending);
+        this.notify.text("Overlay published");
     },
 
     // TODO Overlay UI object should bind directly to these buttons
@@ -989,14 +1027,16 @@ var Dashboard = Base.extend({
     },
 
     /**
-     * Create an empty overlay for our workspace.
+     * Create an empty overlay definition
      */
     _makeDefaultOverlay: function()
     {
         return {
-            name: 'Workspace',
+            name: 'My Overlay',
             description: 'Unsaved changes',
             workspace: false,
+            user_can_edit: true,
+            user_can_publish: false,
             columns: this._makeColumns(3),
             widgets: []
         };
@@ -1106,6 +1146,11 @@ var Dashboard = Base.extend({
             this._createWidget(overlay.widgets.pop());
         }
         this.overlayUI.widgetsMovedCb.add($.proxy(this, "_onWidgetsMoved"));
+        
+        // Set buttons
+        this.buttons.saveoverlay.toggle(overlay.user_can_edit);
+        this.buttons.deleteoverlay.toggle(overlay.id && overlay.user_can_edit);
+        this.buttons.publishoverlay.toggle(overlay.user_can_publish);
     },
 
     _onWidgetsMoved: function(col, widget_ids)
@@ -1123,23 +1168,6 @@ var Dashboard = Base.extend({
     _onColumnChange: function(columns)
     {
         this.overlay.columns = columns;
-    },
-
-    /**
-     * Ask the server to delete an overlay.
-     */
-    deleteOverlay: function(overlay_id)
-    {
-        var rpc = this.rpc('overlay_delete', {
-            id: overlay_id
-        });
-        rpc.done($.proxy(this, "_onDeleteOverlayDone"));
-    },
-
-    _onDeleteOverlayDone: function(overlays)
-    {
-        this.setOverlays(overlays);
-        this.notifyCb.fire('Overlay deleted');
     },
 
     /**
