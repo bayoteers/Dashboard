@@ -6,28 +6,16 @@
   # extension, so that I wouldn't conflict with other error names in
   # Bugzilla or other extensions.
   #%]
-[% IF error == "dashboard_illegal_id" %]
-    [% title = "Fatal Error" %]
-    Your request contained an illegal overlay, widget, or user ID.
-[% ELSIF error == "dashboard_max_columns" %]
-    [% title = "Fatal Error" %]
-    Cannot create new column, maximum reached!
-[% ELSIF error == "dashboard_column_nonempty" %]
-    [% title = "Fatal Error" %]
-    You must remove widgets from the last column before deleting it!
-[% ELSIF error == "dashboard_last_column" %]
-   [% title = "Fatal Error" %]
-   You cannot delete the last column.
-[% ELSIF error == "dashboard_max_widgets" %]
-   [% title = "Fatal Error" %]
-   Cannot create new widget, maximum number reached!
-[% ELSIF error == "dashboard_not_found" %]
-   [% title = "Fatal Error" %]
-   Cannot load, preferences not found!
-[% ELSIF error == "dashboard_invalid_type" %]
-   [% title = "Fatal Error" %]
-   Your request contained an invalid widget type.
-[% ELSIF error == "dashboard_invalid_color" %]
-   [% title = "Fatal Error" %]
-   Your request contained an invalid color name.
+[% IF error == "dashboard_object_access_denied" %]
+    [% title = "Access denied" %]
+    You are not allowed to perform this operation on [% class _ " " _ id %]
+[% ELSIF error == "overlay_publish_denied" %]
+    [% title = "Access Denied" %]
+    You are not authorized to publish this overlay
+[% ELSIF error == "overlay_does_not_exist" %]
+    [% title = "Does not exists" %]
+    Overlay with id [% id %] does not exist
+[% ELSIF error == "widget_does_not_exist" %]
+   [% title = "Does not exists" %]
+   Widget with id [% id %] does not exist
 [% END %]

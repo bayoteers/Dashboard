@@ -75,7 +75,7 @@ use constant OVERLAY_FIELDS => {
 sub _get_overlay {
     my ($self, $id) = @_;
     my $overlay = Bugzilla::Extension::Dashboard::Overlay->new($id);
-    ThrowCodeError('object_does_not_exist', { id => $id, class => 'Overlay' })
+    ThrowUserError('overlay_does_not_exist', { id => $id, class => 'Overlay' })
         unless defined $overlay;
     return $overlay;
 }
@@ -98,7 +98,7 @@ sub overlay_save {
         my $id = delete $params->{id};
         # Existing overlay
         $overlay = $self->_get_overlay($id);
-        ThrowCodeError("dashboard_object_access_denied", {
+        ThrowUserError("dashboard_object_access_denied", {
                 class => 'Overlay', id => $id })
             unless ($overlay->owner_id == $user->id);
         $overlay->set_all($params);
@@ -122,7 +122,7 @@ sub overlay_get {
         unless defined $params->{id};
 
     my $overlay = $self->_get_overlay($params->{id});
-    ThrowCodeError("dashboard_object_access_denied", {
+    ThrowUserError("dashboard_object_access_denied", {
             class => 'Overlay', id => $params->{id} })
         unless $overlay->user_is_owner ||
                 ($overlay->shared &&
@@ -172,7 +172,7 @@ sub overlay_delete {
         unless defined $params->{id};
 
     my $overlay = $self->_get_overlay($params->{id});
-    ThrowCodeError("dashboard_object_access_denied", {
+    ThrowUserError("dashboard_object_access_denied", {
             class => 'Overlay', id => $params->{id} })
             unless $overlay->user_is_owner;
 
@@ -190,7 +190,7 @@ sub overlay_publish {
         unless defined $params->{id};
 
     # Only admin can publish
-    ThrowCodeError("overlay_publish_denied")
+    ThrowUserError("overlay_publish_denied")
         unless $user->in_group('admin');
 
     my $overlay = $self->_get_overlay($params->{id});
@@ -209,7 +209,7 @@ sub overlay_publish {
 sub _get_widget {
     my ($self, $id) = @_;
     my $widget = Bugzilla::Extension::Dashboard::Widget->new($id);
-    ThrowCodeError('object_does_not_exist', { id => $id, class => 'Widget'})
+    ThrowUserError('widget_does_not_exist', { id => $id })
         unless defined $widget;
     return $widget;
 }
@@ -229,7 +229,7 @@ sub widget_save {
     if (defined $params->{id}) {
         my $id = delete $params->{id};
         $widget = $self->_get_widget($id);
-        ThrowCodeError("dashboard_object_access_denied", {
+        ThrowUserError("dashboard_object_access_denied", {
                 class => 'Widget', id => $id })
             unless $widget->user_is_owner;
         $widget->set_all($params);
@@ -250,7 +250,7 @@ sub widget_get {
             param => 'id'})
         unless defined $params->{id};
     my $widget = $self->_get_widget($params->{id});
-    ThrowCodeError("dashboard_object_access_denied", {
+    ThrowUserError("dashboard_object_access_denied", {
             class => 'Widget', id => $params->{id} })
         unless $widget->user_is_owner;
     return $self->_widget_to_hash($widget);
@@ -264,7 +264,7 @@ sub widget_list {
             param => 'id'})
         unless defined $params->{overlay_id};
     my $overlay = $self->_get_overlay($params->{overlay_id});
-    ThrowCodeError("dashboard_object_access_denied", {
+    ThrowUserError("dashboard_object_access_denied", {
             class => 'Overlay', id => $params->{overlay_id} })
         unless $overlay->user_is_owner ||
                 ($overlay->shared && !$overlay->pending);
@@ -281,7 +281,7 @@ sub widget_delete {
             param => 'id'})
         unless defined $params->{id};
     my $widget = $self->_get_widget($params->{id});
-    ThrowCodeError("dashboard_object_access_denied", {
+    ThrowUserError("dashboard_object_access_denied", {
             class => 'Widget', id => $params->{id} })
         unless $widget->user_is_owner;
     $widget->remove_from_db();

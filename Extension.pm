@@ -240,7 +240,10 @@ sub webservice {
 sub webservice_error_codes {
     my ($self, $args) = @_;
     my $error_map = $args->{error_map};
-    $error_map->{'dashboard_my_error'} = 10001;
+    $error_map->{'dashboard_object_access_denied'} = 10001;
+    $error_map->{'overlay_publish_denied'} = 10002;
+    $error_map->{'overlay_does_not_exist'} = 10003;
+    $error_map->{'widget_does_not_exist'} = 10004;
 }
 
 __PACKAGE__->NAME;
