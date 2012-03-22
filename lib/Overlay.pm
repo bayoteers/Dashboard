@@ -147,6 +147,7 @@ sub set_widgets {
     # Sort incoming to existing and new widgets
     my %existing_widgets;
     my @new_widgets;
+    my $modified = 0;
     foreach my $widget (@{$widgets}) {
         if (!defined $widget->{id} || $widget->{overlay_id} != $self->id) {
             push(@new_widgets, $widget);
@@ -166,6 +167,7 @@ sub set_widgets {
         } else {
             $db_widget->remove_from_db();
         }
+        $modified = 1;
     }
 
     # Create new widgets
@@ -174,6 +176,12 @@ sub set_widgets {
         $params->{overlay_id} = $self->id;
         my $widget = Bugzilla::Extension::Dashboard::Widget->create($params);
         push(@{$self->{widgets}}, $widget);
+        $modified = 1;
+    }
+
+    if ($modified) {
+        $self->{modified} = Bugzilla->dbh->selectrow_array(
+            'SELECT LOCALTIMESTAMP(0)');
     }
 }
 

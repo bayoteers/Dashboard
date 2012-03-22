@@ -70,6 +70,13 @@ sub page_before_template {
     }
 
     cgi_no_cache;
+    
+    my $overlay_id = Bugzilla->cgi->param("overlay_id");
+    if (!defined $overlay_id) {
+       $overlay_id = Bugzilla->dbh->selectrow_array(
+           "SELECT id FROM dashboard_overlays WHERE owner_id = ? ".
+           "ORDER BY modified DESC", {}, Bugzilla->user->id);
+    }
 
     my $config = {
         user_id => int(Bugzilla->user->id),
@@ -78,6 +85,7 @@ sub page_before_template {
         rss_max_items => int(Bugzilla->params->{dashboard_rss_max_items}),
         browsers_warn => Bugzilla->params->{"dashboard_browsers_warn"},
         browsers_block => Bugzilla->params->{"dashboard_browsers_block"},
+        overlay_id => $overlay_id,
     };
 
     my $vars = $args->{vars};

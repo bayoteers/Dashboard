@@ -357,7 +357,6 @@ var BugsWidget = Widget.extend(
             content.tablesorter();
         }
         this.contentElement.html(content);
-        this.contentElement.trigger('vertical_resize');
     }
 
 });
@@ -376,7 +375,7 @@ var MyBugsWidget = BugsWidget.extend({
         this.state.data.query = getQueryString({
             bug_status: ['NEW', 'ASSIGNED', 'NEED_INFO', 'REOPENED', 'WAITING',
                     'RESOLVED', 'RELEASED'],
-            email1: this._dashboard.login,
+            email1: this._dashboard.config.user_login,
             emailassigned_to1: 1,
             email_reporter1: 1,
             emailtype1: 'exact',
@@ -386,7 +385,7 @@ var MyBugsWidget = BugsWidget.extend({
             'type0-0-0': 'notequals',
             'type0-0-1': 'equals',
             'value0-0-0': 'UNCONFIRMED',
-            'value0-0-1': this._dashboard.login
+            'value0-0-1': this._dashboard.config.user_login
         });
     },
     render: function()

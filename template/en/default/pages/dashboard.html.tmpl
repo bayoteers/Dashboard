@@ -25,7 +25,13 @@
 [% USE Bugzilla %]
 
 [% header = BLOCK %]
-    Dashboard
+    Dashboard:
+    <a href="#" id="overlay-info">
+        <span class="name"></span>
+        <span class="workspace">(workspace)</span>
+        <span class="shared">(shared)</span>
+        <span class="pending">(pending)</span>
+    </a><br/>
     <span id="buttons">
         &nbsp;
         <button name="newoverlay" type="button">New Overlay</button>

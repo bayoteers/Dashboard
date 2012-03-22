@@ -32,22 +32,6 @@ function makeSelfUrl(obj)
     return url + '#?' + $.param(obj, true);
 }
 
-
-/**
- * Return anchor parameters as an object.
- */
-function getAnchorParams()
-{
-    var obj = {};
-    var params = window.location.hash.substr(2).split('&');
-    for(var i = 0; i < params.length; i++) {
-        var bits = params[i].split('=');
-        obj[bits[0]] = decodeURIComponent(bits[1]);
-    }
-    return obj;
-}
-
-
 /**
  * Left-pad a string with a character until it is a certain length.
  * @param s
@@ -832,19 +816,9 @@ var Overlay = Base.extend({
 
 /**
  * Dashboard 'model': this maintains the front end's notion of the workspace
- * state, which includes column widths, widget instances, user's login state,
- * and available overlay list.
+ * state, which includes column widths, widget instances, and other overlay
+ * settings.
  *
- * 'View' classes are expected to subscribe to the various *Cb callbacks, and
- * update their visual presentation based on, and *only* based on, the state
- * reflected by this model when the callback fires. This means visual changes
- * associated with a mutation (e.g. resizing a column) should not apply until
- * after the callback.
- *
- * Methods are provided for saving state; they return Rpc objects. If some
- * visual update is required following a mutation (e.g. closing a dialog after
- * a saving an overlay), this should be done by subscribing to the ".done()"
- * event provided by the Rpc.
  */
 var Dashboard = Base.extend({
     /**
@@ -854,17 +828,20 @@ var Dashboard = Base.extend({
      *      Dashboard configuration object passed in via JSON object in
      *      dashboard.html.
      */
-    constructor: function(params)
+    constructor: function(config)
     {
         this.overlay = {};
         this._oldOverlay = null;
         this.widgets = {};
         this.buttons = {};
+        this.config = config || {};
+
         this.initUI();
-        if (params.config) {
-            this.login = params.config.user.login;
+        if (this.config.overlay_id) {
+            this.loadOverlay(config.overlay_id);
+        } else {
+            this.welcomeOverlay();
         }
-        this.newOverlay();
     },
 
     initUI: function()
@@ -881,12 +858,17 @@ var Dashboard = Base.extend({
             var callback = "onClick" + name[0].toUpperCase() + name.slice(1);
             $elem.click($.proxy(dashboard, callback));
         });
+
+        this.overlayInfo = $("#overlay-info");
         this.widgetSelect = $("#buttons [name='widgettype']");
         this.overlaySettings = $("#overlay-settings");
         this.overlayList = $("#overlay-open");
         this.notify = $("#dashboard_notify");
     },
 
+    /******************
+     * Button handlers.
+     */
     onClickNewoverlay: function()
     {
         this.setOverlay(this._makeDefaultOverlay());
@@ -901,15 +883,6 @@ var Dashboard = Base.extend({
             type: type,
         });
         widget.onClickEdit();
-    },
-
-    _createWidget: function(state)
-    {
-        var widget = Widget.createInstance(this, state);
-        widget.onRemoveCb.add($.proxy(this, "_onWidgetRemove"));
-        this.widgets[widget.id] = widget;
-        this.overlayUI.insertWidget(widget);
-        return widget;
     },
 
     onClickSaveoverlay: function()
@@ -936,6 +909,7 @@ var Dashboard = Base.extend({
     onClickOpenoverlay: function()
     {
         if (this._unsaved) {
+            // TODO implement unsaved changes tracking
             if (!confirm("There is unsaved changes. Continue?")) return;
         }
         this.rpc("overlay_list").done($.proxy(this, "_openOverlayList"));
@@ -949,7 +923,6 @@ var Dashboard = Base.extend({
         });
         rpc.done($.proxy(this, "_onDeleteOverlayDone"));
     },
-
     _onDeleteOverlayDone: function(overlays)
     {
         this.onClickNewoverlay();
@@ -994,6 +967,9 @@ var Dashboard = Base.extend({
         this._openOverlaySettings(false);
     },
 
+    /***********************************
+     * Overlay settings dialog handling.
+     */
     _openOverlaySettings: function(save)
     {
         var overlay = this.overlay;
@@ -1040,7 +1016,6 @@ var Dashboard = Base.extend({
         });
         this.overlaySettings.dialog("close");
     },
-
     _saveOverlaySettings: function()
     {
         this._applyOverlaySettings();
@@ -1048,11 +1023,9 @@ var Dashboard = Base.extend({
     },
 
     /**
-     * Repopulate with the initial blank workspace (separate from constructor
-     * since view classes need to subscribe before this fires any events),
-     * containing some informative welcome text.
+     * Create initial empty overlay with welcome message
      */
-    newOverlay: function()
+    welcomeOverlay: function()
     {
         this.setOverlay($.extend(this._makeDefaultOverlay(),
         {
@@ -1077,6 +1050,8 @@ var Dashboard = Base.extend({
             name: 'My Overlay',
             description: 'Unsaved changes',
             workspace: false,
+            shared: false,
+            pending: true,
             user_can_edit: true,
             user_can_publish: false,
             columns: this._makeColumns(3),
@@ -1084,6 +1059,9 @@ var Dashboard = Base.extend({
         };
     },
 
+    /**
+     * Saves the current overlay state
+     */
     saveOverlay: function(asnew)
     {
         var rpc = this.rpc("overlay_save", this._makeSaveParams(asnew));
@@ -1117,11 +1095,14 @@ var Dashboard = Base.extend({
         var list = this.overlayList.find("ul.owner");
         list.empty();
         for (var i = 0; i < overlays.length; i++) {
-            if (overlays[i].owner.login != this.login) continue;
+            if (overlays[i].owner.id != this.config.user_id) continue;
             list.append(this._createOverlayEntry(overlays[i]));
         }
     },
 
+    /**
+     * Renders single overlay entry for the open dialog
+     */
     _createOverlayEntry: function(overlay)
     {
         var elem = cloneTemplate("#template-overlay-entry");
@@ -1152,9 +1133,20 @@ var Dashboard = Base.extend({
         return elem;
     },
 
+    /**
+     * Overlay clicked in the open dialog.
+     */
     _onClickLoad: function(event, ui) {
         this.overlayList.dialog("close");
-        this.rpc("overlay_get", {id: event.data.id}).done(
+        this.loadOverlay(event.data.id);
+    },
+
+    /**
+     * Loads overlay with given ID
+     */
+    loadOverlay: function(id)
+    {
+        this.rpc("overlay_get", {id: id}).done(
                 $.proxy(this, "setOverlay"));
     },
 
@@ -1163,7 +1155,7 @@ var Dashboard = Base.extend({
      * JSON object.
      *
      * @param workspace
-     *      Overlay JSON, as represented by get_overlay, get_preferences RPCs.
+     *      Overlay JSON, as represented by overlay_get RPC
      */
     setOverlay: function(overlay)
     {
@@ -1183,13 +1175,36 @@ var Dashboard = Base.extend({
             this._createWidget(overlay.widgets.pop());
         }
         this.overlayUI.widgetsMovedCb.add($.proxy(this, "_onWidgetsMoved"));
-        
+
+        // Set overlay info
+        this.overlayInfo.attr("href",
+                "page.cgi?id=dashboard.html&overlay_id=" + (overlay.id || ""))
+        $(".name", this.overlayInfo).text(overlay.name);
+        $(".workspace", this.overlayInfo).toggle(overlay.workspace);
+        $(".shared", this.overlayInfo).toggle(overlay.shared);
+        $(".pending", this.overlayInfo).toggle(overlay.shared && overlay.pending);
+
         // Set buttons
         this.buttons.saveoverlay.toggle(overlay.user_can_edit);
         this.buttons.deleteoverlay.toggle(overlay.id && overlay.user_can_edit);
         this.buttons.publishoverlay.toggle(overlay.user_can_publish);
     },
 
+    /**
+     * Creates a widget and inserts it in the overlay ui.
+     */
+    _createWidget: function(state)
+    {
+        var widget = Widget.createInstance(this, state);
+        widget.onRemoveCb.add($.proxy(this, "_onWidgetRemove"));
+        this.widgets[widget.id] = widget;
+        this.overlayUI.insertWidget(widget);
+        return widget;
+    },
+
+    /*******************************************
+     * Column and widget postion change handling.
+     */
     _onWidgetsMoved: function(col, widget_ids)
     {
         for (var i = 0; i < widget_ids.length; i++) {
@@ -1207,7 +1222,7 @@ var Dashboard = Base.extend({
         this.overlay.columns = columns;
     },
 
-    /**
+    /********************************************
      * Start an RPC to the Dashboard web service.
      *
      * @param method
@@ -1300,9 +1315,7 @@ function checkBrowserQuality()
 function main()
 {
     checkBrowserQuality();
-    var params = $.extend({config: BB_CONFIG}, getAnchorParams());
-    dashboard = new Dashboard(params);
-    window.location.hash = '';
+    dashboard = new Dashboard(DASHBOARD_CONFIG);
 }
 
 $(document).ready(main);
