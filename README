@@ -1,4 +1,13 @@
 
+    Changes
+======================
+
+1.0 - The Dashboard extensions storage backend has been rewriten to use
+    database. Old file based storage is not compatible with this, and currently
+    there is no migration tools for existing overlays. Upgrading will not
+    destroy the old overlays, but they won't be available in the new version.
+
+
     Dashboard
 ======================
 
