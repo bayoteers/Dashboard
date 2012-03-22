@@ -298,9 +298,17 @@ var Widget = Base.extend({
 
         if (this.element.hasClass("widget-max")) {
             this.containerElement.css("height", "100%");
+            if (this.state.minimized) {
+                this.headerElement.removeClass("ui-corner-bottom");
+                this.containerElement.slideDown("fast");
+            }
             this.onMaximizeCb.fire(true);
         } else {
             this.containerElement.css("height", this.state.height);
+            if (this.state.minimized) {
+                this.headerElement.addClass("ui-corner-bottom");
+                this.containerElement.slideUp("fast");
+            }
             this.onMaximizeCb.fire(false);
         }
 
