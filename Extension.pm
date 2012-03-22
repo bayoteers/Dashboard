@@ -25,7 +25,6 @@ package Bugzilla::Extension::Dashboard;
 use strict;
 use base qw(Bugzilla::Extension);
 
-use Data::Dumper;
 use POSIX qw(strftime);
 
 use Bugzilla::Constants;
@@ -34,13 +33,11 @@ use Bugzilla::Util;
 use Bugzilla::User;
 
 use Bugzilla::Extension::Dashboard::Config;
-use Bugzilla::Extension::Dashboard::Util;
-use Bugzilla::Extension::Dashboard::Schema;
 use Bugzilla::Extension::Dashboard::WebService;
 
 use JSON;
 
-our $VERSION = '0.01';
+our $VERSION = '1.00';
 
 
 # Disable client-side caching of this HTTP request.
@@ -73,22 +70,18 @@ sub page_before_template {
     }
 
     cgi_no_cache;
-    migrate_workspace;
 
     my $config = {
-        rss_max_items => int(Bugzilla->params->{dashboard_rss_max_items}),
         user_id => int(Bugzilla->user->id),
         user_login => Bugzilla->user->login,
         is_admin => Bugzilla->user->in_group('admin'),
+        rss_max_items => int(Bugzilla->params->{dashboard_rss_max_items}),
         browsers_warn => Bugzilla->params->{"dashboard_browsers_warn"},
         browsers_block => Bugzilla->params->{"dashboard_browsers_block"},
-        overlays => Bugzilla::Extension::Dashboard::WebService::get_overlays(),
-        overlay_id => first_free_id(get_overlays_dir())
     };
 
     my $vars = $args->{vars};
     $vars->{dashboard_config} = JSON->new->utf8->pretty->encode($config);
-    #$vars->{dashboard_config} = encode_json($config);
 }
 
 sub db_schema_abstract_schema {

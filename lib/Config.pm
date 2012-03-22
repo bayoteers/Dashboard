@@ -31,20 +31,11 @@ our @EXPORT = qw(
     COLUMNS_DEFAULT
     COLUMNS_MAX
     WIDGETS_MAX
-    WIDGET_TYPES
 );
 
 use constant COLUMNS_DEFAULT => 3;
 use constant COLUMNS_MAX     => 4;
 use constant WIDGETS_MAX     => 30;
-
-use constant WIDGET_TYPES => qw(
-    mybugs
-    rss
-    url
-    text
-    bugs
-);
 
 our $sortkey = 5000;
 
@@ -59,12 +50,6 @@ sub get_param_list {
                                  'automatically deleting the oldest one.',
                          type => 't', # can't find docs, should be numeric.
                          default => '5',
-                      },
-                      {
-                         name => 'dashboard_jquery_path',
-                         desc => 'Path to JQuery, empty if Bugzilla already uses JQuery',
-                         type => 't',
-                         default => 'extensions/Dashboard/web/js/jquery-1.7.min.js',
                       },
                       {
                          name => 'dashboard_browsers_warn',

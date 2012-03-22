@@ -21,7 +21,7 @@
 #   Jari Savolainen <ext-jari.a.savolainen@nokia.com>
 #
 
-package Bugzilla::Extension::Dashboard::Util;
+package Bugzilla::Extension::Dashboard::Legacy::Util;
 
 use strict;
 use warnings;
@@ -52,7 +52,7 @@ use Storable qw(store retrieve);
 
 use Bugzilla::Constants;
 use Bugzilla::Extension::Dashboard::Config;
-use Bugzilla::Extension::Dashboard::Schema;
+use Bugzilla::Extension::Dashboard::Legacy::Schema;
 use Bugzilla::User;
 use Bugzilla::Util;
 

@@ -23,12 +23,6 @@ use warnings;
 
 use base qw(Bugzilla::WebService);
 
-use Data::Dumper;
-use File::Basename;
-use File::Copy;
-use File::Spec;
-use List::Util;
-use Storable;
 use XML::Feed;
 
 use Bugzilla::Constants;
@@ -38,8 +32,6 @@ use Bugzilla::Util;
 use Bugzilla::Extension::Dashboard::Config;
 use Bugzilla::Extension::Dashboard::Overlay;
 use Bugzilla::Extension::Dashboard::Widget;
-use Bugzilla::Extension::Dashboard::Schema qw(to_int);
-use Bugzilla::Extension::Dashboard::Util;
 
 use constant WIDGET_FIELDS => {
     id => 'int',
@@ -337,107 +329,11 @@ sub _widget_to_hash {
 }
 
 
-# Old methods
-
-
-
-
-sub require_account {
-    if(! Bugzilla->user->id) {
-        ThrowUserError('login_required');
-    }
-}
-
-
-sub delete_overlay {
-    require_account;
-    my ($self, $params) = @_;
-
-    my $overlay = Bugzilla::Extension::Dashboard::Overlay->from_store(
-        $params->{user_id}, $params->{id});
-    if($overlay) {
-        $overlay->delete();
-    }
-    return get_overlays();
-}
-
-
-sub get_overlay {
-    require_account;
-    my ($self, $params) = @_;
-
-    my $overlay = Bugzilla::Extension::Dashboard::Overlay->from_store(
-        $params->{user_id}, $params->{id});
-    return merge $overlay;
-}
-
-
-sub get_overlays {
-    require_account;
-    my ($self, $params) = @_;
-
-    my @overlays;
-    push @overlays, overlays_for_user(Bugzilla->user->id);
-    push @overlays, overlays_for_user(0);
-
-    # Remove fields useless for list view.
-    foreach my $overlay (@overlays) {
-        delete @$overlay{qw(columns widgets)};
-    }
-
-    my $is_admin = Bugzilla->user->in_group('admin');
-    return [ grep { $is_admin || !$_->{'pending'} } @overlays ];
-}
-
-
-sub publish_overlay {
-    require_account;
-    my ($self, $params) = @_;
-
-    my $overlay = Bugzilla::Extension::Dashboard::Overlay->from_store(
-        $params->{user_id}, $params->{id});
-    return merge $overlay->publish();
-}
-
-
-# Like save_overlay, but takes all data from the request.
-sub set_overlay {
-    require_account;
-    my ($self, $params) = @_;
-
-    my $class = 'Bugzilla::Extension::Dashboard::Overlay';
-
-    my $overlay = $class->from_store($params->{id}, $params->{user_id});
-
-    if($overlay) {
-        $overlay->update_from($params);
-    } else {
-        $overlay = $class->from_hash($params);
-    }
-
-    $overlay->save();
-    trim_workspace_overlays();
-    return merge $overlay;
-}
-
-
-sub clone_overlay {
-    require_account;
-    my ($this, $params) = @_;
-
-    my $overlay = Bugzilla::Extension::Dashboard::Overlay->from_store(
-        $params->{user_id}, $params->{id});
-    my $result = merge $overlay->clone($params->{new_id});
-    trim_workspace_overlays();
-    return $result;
-}
-
-
 # Fetch an RSS/ATOM feed at the given URL, 'url', returning a parsed and
 # normalized representation.
 sub get_feed {
-    require_account;
     my ($self, $params) = @_;
+    Bugzilla->login(LOGIN_REQUIRED);
 
     my $browser = LWP::UserAgent->new();
     my $proxy_url = Bugzilla->params->{'proxy_url'};

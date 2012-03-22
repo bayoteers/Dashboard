@@ -20,7 +20,7 @@
 #   David Wilson <ext-david.3.wilson@nokia.com>
 #
 
-package Bugzilla::Extension::Dashboard::Schema;
+package Bugzilla::Extension::Dashboard::Legacy::Schema;
 
 use strict;
 use Exporter 'import';
