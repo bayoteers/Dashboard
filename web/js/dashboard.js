@@ -857,6 +857,7 @@ var Dashboard = Base.extend({
     constructor: function(params)
     {
         this.overlay = {};
+        this._oldOverlay = null;
         this.widgets = {};
         this.buttons = {};
         this.initUI();
@@ -914,17 +915,22 @@ var Dashboard = Base.extend({
     onClickSaveoverlay: function()
     {
         if (!this.overlay.id) {
-            // TODO Make overlay settings modifiable
-            this.onClickOverlaysettings();
-            return;
+            this._openOverlaySettings(true);
         } else {
-            this.saveOverlay();
+            this.saveOverlay(false);
         }
     },
 
     onClickSaveoverlayas: function()
     {
-        alert("Not implemented");
+        if (this.overlay.id) {
+            this._oldOverlay = $.extend({}, this.overlay);
+            delete this.overlay.id;
+            this.overlay.name = "";
+            this.overlay.description = "";
+            this.overlay.shared = false;
+        }
+        this._openOverlaySettings(true);
     },
 
     onClickOpenoverlay: function()
@@ -985,6 +991,11 @@ var Dashboard = Base.extend({
 
     onClickOverlaysettings: function()
     {
+        this._openOverlaySettings(false);
+    },
+
+    _openOverlaySettings: function(save)
+    {
         var overlay = this.overlay;
         this.overlaySettings.find(".settings-field").each(function(){
             var field = $(this);
@@ -995,14 +1006,45 @@ var Dashboard = Base.extend({
                 field.val(overlay[name]);
             }
         });
+        var buttons = {
+            "Cancel": $.proxy(this, "_cancelOverlaySettings")
+        };
+        if (save) {
+            buttons["Save"] = $.proxy(this, "_saveOverlaySettings");
+        } else {
+            buttons["Apply"] = $.proxy(this, "_applyOverlaySettings");
+        }
+
         this.overlaySettings.dialog({
             width: 500,
             zIndex: 9999,
-            buttons: {
-                "Save": $.proxy(this, "saveOverlay"),
-                "Cancel": function(){ $(this).dialog("destroy") }
-            },
+            buttons: buttons
         });
+    },
+    _cancelOverlaySettings: function()
+    {
+        if (this._oldOverlay != null) this.overlay = this._oldOverlay;
+        this.overlaySettings.dialog("close");
+    },
+    _applyOverlaySettings: function()
+    {
+        var overlay = this.overlay;
+        this.overlaySettings.find(".settings-field").each(function(){
+            var field = $(this);
+            var name = field.attr("name");
+            if (field.attr("type") == "checkbox") {
+                overlay[name] = field.prop("checked");
+            } else {
+                overlay[name] = field.val();
+            }
+        });
+        this.overlaySettings.dialog("close");
+    },
+
+    _saveOverlaySettings: function()
+    {
+        this._applyOverlaySettings();
+        this.saveOverlay(true);
     },
 
     /**
@@ -1042,27 +1084,22 @@ var Dashboard = Base.extend({
         };
     },
 
-    saveOverlay: function()
+    saveOverlay: function(asnew)
     {
-        this.overlaySettings.dialog("destroy");
-        var overlay = this.overlay;
-        this.overlaySettings.find(".settings-field").each(function(){
-            var field = $(this);
-            var name = field.attr("name");
-            if (field.attr("type") == "checkbox") {
-                overlay[name] = field.prop("checked");
-            } else {
-                overlay[name] = field.val();
-            }
-        });
-        var rpc = this.rpc("overlay_save", this._makeOverlay());
+        var rpc = this.rpc("overlay_save", this._makeSaveParams(asnew));
         rpc.done($.proxy(this, "_saveDone"));
+        rpc.fail($.proxy(this, "_saveFail"));
     },
 
     _saveDone: function(result)
     {
-        alert("Overlay saved");
+        this.notify.text("Overlay saved");
+        this._oldOverlay = null;
         this.setOverlay(result.overlay);
+    },
+    _saveFail: function(error)
+    {
+        if(this._oldOverlay != null) this.overlay = this._oldOverlay;
     },
 
     _openOverlayList: function(overlays)
@@ -1204,30 +1241,32 @@ var Dashboard = Base.extend({
     },
 
     /**
-     * Return an array describing state of widgets in the workspace, as
-     * understood by 'save_workspace' RPC.
+     * Return structure that can be saved through rpc
      *
-     * @returns
-     *      Array of objects containing widget parameters.
+     * @param asnew
+     *      If true, removes the id values so that overlay gets saved as new one
      */
-    _getWidgetStates: function()
+    _makeSaveParams: function(asnew)
+    {
+        var overlay = $.extend({}, this.overlay, {
+            widgets: this._getWidgetStates(asnew)
+        });
+        if (asnew) delete overlay.id;
+        return overlay;
+    },
+    /**
+     * Return an array describing state of widgets in the workspace, as
+     * understood by the save rpc methods
+     */
+    _getWidgetStates: function(asnew)
     {
         var states = [];
         for (var id in this.widgets) {
-            states.push($.extend({}, this.widgets[id].state));
+            var state = $.extend({}, this.widgets[id].state);
+            if (asnew) delete state.id;
+            states.push(state);
         }
         return states;
-    },
-
-    /**
-     * Return an overlay structure describing the current workspace state, and
-     * taking the remaining metadata fields from this.overlay.
-     */
-    _makeOverlay: function()
-    {
-        return $.extend({}, this.overlay, {
-            widgets: this._getWidgetStates()
-        });
     },
 });
 

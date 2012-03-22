@@ -140,6 +140,10 @@ div.widget {
     /* jQuery UI check */
     background-position: -64px -144px;
 }
+.ui-icon.icon-overlaysettings {
+    /* jQuery UI wrench */
+    background-position: -176px -112px;
+}
 
 .ui-icon.icon-addwidget {
     /* jQuery UI plus */

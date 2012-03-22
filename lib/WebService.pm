@@ -86,6 +86,11 @@ sub overlay_save {
 
     # Publishing only via overlay_publish()
     delete $params->{pending};
+    # Delete other extra stuff
+    delete $params->{owner};
+    delete $params->{user_can_edit};
+    delete $params->{user_can_publish};
+
 
     my $overlay;
     my $changes = {};
