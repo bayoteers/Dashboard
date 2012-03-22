@@ -720,6 +720,8 @@ var Overlay = Base.extend({
         this._child("td.overlay-column").sortable({
             connectWith: "td.overlay-column",
             handle: ".widget-header",
+            opacity: 0.7,
+            tolerance: "pointer",
             update: $.proxy(this, "_onSortUpdate"),
             start: $.proxy(this, "_onSortStart"),
             stop: $.proxy(this, "_onSortStop"),
