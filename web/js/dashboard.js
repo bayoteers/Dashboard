@@ -1035,7 +1035,7 @@ var Dashboard = Base.extend({
                 pos: 0,
                 type: 'text',
                 name: 'Welcome to Dashboard',
-                height: 150,
+                height: 500,
                 data :{text: $('#dash-template-welcome-text').html()}
             }]
         }));

@@ -113,14 +113,61 @@
     </div>
 
     <div id="dash-template-welcome-text">
-        <p>To begin, please load an existing overlay using the Open icon in the
-        toolbar above, or alternatively you may clear the workspace and begin
-        building a new overlay from scratch.</p>
+<p>To begin, please load an existing overlay using the Open icon in the toolbar
+above, or alternatively you may clear the workspace and begin building a new
+overlay from scratch.</p>
 
-        <p>The current workspace available in this session will not be saved
-        until you explicitly write the changes to a new or existing overlay,
-        using the Save icon above.</p>
-    </div>
+<h3>The dashboard toolbar buttons:</h3>
+<ul>
+    <li>New Overlay - Opens a new empty dashboard overlay</li>
+    <li>Open Overlay - Fetches the list of existing overlays and opens a dialog
+    where you can open one ofthem</li>
+    <li>Save Overlay - Saves the changes in current overlay. If this is a new
+    overlay, it will pop up a dialog for entering the overlay name and
+    description</li>
+    <li>Save Overlay As... - Allows saving an existing overlay as a new instance
+    </li>
+    <li>Delete Overlay - Deletes the currently opened overlay. This is only
+    visible if the overlay has been saved and you are the owner of the overlay
+    </li>
+    <li>Publish Overlay - Publishes the shared overlay that is pending approval.
+    This is only visible to admins.</li>
+    <li>Overlay Settings - Opens up a dialog where you can change overlay name,
+    description and shared status</li>
+    <br />
+    <li>Add Widget select box and button - Allows you to create a new widget of
+    the selected type</li>
+    <br />
+    <li>Add column - Adds a new column to the overlay on the right</li>
+    <li>Remove column - Removes the rightmost column from the overlay. Any
+    widgets the will be moved to the column before that</li>
+    <li>Reset column widths - Makes the columns equaly spaced</li>
+</ul>
+
+<h3>The overlay</h3>
+<p>The overlay is laid out in columns which each can contain one or more
+widgets. There is a top 'column' which spans the whole page width and below
+that one or more (up to 4) columns side by side. The lower column widths can be
+changed by dragging from the column edge or resize handles at the top</p>
+
+<p>Overlays can be saved as shared, so that other user can view it. When
+overlay is set as shared is it not visible to others than admin users until
+admin approves and publishes the overlay.</p>
+
+<h3>Widgets</h3>
+<p>Widgets can be organized in overlay columns using drag and drop. The column
+width determines the widget width, but height can be adjusted by dragging the 
+bottom edge of the widget.</p>
+<p>Widget title bar contains buttons for
+<ul>
+    <li>Refreshing the widget content</li>
+    <li>Opening the widget settings dialog</li>
+    <li>Removing the widget</li>
+    <li>Minimizing the widget, so that only the title bar is wisible</li>
+    <li>and maximizing the widget to full browser window.</li>
+</ul>
+</p>
+</div>
 
     <div id="overlay-open" title="Load Overlay" class="settings-dialog">
         <b>Shared overlays</b>
