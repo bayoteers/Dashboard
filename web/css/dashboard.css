@@ -243,6 +243,16 @@ div.widget {
     background: url(images/icon_rss_link_b.png) center left no-repeat;
 }
 
+.widget table.buglist {
+    width: 100%;
+}
+.widget table.buglist th .ui-icon {
+    float: right;
+}
+.widget table.buglist td {
+    border: dotted 1px;
+}
+
 .settings-dialog .buglist-column-select select {
     right: 0px;
     position: absolute;

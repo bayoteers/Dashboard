@@ -434,7 +434,7 @@ var BugsWidget = Widget.extend(
                 $("tbody", content).append(row);
             }
             // Make it pretty and sortable
-            content.tablesorter({sortList:tableorder});
+            content.tablesorter({sortList: tableorder, useUI: true});
         }
         this.contentElement.html(content);
     }
