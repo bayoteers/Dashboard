@@ -77,6 +77,7 @@ div.widget {
 }
 .widget-content {
     margin: 0px;
+    padding: 2px;
     background: white;
     color: #000;
     overflow: auto;
@@ -242,3 +243,8 @@ div.widget {
     background: url(images/icon_rss_link_b.png) center left no-repeat;
 }
 
+.settings-dialog .buglist-column-select select {
+    right: 0px;
+    position: absolute;
+    margin-right: 10%;
+}

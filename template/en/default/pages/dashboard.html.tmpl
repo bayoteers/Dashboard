@@ -65,6 +65,11 @@
 
 [% javascript = BLOCK %]
     var DASHBOARD_CONFIG = [% dashboard_config || 'null' %];
+    var BUGLIST_COLUMNS = {
+    [% FOREACH bug_fields %]
+        [% IF value.buglist %]"[% value.name %]": "[% value.description %]",[% END %]
+    [% END %]
+    };
 [% END %]
 
 [% PROCESS global/header.html.tmpl
@@ -356,9 +361,16 @@ bottom edge of the widget.</p>
             <input name="editquery" type="button" value="Edit query" />
         </li>
         <li>
-            <label>Columns:</label><b>* Not supported yet *</b>
+            <label>Columns:</label><br/>
+            <ul class="buglist-column-select"></ul>
         </li>
     </fieldset>
+
+    <select id="buglist-sort-template">
+        <option value="-1">---</option>
+        <option value="0">Asc</option>
+        <option value="1">Desc</option>
+    </select>
 
     [% Hook.process("widget-template") %]
 

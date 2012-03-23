@@ -228,6 +228,9 @@ function stripBugzillaPage(frame)
  */
 var BugsWidget = Widget.extend(
 {
+    DEFAULT_COLUMNS: ["bug_id", "bug_status", "short_desc"],
+    DEFAULT_SORT: [0, -1 , -1],
+
     // See Widget.render().
     render: function()
     {
@@ -244,6 +247,60 @@ var BugsWidget = Widget.extend(
             onCleanup: this._getSearchQuery.bind(this),
             onComplete: this._onEditBoxReady.bind(this)
         });
+        this._columnList = this._child("ul.buglist-column-select");
+        for (var name in BUGLIST_COLUMNS) {
+            var item = $("<li/>");
+            var check = $("<input type='checkbox'/>");
+            check.attr("name", name);
+            item.append(check).append(BUGLIST_COLUMNS[name]);
+            item.append(cloneTemplate("#buglist-sort-template"));
+            this._columnList.append(item);
+        }
+        this._columnList.sortable();
+    },
+
+    _sortOrder: function()
+    {
+        return $.isEmptyObject(this.state.data.sort) ?
+                this.DEFAULT_SORT : this.state.data.sort;
+    },
+    _columnNames: function()
+    {
+        return $.isEmptyObject(this.state.data.columns) ?
+                this.DEFAULT_COLUMNS : this.state.data.columns;
+    },
+
+    _setCustomSettingFields: function()
+    {
+        this.base();
+        var columns = this._columnNames();
+        var sort = this._sortOrder();
+
+        for (var i = columns.length - 1; i >= 0; i--) {
+            var check = this._columnList.find("[name='" + columns[i] + "']");
+            check.prop("checked", true);
+            var item = check.parent();
+            try {
+                $("select", item).val(sort[i]);
+            } catch(e) {
+            }
+            item.remove();
+            this._columnList.prepend(item);
+        }
+    },
+
+    _applyCustomSettings: function()
+    {
+        this.base();
+        var columns = [];
+        var sort = [];
+        this._columnList.find(":checked").each(function(){
+            var check = $(this);
+            columns.push(check.attr("name"));
+            sort.push(Number(check.siblings("select").val()) || 0);
+        });
+        this.state.data.columns = columns;
+        this.state.data.sort = sort;
     },
 
     /**
@@ -300,11 +357,15 @@ var BugsWidget = Widget.extend(
     {
         this.loader(true);
         if (this.state.data.query) {
-            // display loader animation
-            this.contentElement.html(cloneTemplate('#loader_template'));
             // set ctype to csv in query parameters
             params = getQueryParams(this.state.data.query);
             params.ctype = "csv";
+
+            // Set columns
+            var columns = this._columnNames();
+            if ($.isEmptyObject(columns)) columns = this.DEFAULT_COLUMNS;
+            params.columnlist = columns.join(",");
+
             // Create request to fetch the data and set result callbacks
             var jqxhr = $.get("buglist.cgi" + getQueryString(params), {});
             jqxhr.success(this._onReloadDone.bind(this));
@@ -343,6 +404,9 @@ var BugsWidget = Widget.extend(
         if (buglist.length == 1) {
             var content = $("<p>Sorry, no bugs found</p>");
         } else {
+            var tableorder = [];
+            var sort = this._sortOrder();
+            var columns = this._columnNames();
             // Create table
             var content = $("<table class='buglist tablesorter'/>");
             content.append("<thead/>");
@@ -351,7 +415,12 @@ var BugsWidget = Widget.extend(
             var header = $("<tr/>");
             for (var i = 0; i < buglist[0].length; i++)
             {
-                header.append("<th>" + buglist[0][i] + "</th>");
+                var name = buglist[0][i];
+                var index = columns.indexOf(name);
+                if (sort[index] > -1) {
+                    tableorder.push([i, sort[index]]);
+                }
+                header.append("<th>" + BUGLIST_COLUMNS[name] + "</th>");
             }
             $("thead", content).append(header);
             // Create rows
@@ -365,7 +434,7 @@ var BugsWidget = Widget.extend(
                 $("tbody", content).append(row);
             }
             // Make it pretty and sortable
-            content.tablesorter();
+            content.tablesorter({sortList:tableorder});
         }
         this.contentElement.html(content);
     }
