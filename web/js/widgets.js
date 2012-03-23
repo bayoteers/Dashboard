@@ -429,7 +429,14 @@ var BugsWidget = Widget.extend(
                 var row = $("<tr/>");
                 for(var j = 0; j < buglist[i].length; j++)
                 {
-                    row.append("<td>" + buglist[i][j]+"</td>");
+                    var value = buglist[i][j];
+                    var formatter = this["_format_" + buglist[0][j]];
+                    if (formatter != undefined) {
+                        value = formatter(value);
+                    }
+                    var cell = $("<td/>");
+                    cell.append(value);
+                    row.append(cell);
                 }
                 $("tbody", content).append(row);
             }
@@ -437,7 +444,18 @@ var BugsWidget = Widget.extend(
             content.tablesorter({sortList: tableorder, useUI: true});
         }
         this.contentElement.html(content);
-    }
+    },
+
+    /**
+     * Formatter for bug_id in data table
+     */
+    _format_bug_id: function(value)
+    {
+        var link = $("<a target='_blank'></a>");
+        link.text(value);
+        link.attr("href", "show_bug.cgi?id=" + value);
+        return link;
+    },
 
 });
 Widget.addClass('bugs', BugsWidget);
