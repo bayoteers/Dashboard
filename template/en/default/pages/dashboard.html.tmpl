@@ -24,6 +24,14 @@
 
 [% USE Bugzilla %]
 
+[% PROCESS "global/field-descs.none.tmpl" %]
+[% field_descs.short_short_desc     = "Summary (first 60 characters)" %]
+[% field_descs.short_desc           = "Full Summary" %]
+[% field_descs.assigned_to_realname = "Assignee Realname" %]
+[% field_descs.reporter_realname    = "Reporter Realname" %]
+[% field_descs.qa_contact_realname  = "QA Contact Realname" %]
+
+
 [% header = BLOCK %]
     Dashboard:
     <a href="#" id="overlay-info">
@@ -66,8 +74,8 @@
 [% javascript = BLOCK %]
     var DASHBOARD_CONFIG = [% dashboard_config || 'null' %];
     var BUGLIST_COLUMNS = {
-    [% FOREACH bug_fields %]
-        [% IF value.buglist %]"[% value.name %]": "[% value.description %]",[% END %]
+    [% FOREACH column = masterlist %]
+        "[% column %]": "[% (field_descs.${column} || column) %]",
     [% END %]
     };
 [% END %]

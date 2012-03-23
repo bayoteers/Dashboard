@@ -70,7 +70,58 @@ sub page_before_template {
     }
 
     cgi_no_cache;
-    
+    my $vars = $args->{vars};
+
+    # Get the same list of columns as used in colchange.cgi
+    my @masterlist = ("bug_id", "opendate", "changeddate", "bug_severity", "priority",
+                  "rep_platform", "assigned_to", "assigned_to_realname",
+                  "reporter", "reporter_realname", "bug_status",
+                  "resolution");
+
+    if (Bugzilla->params->{"useclassification"}) {
+        push(@masterlist, "classification");
+    }
+
+    push(@masterlist, ("product", "component", "version", "op_sys"));
+
+    if (Bugzilla->params->{"usevotes"}) {
+        push (@masterlist, "votes");
+    }
+    if (Bugzilla->params->{"usebugaliases"}) {
+        unshift(@masterlist, "alias");
+    }
+    if (Bugzilla->params->{"usetargetmilestone"}) {
+        push(@masterlist, "target_milestone");
+    }
+    if (Bugzilla->params->{"useqacontact"}) {
+        push(@masterlist, "qa_contact");
+        push(@masterlist, "qa_contact_realname");
+    }
+    if (Bugzilla->params->{"usestatuswhiteboard"}) {
+        push(@masterlist, "status_whiteboard");
+    }
+    if (Bugzilla::Keyword->any_exist) {
+        push(@masterlist, "keywords");
+    }
+    if (Bugzilla->has_flags) {
+        push(@masterlist, "flagtypes.name");
+    }
+    if (Bugzilla->user->is_timetracker) {
+        push(@masterlist, ("estimated_time", "remaining_time", "actual_time",
+                           "percentage_complete", "deadline"));
+    }
+
+    push(@masterlist, ("short_desc", "short_short_desc"));
+
+    my @custom_fields = grep { $_->type != FIELD_TYPE_MULTI_SELECT }
+                             Bugzilla->active_custom_fields;
+    push(@masterlist, map { $_->name } @custom_fields);
+
+    Bugzilla::Hook::process('colchange_columns', {'columns' => \@masterlist} );
+
+    $vars->{'masterlist'} = \@masterlist;
+
+
     my $overlay_id = Bugzilla->cgi->param("overlay_id");
     if (!defined $overlay_id) {
        $overlay_id = Bugzilla->dbh->selectrow_array(
@@ -88,7 +139,6 @@ sub page_before_template {
         overlay_id => $overlay_id,
     };
 
-    my $vars = $args->{vars};
     $vars->{dashboard_config} = JSON->new->utf8->pretty->encode($config);
 }
 
