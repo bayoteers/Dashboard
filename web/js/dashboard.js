@@ -261,6 +261,7 @@ var Widget = Base.extend({
         // Make widget resizable
         this.containerElement.resizable({
             handles:"s",
+            minHeight: Widget.MIN_HEIGHT,
             start: $.proxy(this, "_onResizeStart"),
             stop: $.proxy(this, "_onResizeStop")
         });

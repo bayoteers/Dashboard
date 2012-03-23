@@ -75,13 +75,18 @@
 div.widget {
     padding: 2px;
 }
+
+.widget-container {
+    padding: 1px;
+}
 .widget-content {
+    overflow: auto;
     margin: 0px;
-    padding: 2px;
+    padding 0px;
     background: white;
     color: #000;
-    overflow: auto;
     height: 100%;
+    width: 100%;
 }
 
 .settings-dialog li {
@@ -93,10 +98,13 @@ div.widget {
     float: left;
 }
 
-.widget-title {
+.widget-header {
+    white-space: nowrap;
     overflow: hidden;
     cursor: move;
-    width: 100%;
+}
+
+.widget-title {
     line-height: 1.5em;
 }
 
@@ -248,6 +256,9 @@ div.widget {
 }
 .widget table.buglist th .ui-icon {
     float: right;
+}
+.widget table.buglist th {
+    white-space: nowrap;
 }
 .widget table.buglist td {
     border: dotted 1px;
