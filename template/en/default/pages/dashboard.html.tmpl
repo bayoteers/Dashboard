@@ -39,6 +39,7 @@
         <span class="workspace">(workspace)</span>
         <span class="shared">(shared)</span>
         <span class="pending">(pending)</span>
+        <span class="unsaved">(unsaved)</span>
     </a><br/>
     <span id="buttons">
         &nbsp;
@@ -60,11 +61,11 @@
             <option value="text">Text</option>
             [% Hook.process("widget-type") %]
         </select>
-        <button name="addwidget" >Add widget</button>
+        <button name="addwidget" type="button">Add widget</button>
         &nbsp;&nbsp;
-        <button name="addcolumn" >Add column</button>
-        <button name="removecolumn" >Remove column</button>
-        <button name="resetcolumns" >Reset column widths</button>
+        <button name="addcolumn" type="button">Add column</button>
+        <button name="removecolumn" type="button">Remove column</button>
+        <button name="resetcolumns" type="button">Reset column widths</button>
     </span>
 
     &nbsp;
@@ -193,7 +194,8 @@ bottom edge of the widget.</p>
     <li id="template-overlay-entry" class="overlay-entry">
         <div>
             <div>
-                <button class="name"></button><button>Details</button>
+                <button class="name" type="button"></button>
+                <button type="button">Details</button>
             </div>
             <div class="details">
                 <div class="states">
@@ -242,11 +244,11 @@ bottom edge of the widget.</p>
         <div class="widget-header ui-widget-header ui-corner-top">
             <span class="widget-title"></span>
             <span class="widget-buttons">
-                <button name="maximize" title="Maximize">+</button>
-                <button name="minimize" title="Minimize">-</button>
-                <button name="remove" title="Remove">X</button>
-                <button name="edit" title="Edit">E</button>
-                <button name="refresh" title="Refresh">R</button>
+                <button name="maximize" title="Maximize" type="button">+</button>
+                <button name="minimize" title="Minimize" type="button">-</button>
+                <button name="remove" title="Remove" type="button">X</button>
+                <button name="edit" title="Edit" type="button">E</button>
+                <button name="refresh" title="Refresh" type="button">R</button>
             </span>
         </div>
         <div class="settings-dialog" title="Widget setings" style="display:none;">
@@ -310,7 +312,7 @@ bottom edge of the widget.</p>
 
         <li>
             <label>Selector:</label>
-            <input name="selector" class="cudtom-field"/>
+            <input name="selector" class="custom-field"/>
         </li>
         <li>
             <small>Supported syntax:
@@ -320,7 +322,7 @@ bottom edge of the widget.</p>
         </li>
 
         <li>
-            <button name="loadurl">Load URL</button>
+            <button type="button" name="loadurl">Load URL</button>
         </li>
     </fieldset>
 

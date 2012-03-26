@@ -18,7 +18,7 @@ Widget.addClass('url', Widget.extend({
      */
     _onIframeLoad: function()
     {
-        if(this.state.maximized || !this.state.selector) {
+        if(this.state.maximized || !this.state.data.selector) {
             return;
         }
 
@@ -33,7 +33,7 @@ Widget.addClass('url', Widget.extend({
         }
 
         var body = $('body', this._iframe[0].contentDocument);
-        var matched = $(this.state.selector, body);
+        var matched = $(this.state.data.selector, body);
         body.children().remove();
         matched.appendTo(body);
         matched.css('padding', '0px');
@@ -43,14 +43,16 @@ Widget.addClass('url', Widget.extend({
 
     onClickLoadurl: function()
     {
-        var url = this.settingsDialog.find("[name='url']").val()
-        this.reload(url);
+        var url = this.settingsDialog.find("[name='url']").val();
+        if (url) {
+            this._iframe.attr("src", url);
+        }
     },
 
-    reload: function(url)
+    reload: function()
     {
         var url = !url ? this.state.data.url : url;
-        this._iframe.attr("src", url);
+        this._iframe.attr("src", this.state.data.url);
     },
 
 }));
@@ -270,12 +272,14 @@ var BugsWidget = Widget.extend(
                 this.DEFAULT_COLUMNS : this.state.data.columns;
     },
 
-    _setCustomSettingFields: function()
+    _setCustomSetting: function()
     {
         this.base();
         var columns = this._columnNames();
         var sort = this._sortOrder();
 
+        // Iterate backwards so we can easily push the selected on top of the
+        // list in right order
         for (var i = columns.length - 1; i >= 0; i--) {
             var check = this._columnList.find("[name='" + columns[i] + "']");
             check.prop("checked", true);
@@ -289,18 +293,33 @@ var BugsWidget = Widget.extend(
         }
     },
 
-    _applyCustomSettings: function()
+    _getCustomSettings: function()
     {
-        this.base();
-        var columns = [];
-        var sort = [];
+        var data = this.base();
+        data.columns = [];
+        data.sort = [];
         this._columnList.find(":checked").each(function(){
             var check = $(this);
-            columns.push(check.attr("name"));
-            sort.push(Number(check.siblings("select").val()) || 0);
+            data.columns.push(check.attr("name"));
+            data.sort.push(Number(check.siblings("select").val()) || 0);
         });
-        this.state.data.columns = columns;
-        this.state.data.sort = sort;
+        return data;
+    },
+
+    _updateStateData: function(changes)
+    {
+        var dataChanges = this.base(changes);
+        // columns and sort in data are arrays so they need special checking
+        for (var key in {columns:1, sort:1}) {
+            var list = dataChanges[key];
+            if(list == undefined) continue;
+            var changed = false;
+            for (var i = 0; i < list.length; i++) {
+                if (list[i] != this.state.data[key][i]) changed = true;
+            }
+            if (!changed) delete dataChanges[key];
+        }
+        return dataChanges;
     },
 
     /**

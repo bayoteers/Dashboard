@@ -142,7 +142,7 @@ function now()
  * Any field value in the settings dialog template with class 'custom-field'
  * and name attribute gets automatically transfered to and from
  * widget.state.data. If something else is require, subclass shoud override
- * _setCustomSettingFields() and _applyCustomSettings() methods.
+ * _setCustomSetting() and _getCustomSettings() methods.
  *
  * In the simplest scenario the subclass only needs to implement reload() method
  * to display the desired content in the widget content element.
@@ -173,6 +173,7 @@ var Widget = Base.extend({
         this.onMaximizeCb = new jQuery.Callbacks();
         // Fired when the widget state changes
         this.stateChangeCb = new jQuery.Callbacks();
+        this.stateChangeCb.add($.proxy(this, "reload"));
 
         this.id = Widget.counter++;
 
@@ -191,11 +192,48 @@ var Widget = Base.extend({
                 data: {},
             }, state);
         this.render();
-        this.applyState();
+        this._applyState();
     },
 
-    // TODO implement updateState which checks if there actually is changes and
-    // fires stateChangeCb. All changes should go through that method
+    /**
+     * Updates the widget.state and fires stateChangeCb if changes were
+     * introduced.
+     *
+     * @param changes - New state values
+     */
+    updateState: function(changes)
+    {
+        var stateChanges = $.extend({}, changes);
+        var dataChanges = stateChanges.data;
+        for (var key in stateChanges) {
+            if (Widget.STATE_KEYS.indexOf(key) == -1 ||
+                    this.state[key] == stateChanges[key]) {
+                delete stateChanges[key];
+            }
+        }
+        dataChanges = this._updateStateData(dataChanges);
+        if (!$.isEmptyObject(dataChanges)) {
+            stateChanges.data = dataChanges;
+        }
+        if (!$.isEmptyObject(stateChanges)) {
+            $.extend(true, this.state, stateChanges);
+            this.stateChangeCb.fire(this);
+            this._applyState();
+            if(window.console) console.log("widget state updated");
+        }
+    },
+
+    _updateStateData: function(changes)
+    {
+
+        var dataChanges = $.extend({}, changes);
+        for (var key in dataChanges) {
+            if (this.state.data[key] == dataChanges[key]) {
+                delete dataChanges[key];
+            }
+        }
+        return dataChanges;
+    },
 
     /**
      * Renders the widget ui from templates.
@@ -282,7 +320,7 @@ var Widget = Base.extend({
         // jquery ui resizable forces all dimensions, but we want width from
         // the parent overaly column.
         this.containerElement.css("width", "");
-        this.state.height = this.containerElement.height();
+        this.updateState({height: this.containerElement.height()});
     },
 
     /**
@@ -323,11 +361,11 @@ var Widget = Base.extend({
         if (this.state.minimized) {
             this.headerElement.removeClass("ui-corner-bottom");
             this.containerElement.slideDown("fast");
-            this.state.minimized = false;
+            this.updateState({minimized: false});
         } else {
             this.headerElement.addClass("ui-corner-bottom");
             this.containerElement.slideUp("fast");
-            this.state.minimized = true;
+            this.updateState({minimized: true});
         }
     },
 
@@ -355,33 +393,51 @@ var Widget = Base.extend({
      */
     onClickEdit: function()
     {
-        var self = this;
-        this.settingsDialog.find(".settings-field").each(function() {
-            var key = $(this).attr("name");
-            if(!key) return;
-            $(this).val(self.state[key]);
-        });
-        this._setCustomSettingFields();
+
+        this._setSettings();
         this.settingsDialog.dialog({
             width: 500,
             zIndex: 9999,
             buttons: {
-                "Apply": $.proxy(this, "applySettings"),
+                "Apply": $.proxy(this, "_onSettingsApply"),
                 "Cancel": function(){ $(this).dialog("destroy") }
             },
         });
     },
 
     /**
+     * Handler for settings dialog apply button click.
+     */
+    _onSettingsApply: function()
+    {
+        var state = this._getSettings();
+        this.settingsDialog.dialog("close");
+        this.updateState(state);
+    },
+
+    /**
+     * Sets values in the widget settings dialog.
+     */
+    _setSettings: function()
+    {
+        var self = this;
+        this.settingsDialog.find(".settings-field").each(function() {
+            var key = $(this).attr("name");
+            if(!key) return;
+            $(this).val(self.state[key]);
+        });
+        this._setCustomSetting();
+    },
+
+    /**
      * Sets the widget specific setting values in the settigns dialog.
      *
-     * Default implementation copies value to each "custom-field" class
-     * form element from this.state.data[<name>], where <name> is the field
-     * element name attribute.
-     *
-     * Override in subclass if special processing is required.
+     * Default implementation sets value to each form element with class
+     * 'custom-field' in the settings dialog from this.state.data[<name>],
+     * where <name> is the form element name attribute. Override in subclass,
+     * if special processing is required.
      */
-    _setCustomSettingFields: function()
+    _setCustomSetting: function()
     {
         var self = this;
         this.settingsDialog.find(".custom-field").each(function() {
@@ -392,45 +448,44 @@ var Widget = Base.extend({
     },
 
     /**
-     * Copies the settings from widget settings dialog to widget state
+     * Gets settings values from widget settings dialog.
      */
-    applySettings: function()
+    _getSettings: function()
     {
-        this.settingsDialog.dialog("close");
-        var self = this;
+        var state = {};
         this.settingsDialog.find(".settings-field").each(function() {
             var key = $(this).attr("name");
             if(!key) return;
-            self.state[key] = $(this).val();
+            state[key] = $(this).val();
         });
-        this._applyCustomSettings();
-        this.applyState();
-        this.reload();
+        state.data = this._getCustomSettings();
+        return state;
     },
 
     /**
-     * Aplies the widget specific settings from the settings dialog.
+     * Gets the widget type specific settings from the settings dialog
      *
-     * Default implementation copies value from each "custom-field" class
-     * form element to this.state.data[<name>], where <name> is the field
-     * element name attribute.
+     * Default implementation gets value (.val()) from each element with
+     * class 'custom-field'. Override in subclass if special processing is
+     * required.
      *
-     * Override in subclass if special processing is required.
+     * @returns Object presenting the state.data
      */
-    _applyCustomSettings: function()
+    _getCustomSettings: function()
     {
-        var self = this;
+        var data = {};
         this.settingsDialog.find(".custom-field").each(function() {
             var key = $(this).attr("name");
             if(!key) return;
-            self.state.data[key] = $(this).val();
+            data[key] = $(this).val();
         });
+        return data;
     },
 
     /**
-     *
+     * Aplies the state to widget UI.
      */
-    applyState: function()
+    _applyState: function()
     {
         window.clearInterval(this._refreshInterval);
         if(+this.state.refresh){
@@ -524,6 +579,10 @@ var Widget = Base.extend({
 
     /** Counter for widget instances to provide unique ID */
     counter: 0,
+
+    /** Allowed keys in Widget.state */
+    STATE_KEYS: ["id", "name", "overlay_id", "type", "color", "col", "pos",
+        "height", "minimized", "refresh"],
 
     /** Minimum height for any widget. */
     MIN_HEIGHT: 100,
@@ -843,6 +902,7 @@ var Dashboard = Base.extend({
     {
         this.overlay = {};
         this._oldOverlay = null;
+        this._unsavedChanges = false;
         this.widgets = {};
         this.buttons = {};
         this.config = config || {};
@@ -853,6 +913,7 @@ var Dashboard = Base.extend({
         } else {
             this.welcomeOverlay();
         }
+        window.onbeforeunload = $.proxy(this, "_onBeforeUnload");
     },
 
     initUI: function()
@@ -882,7 +943,9 @@ var Dashboard = Base.extend({
      */
     onClickNewoverlay: function()
     {
+        if (!this._confirmUnsaved()) return;
         this.setOverlay(this._makeDefaultOverlay());
+        this._setUnsaved(false);
     },
 
     onClickAddwidget: function()
@@ -909,8 +972,12 @@ var Dashboard = Base.extend({
     {
         if (this.overlay.id) {
             this._oldOverlay = $.extend({}, this.overlay);
-            delete this.overlay.id;
-            this.overlay.name = "";
+            if (this.overlay.id) {
+                delete this.overlay.id;
+                this.overlay.name = "Copy of " + this._oldOverlay.name;
+            } else {
+                this.overlay.name = "";
+            }
             this.overlay.description = "";
             this.overlay.shared = false;
         }
@@ -919,10 +986,7 @@ var Dashboard = Base.extend({
 
     onClickOpenoverlay: function()
     {
-        if (this._unsaved) {
-            // TODO implement unsaved changes tracking
-            if (!confirm("There is unsaved changes. Continue?")) return;
-        }
+        if (!this._confirmUnsaved()) return;
         this.rpc("overlay_list").done($.proxy(this, "_openOverlayList"));
     },
 
@@ -934,10 +998,11 @@ var Dashboard = Base.extend({
         });
         rpc.done($.proxy(this, "_onDeleteOverlayDone"));
     },
-    _onDeleteOverlayDone: function(overlays)
+    _onDeleteOverlayDone: function()
     {
-        this.onClickNewoverlay();
         this.notify.text("Overlay deleted");
+        this._setUnsaved(false);
+        this.onClickNewoverlay();
     },
 
     onClickPublishoverlay: function()
@@ -1016,16 +1081,23 @@ var Dashboard = Base.extend({
     _applyOverlaySettings: function()
     {
         var overlay = this.overlay;
+        var changed = false;
         this.overlaySettings.find(".settings-field").each(function(){
             var field = $(this);
             var name = field.attr("name");
+            var value = null;
             if (field.attr("type") == "checkbox") {
-                overlay[name] = field.prop("checked");
+                value = field.prop("checked");
             } else {
-                overlay[name] = field.val();
+                value = field.val();
+            }
+            if (overlay[name] != value) {
+                overlay[name] = value;
+                changed = true;
             }
         });
         this.overlaySettings.dialog("close");
+        if (changed) this._setUnsaved(true);
     },
     _saveOverlaySettings: function()
     {
@@ -1050,6 +1122,7 @@ var Dashboard = Base.extend({
                 data :{text: $('#dash-template-welcome-text').html()}
             }]
         }));
+        this._setUnsaved(false);
     },
 
     /**
@@ -1058,8 +1131,8 @@ var Dashboard = Base.extend({
     _makeDefaultOverlay: function()
     {
         return {
-            name: 'My Overlay',
-            description: 'Unsaved changes',
+            name: 'New Overlay',
+            description: '',
             workspace: false,
             shared: false,
             pending: true,
@@ -1085,6 +1158,7 @@ var Dashboard = Base.extend({
         this.notify.text("Overlay saved");
         this._oldOverlay = null;
         this.setOverlay(result.overlay);
+        this._setUnsaved(false);
     },
     _saveFail: function(error)
     {
@@ -1158,7 +1232,12 @@ var Dashboard = Base.extend({
     loadOverlay: function(id)
     {
         this.rpc("overlay_get", {id: id}).done(
-                $.proxy(this, "setOverlay"));
+                $.proxy(this, "_loadDone"));
+    },
+    _loadDone: function(overlay) 
+    {
+        this.setOverlay(overlay);
+        this._setUnsaved(false);
     },
 
     /**
@@ -1208,6 +1287,7 @@ var Dashboard = Base.extend({
     {
         var widget = Widget.createInstance(this, state);
         widget.onRemoveCb.add($.proxy(this, "_onWidgetRemove"));
+        widget.stateChangeCb.add($.proxy(this, "_onWidgetStateChange"));
         this.widgets[widget.id] = widget;
         this.overlayUI.insertWidget(widget);
         return widget;
@@ -1220,17 +1300,49 @@ var Dashboard = Base.extend({
     {
         for (var i = 0; i < widget_ids.length; i++) {
             var id = widget_ids[i].split("_")[1];
-            this.widgets[id].state.col = col;
-            this.widgets[id].state.pos = i;
+            this.widgets[id].updateState({col: col, pos: i});
         }
     },
     _onWidgetRemove: function(widget)
     {
+        this._setUnsaved(true)
         delete this.widgets[widget.id]
     },
     _onColumnChange: function(columns)
     {
+        this._setUnsaved(true);
         this.overlay.columns = columns;
+    },
+    _onWidgetStateChange: function(widget)
+    {
+        this._setUnsaved(true);
+    },
+
+    _setUnsaved: function(unsaved)
+    {
+        if (unsaved && !this._unsavedChanges) {
+
+        } else if(!unsaved && !this._unsavedChanges) {
+
+        }
+        $(".unsaved", this.overlayInfo).toggle(unsaved);
+        this._unsavedChanges = unsaved;
+
+    },
+    
+    _confirmUnsaved: function()
+    {
+        if (this._unsavedChanges && this.overlay.user_can_edit) {
+            return confirm("There are unsaved changes. Continue?");
+        }
+        return true;
+    },
+
+    _onBeforeUnload: function()
+    {
+        if (this._unsavedChanges) {
+            return "There are unsaved changes, which would be lost.";
+        }
     },
 
     /********************************************

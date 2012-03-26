@@ -46,6 +46,11 @@
     border-radius: 5px;
 }
 
+#overlay-info .unsaved {
+    color: red;
+    display: none;
+}
+
 .overlay-entry .details {
     display: none;
 }
