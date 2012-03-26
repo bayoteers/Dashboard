@@ -312,10 +312,11 @@ var BugsWidget = Widget.extend(
         // columns and sort in data are arrays so they need special checking
         for (var key in {columns:1, sort:1}) {
             var list = dataChanges[key];
+            var orig = this.state.data[key] || [];
             if(list == undefined) continue;
             var changed = false;
             for (var i = 0; i < list.length; i++) {
-                if (list[i] != this.state.data[key][i]) changed = true;
+                if (list[i] != orig[i]) changed = true;
             }
             if (!changed) delete dataChanges[key];
         }
