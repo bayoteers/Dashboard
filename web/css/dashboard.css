@@ -84,6 +84,11 @@ div.widget {
 .widget-container {
     padding: 1px;
 }
+
+.widget-resize-helper {
+    border: dashed 2px gray;
+}
+
 .widget-content {
     overflow: auto;
     margin: 0px;
