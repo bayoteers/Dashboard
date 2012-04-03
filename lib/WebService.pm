@@ -191,7 +191,7 @@ sub overlay_publish {
         $overlay->set_pending(0);
         $overlay->update();
     }
-    return $overlay->pending;
+    return $self->type('boolean', $overlay->pending);
 }
 
 ##################

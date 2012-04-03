@@ -1043,7 +1043,12 @@ var Dashboard = Base.extend({
     {
         this.overlay.pending = pending;
         this.buttons.publishoverlay.toggle(pending);
-        this.notify.text("Overlay published");
+        $(".pending", this.overlayInfo).toggle(this.overlay.shared && pending);
+        if (pending) {
+            this.notify.text("Overlay not published");
+        } else {
+            this.notify.text("Overlay published");
+        }
     },
 
     // TODO Overlay UI object should bind directly to these buttons
