@@ -156,16 +156,21 @@ sub set_widgets {
         }
     }
 
+    # Get the old widgets and clear cache list
+    my $db_widgets = $self->widgets;
+    $self->{widgets} = [];
+
     # Update existing widgets and delete those not listed
-    foreach my $db_widget (@{$self->widgets}) {
-        my $params = $existing_widgets{$db_widget->id};
+    foreach my $widget (@{$db_widgets}) {
+        my $params = $existing_widgets{$widget->id};
         if (defined $params) {
             delete $params->{id};
             delete $params->{overlay_id};
-            $db_widget->set_all($params);
-            $db_widget->update();
+            $widget->set_all($params);
+            $widget->update();
+            push(@{$self->{widgets}}, $widget);
         } else {
-            $db_widget->remove_from_db();
+            $widget->remove_from_db();
         }
         $modified = 1;
     }
