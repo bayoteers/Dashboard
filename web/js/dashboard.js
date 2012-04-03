@@ -307,6 +307,7 @@ var Widget = Base.extend({
         var template = cloneTemplate(sel);
         this.settingsDialog.find("form").append(template);
 
+
         // Bind any buttons to automatic callbacks
         var widget = this;
         this._child(":button").each(function() {
@@ -315,6 +316,17 @@ var Widget = Base.extend({
             var method = "onClick" + name[0].toUpperCase() + name.slice(1).toLowerCase();
             // this is the button element in this context
             $(this).click($.proxy(widget, method));
+        });
+
+        // Initialize the settings dialog
+        this.settingsDialog.dialog({
+            autoOpen: false,
+            width: 500,
+            zIndex: 9999,
+            buttons: {
+                "Apply": $.proxy(this, "_onSettingsApply"),
+                "Cancel": function(){ $(this).dialog("close") }
+            },
         });
 
         // Make widget resizable
@@ -417,14 +429,7 @@ var Widget = Base.extend({
     {
 
         this._setSettings();
-        this.settingsDialog.dialog({
-            width: 500,
-            zIndex: 9999,
-            buttons: {
-                "Apply": $.proxy(this, "_onSettingsApply"),
-                "Cancel": function(){ $(this).dialog("destroy") }
-            },
-        });
+        this.settingsDialog.dialog("open");
     },
 
     /**

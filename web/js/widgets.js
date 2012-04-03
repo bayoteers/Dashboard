@@ -237,8 +237,8 @@ var BugsWidget = Widget.extend(
     render: function()
     {
         this.base();
-        this._queryField = this._child("input[name='query']");
-        this._queryButton = this._child("input[name='editquery']");
+        this._queryField = $("input[name='query']", this.settingsDialog);
+        this._queryButton = $("input[name='editquery']", this.settingsDialog);
         this._queryButton.colorbox({
             width: "90%",
             height: "90%",
@@ -249,7 +249,7 @@ var BugsWidget = Widget.extend(
             onCleanup: this._getSearchQuery.bind(this),
             onComplete: this._onEditBoxReady.bind(this)
         });
-        this._columnList = this._child("ul.buglist-column-select");
+        this._columnList = $("ul.buglist-column-select", this.settingsDialog);
         for (var name in BUGLIST_COLUMNS) {
             var item = $("<li/>");
             var check = $("<input type='checkbox'/>");
