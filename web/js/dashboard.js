@@ -173,7 +173,6 @@ var Widget = Base.extend({
         this.onMaximizeCb = new jQuery.Callbacks();
         // Fired when the widget state changes
         this.stateChangeCb = new jQuery.Callbacks();
-        this.stateChangeCb.add($.proxy(this, "reload"));
 
         this.id = Widget.counter++;
 
@@ -228,7 +227,7 @@ var Widget = Base.extend({
             this._applyState();
             if(window.console) console.log("widget state updated");
         }
-
+        return changed;
     },
 
     /**
@@ -435,7 +434,9 @@ var Widget = Base.extend({
     {
         var state = this._getSettings();
         this.settingsDialog.dialog("close");
-        this.updateState(state);
+        if (this.updateState(state)) {
+            this.reload();
+        }
     },
 
     /**
