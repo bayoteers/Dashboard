@@ -321,6 +321,7 @@ var Widget = Base.extend({
         // Initialize the settings dialog
         this.settingsDialog.dialog({
             autoOpen: false,
+            modal: true,
             width: 500,
             zIndex: 9999,
             buttons: {
@@ -1102,6 +1103,7 @@ var Dashboard = Base.extend({
         }
 
         this.overlaySettings.dialog({
+            modal: true,
             width: 500,
             zIndex: 9999,
             buttons: buttons
@@ -1203,6 +1205,7 @@ var Dashboard = Base.extend({
     {
         this.overlayList.find("ul").empty();
         this.overlayList.dialog({
+            modal: true,
             width: 500,
             zIndex: 9999,
         });
