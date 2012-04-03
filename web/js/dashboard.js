@@ -205,34 +205,56 @@ var Widget = Base.extend({
     {
         var stateChanges = $.extend({}, changes);
         var dataChanges = stateChanges.data;
+
+        // Remove unknown and unchanged values
         for (var key in stateChanges) {
             if (Widget.STATE_KEYS.indexOf(key) == -1 ||
                     this.state[key] == stateChanges[key]) {
                 delete stateChanges[key];
             }
         }
-        dataChanges = this._updateStateData(dataChanges);
-        if (!$.isEmptyObject(dataChanges)) {
-            stateChanges.data = dataChanges;
-        }
+        var changed = false;
         if (!$.isEmptyObject(stateChanges)) {
-            $.extend(true, this.state, stateChanges);
+            $.extend(this.state, stateChanges);
+            changed = true;
+        }
+
+        // Update widget type specific data
+        changed = this._updateStateData(dataChanges) || changed;
+
+        // Apply changes and fire the event
+        if (changed) {
             this.stateChangeCb.fire(this);
             this._applyState();
             if(window.console) console.log("widget state updated");
         }
+
     },
 
+    /**
+     * Updates the widget type specific state.data
+     *
+     * @param changes - Object containin values to update in state.data
+     * @returns True if something has changed in state.data
+     *
+     * Default implementation only compares state.data[key] == changes[key]
+     * so this needs to be overriden in the subclass if widget stores more
+     * complex values in the data object.
+     */
     _updateStateData: function(changes)
     {
-
-        var dataChanges = $.extend({}, changes);
-        for (var key in dataChanges) {
-            if (this.state.data[key] == dataChanges[key]) {
-                delete dataChanges[key];
+        var changes = $.extend({}, changes);
+        for (var key in changes) {
+            if (this.state.data[key] == changes[key]) {
+                delete changes[key];
             }
         }
-        return dataChanges;
+        if ($.isEmptyObject(changes)) {
+            return false;
+        } else {
+            $.extend(this.state.data, changes);
+            return true
+        }
     },
 
     /**

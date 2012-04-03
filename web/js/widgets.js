@@ -281,7 +281,7 @@ var BugsWidget = Widget.extend(
         // Iterate backwards so we can easily push the selected on top of the
         // list in right order
         for (var i = columns.length - 1; i >= 0; i--) {
-            var check = this._columnList.find("[name='" + columns[i] + "']");
+            var check = this._columnList.find("input[name='" + columns[i] + "']");
             check.prop("checked", true);
             var item = check.parent();
             try {
@@ -298,7 +298,7 @@ var BugsWidget = Widget.extend(
         var data = this.base();
         data.columns = [];
         data.sort = [];
-        this._columnList.find(":checked").each(function(){
+        this._columnList.find("input:checked").each(function(){
             var check = $(this);
             data.columns.push(check.attr("name"));
             data.sort.push(Number(check.siblings("select").val()) || 0);
@@ -306,21 +306,36 @@ var BugsWidget = Widget.extend(
         return data;
     },
 
+    /**
+     * See Widget._updateStateData()
+     */
     _updateStateData: function(changes)
     {
-        var dataChanges = this.base(changes);
+        var changed = false;
+        var changes = $.extend({}, changes);
         // columns and sort in data are arrays so they need special checking
         for (var key in {columns:1, sort:1}) {
-            var list = dataChanges[key];
-            var orig = this.state.data[key] || [];
+            var list = changes[key];
             if(list == undefined) continue;
-            var changed = false;
-            for (var i = 0; i < list.length; i++) {
-                if (list[i] != orig[i]) changed = true;
+            delete changes[key];
+
+            var orig = this.state.data[key] || [];
+            if (list.length != orig.length) {
+                this.state.data[key] = list;
+                changed = true;
+                continue;
             }
-            if (!changed) delete dataChanges[key];
+
+            for (var i = 0; i < list.length; i++) {
+                if (list[i] != orig[i]) {
+                    this.state.data[key] = list;
+                    changed = true;
+                    continue;
+                }
+            }
         }
-        return dataChanges;
+        // Call the base implementation for remaining simple values
+        return this.base(changes) || changed;
     },
 
     /**
