@@ -111,13 +111,17 @@ div.widget {
 
 .widget-title {
     line-height: 1.5em;
+    float: left;
+}
+
+.widget-buttons {
+    float: right;
 }
 
 .widget-buttons button {
-    float: right;
     width: 1em;
     height: 1em;
-    margin: 0.1em;
+    vertical-align: middle;
 }
 
 #buttons button {
