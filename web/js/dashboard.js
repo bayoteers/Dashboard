@@ -965,7 +965,7 @@ var Dashboard = Base.extend({
         this.widgetSelect = $("#buttons [name='widgettype']");
         this.overlaySettings = $("#overlay-settings");
         this.overlayList = $("#overlay-open");
-        this.notify = $("#dashboard_notify");
+        this.notifyBox = $("#dashboard_notify");
     },
 
     /******************
@@ -1030,7 +1030,7 @@ var Dashboard = Base.extend({
     },
     _onDeleteOverlayDone: function()
     {
-        this.notify.text("Overlay deleted");
+        this.notify("Overlay deleted");
         this._setUnsaved(false);
         this.onClickNewoverlay();
     },
@@ -1053,9 +1053,9 @@ var Dashboard = Base.extend({
         this.buttons.publishoverlay.toggle(pending);
         $(".pending", this.overlayInfo).toggle(this.overlay.shared && pending);
         if (pending) {
-            this.notify.text("Overlay not published");
+            this.notify("Overlay not published");
         } else {
-            this.notify.text("Overlay published");
+            this.notify("Overlay published");
         }
     },
 
@@ -1191,7 +1191,7 @@ var Dashboard = Base.extend({
 
     _saveDone: function(result)
     {
-        this.notify.text("Overlay saved");
+        this.notify("Overlay saved");
         this._oldOverlay = null;
         this.setOverlay(result.overlay);
         this._setUnsaved(false);
@@ -1273,6 +1273,7 @@ var Dashboard = Base.extend({
     },
     _loadDone: function(overlay) 
     {
+        this.notify("Overlay loaded");
         this.setOverlay(overlay);
         this._setUnsaved(false);
     },
@@ -1397,6 +1398,16 @@ var Dashboard = Base.extend({
         var rpc = new Rpc('Dashboard', method, params);
         rpc.fail(function(e) { alert(e.message ? e.message : e); });
         return rpc;
+    },
+
+    /**
+     * Displays a notification in dashboard status box
+     */
+    notify: function(message)
+    {
+        this.notifyBox.text(message);
+        this.notifyBox.stop(true, true).show()
+            .delay(5000).fadeOut("slow");
     },
 
     /**
