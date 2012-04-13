@@ -333,6 +333,7 @@ var Widget = Base.extend({
         // Make widget resizable
         this.containerElement.resizable({
             handles:"s",
+            grid: [1, 16],
             helper: "widget-resize-helper",
             minHeight: Widget.MIN_HEIGHT,
             start: $.proxy(this, "_onResizeStart"),
@@ -343,7 +344,7 @@ var Widget = Base.extend({
     _onResizeStart: function()
     {
         // Iframes can eat mouse events, so we need to hide them
-        this.contentElement.find("iframe").hide();
+        $(".widget-content iframe").hide();
     },
 
     /**
@@ -351,7 +352,7 @@ var Widget = Base.extend({
      */
     _onResizeStop: function()
     {
-        this.contentElement.find("iframe").show();
+        $(".widget-content iframe").show();
         // jquery ui resizable forces all dimensions, but we want width from
         // the parent overaly column.
         this.containerElement.css("width", "");
@@ -777,7 +778,7 @@ var Overlay = Base.extend({
             colElement = this._child("#overlay-columns > td").first();
             col = 1;
         }
-        var posElement = colElement.find(".ui-widget").eq(widget.state.pos);
+        var posElement = colElement.find(".widget").eq(widget.state.pos);
         if (posElement.size()) {
             posElement.before(widget.element);
         } else {
