@@ -74,27 +74,17 @@ function formatTime(ts)
 
 
 /**
- * Given 2 overlays, sort them:
- *      Workspaces first
- *      Newest first
- *      Lexicographically.
+ * Compare two widgets (state hash) by position.
+ *
+ * Used to sort the widget array in order which can be easily pushed on overlay
  */
-function overlayCmp(a, b)
+function widgetPosCmp(a, b)
 {
-    if(a.workspace > b.workspace) {
-        return -1;
-    } else if(a.workspace < b.workspace) {
-        return 1;
-    } else if(a.modified > b.modified) {
-        return -1;
-    } else if(a.modified < b.modified) {
-        return 1;
-    } else if(a.name > b.name) {
-        return 1;
-    } else if(a.name < b.name) {
-        return -1;
+    if (a.col == b.col) {
+        return a.pos - b.pos;
+    } else {
+        return a.col - b.col;
     }
-    return 0;
 }
 
 
@@ -1300,8 +1290,9 @@ var Dashboard = Base.extend({
         this.overlayUI = new Overlay(this, overlay.columns);
         this.overlayUI.columnChangeCb.add($.proxy(this, "_onColumnChange"));
         // Create new widgets
+        overlay.widgets.sort(widgetPosCmp);
         while(overlay.widgets.length) {
-            this._createWidget(overlay.widgets.pop());
+            this._createWidget(overlay.widgets.shift());
         }
         this.overlayUI.widgetsMovedCb.add($.proxy(this, "_onWidgetsMoved"));
 
