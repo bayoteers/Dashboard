@@ -58,6 +58,72 @@ sub cgi_no_cache {
     }
 }
 
+# Copypasta from colchange.cgi
+# Maps parameters that control columns to the names of columns.
+use constant COLUMN_PARAMS => {
+    'useclassification'   => ['classification'],
+    'usebugaliases'       => ['alias'],
+    'usetargetmilestone'  => ['target_milestone'],
+    'useqacontact'        => ['qa_contact', 'qa_contact_realname'],
+    'usestatuswhiteboard' => ['status_whiteboard'],
+    'usevotes'            => ['votes'],
+};
+
+# We only show these columns if an object of this type exists in the
+# database.
+use constant COLUMN_CLASSES => {
+    'Bugzilla::Flag'    => 'flagtypes.name',
+    'Bugzilla::Keyword' => 'keywords',
+};
+
+sub _get_columns {
+
+    my @columns;
+    my @hide;
+    if (BUGZILLA_VERSION =~ /^4\..*/) {
+        use Bugzilla::Search;
+        @columns = keys(%{Bugzilla::Search::COLUMNS()});
+        @hide = qw(relevance);
+    } else {
+        @columns = qw(bug_id opendate changeddate bug_severity priority
+                rep_platform assigned_to assigned_to_realname reporter
+                reporter_realname bug_status resolution classification alias
+                target_milestone qa_contact qa_contact_realname
+                status_whiteboard product component version op_sys short_desc
+                short_short_desc estimated_time remaining_time work_time
+                actual_time percentage_complete deadline);
+        if (Bugzilla->params->{"usevotes"}) {
+            push(@columns, "votes");
+        }
+        my @custom_fields = grep { $_->type != FIELD_TYPE_MULTI_SELECT }
+                             Bugzilla->active_custom_fields;
+        push(@columns, map { $_->name } @custom_fields);
+
+        Bugzilla::Hook::process('colchange_columns', {'columns' => \@columns} );
+    }
+    foreach my $param (keys %{ COLUMN_PARAMS() }) {
+        next if Bugzilla->params->{$param};
+        foreach my $column (@{ COLUMN_PARAMS->{$param} }) {
+            push(@hide, $column);
+        }
+    }
+
+    foreach my $class (keys %{ COLUMN_CLASSES() }) {
+        eval("use $class; 1;") || die $@;
+        my $column = COLUMN_CLASSES->{$class};
+        push(@hide, $column) if !$class->any_exist;
+    }
+
+    if (!Bugzilla->user->is_timetracker) {
+        foreach my $column (TIMETRACKING_FIELDS) {
+            push(@hide, $column);
+        }
+    }
+
+    @columns = grep {my $col = $_; !scalar grep(/$col/, @hide)} @columns;
+    @columns = sort @columns;
+    return \@columns;
+}
 
 # Hook for page.cgi and dashboard
 sub page_before_template {
@@ -73,54 +139,8 @@ sub page_before_template {
     my $vars = $args->{vars};
 
     # Get the same list of columns as used in colchange.cgi
-    my @masterlist = ("bug_id", "opendate", "changeddate", "bug_severity", "priority",
-                  "rep_platform", "assigned_to", "assigned_to_realname",
-                  "reporter", "reporter_realname", "bug_status",
-                  "resolution");
 
-    if (Bugzilla->params->{"useclassification"}) {
-        push(@masterlist, "classification");
-    }
-
-    push(@masterlist, ("product", "component", "version", "op_sys"));
-
-    if (Bugzilla->params->{"usevotes"}) {
-        push (@masterlist, "votes");
-    }
-    if (Bugzilla->params->{"usebugaliases"}) {
-        unshift(@masterlist, "alias");
-    }
-    if (Bugzilla->params->{"usetargetmilestone"}) {
-        push(@masterlist, "target_milestone");
-    }
-    if (Bugzilla->params->{"useqacontact"}) {
-        push(@masterlist, "qa_contact");
-        push(@masterlist, "qa_contact_realname");
-    }
-    if (Bugzilla->params->{"usestatuswhiteboard"}) {
-        push(@masterlist, "status_whiteboard");
-    }
-    if (Bugzilla::Keyword->any_exist) {
-        push(@masterlist, "keywords");
-    }
-    if (Bugzilla->has_flags) {
-        push(@masterlist, "flagtypes.name");
-    }
-    if (Bugzilla->user->is_timetracker) {
-        push(@masterlist, ("estimated_time", "remaining_time", "actual_time",
-                           "percentage_complete", "deadline"));
-    }
-
-    push(@masterlist, ("short_desc", "short_short_desc"));
-
-    my @custom_fields = grep { $_->type != FIELD_TYPE_MULTI_SELECT }
-                             Bugzilla->active_custom_fields;
-    push(@masterlist, map { $_->name } @custom_fields);
-
-    Bugzilla::Hook::process('colchange_columns', {'columns' => \@masterlist} );
-
-    $vars->{'masterlist'} = \@masterlist;
-
+    $vars->{'columns'} = _get_columns;
 
     my $overlay_id = Bugzilla->cgi->param("overlay_id");
     if (!defined $overlay_id) {

@@ -75,7 +75,7 @@
 [% javascript = BLOCK %]
     var DASHBOARD_CONFIG = [% dashboard_config || 'null' %];
     var BUGLIST_COLUMNS = {
-    [% FOREACH column = masterlist %]
+    [% FOREACH column = columns %]
         "[% column %]": "[% (field_descs.${column} || column) %]",
     [% END %]
     };
