@@ -75,6 +75,9 @@ use constant VALIDATORS => {
 };
 
 use constant LIST_ORDER => 'pos';
+use constant AUDIT_CREATES => 0;
+use constant AUDIT_UPDATES => 0;
+use constant AUDIT_REMOVES => 0;
 
 #############
 # Accessors #

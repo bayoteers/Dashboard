@@ -82,6 +82,10 @@ use constant VALIDATORS => {
     columns => \&_check_columns,
 };
 
+use constant AUDIT_CREATES => 0;
+use constant AUDIT_UPDATES => 0;
+use constant AUDIT_REMOVES => 0;
+
 #############
 # Accessors #
 #############
