@@ -160,59 +160,6 @@ $.colorbox.close = function() {
 }
 
 /**
- * Utility function to covert query string to parameter object
- *
- * @param query
- *      String in format "key=value&key=othervalue&foo=bar"
- *
- * @returns Object containing the paramters
- *      {key: ["value", "othervalue"], foo: "bar"}
- *      Values will be URI decoded
- */
-function getQueryParams(query)
-{
-    var params = {};
-    var regex = /([^=&\?]*)=([^&]*)/g;
-    var match = null;
-    while ((match = regex.exec(query)) != null) {
-        var name = match[1];
-        var value = decodeURIComponent(match[2]);
-        if (params.hasOwnProperty(name)) {
-            if (! $.isArray(params[name])) {
-                params[name] = [params[name]];
-            }
-            params[name].push(value);
-        } else {
-            params[name] = value;
-        }
-    }
-    return params;
-}
-/**
- * Utility function to convert parameter object ro query string
- *
- * @param params
- *      Object containing teh params
- *      { key: ["value", "othervalue"], foo: "bar" }
- *
- * @returns Query string
- *      "?key=value&key=othervalue&foo=bar"
- *      Values will be URI encoded
- */
-function getQueryString(params)
-{
-    var query = "?"
-    for (name in params) {
-        var values = params[name];
-        if (! $.isArray(values)) values = [values];
-        for (var i = 0; i < values.length; i++) {
-            query += "&" + name + "=" + encodeURIComponent(values[i]);
-        }
-    }
-    return query;
-}
-
-/**
  * Helper function to hide the header and footer from bugzilla page
  *
  * @param frame
