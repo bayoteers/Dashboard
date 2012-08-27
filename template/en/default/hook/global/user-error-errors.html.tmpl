@@ -6,16 +6,29 @@
   # extension, so that I wouldn't conflict with other error names in
   # Bugzilla or other extensions.
   #%]
-[% IF error == "dashboard_object_access_denied" %]
-    [% title = "Access denied" %]
-    You are not allowed to perform this operation on [% class _ " " _ id %]
-[% ELSIF error == "overlay_publish_denied" %]
-    [% title = "Access Denied" %]
-    You are not authorized to publish this overlay
-[% ELSIF error == "overlay_does_not_exist" %]
+[% IF error == "overlay_does_not_exist" %]
     [% title = "Does not exists" %]
     Overlay with id [% id %] does not exist
+[% ELSIF error == "overlay_access_denied" %]
+    [% title = "Not allowed to access overlay" %]
+    You are not allowed to access overlay with ID [% id %].
+    You are not the owner or it is not shared.
+[% ELSIF error == "overlay_edit_denied" %]
+    [% title = "Not allowed to edit overlay" %]
+    You are not allowed to modify overlay with ID [% id %].
+    You are not the owner.
+[% ELSIF error == "overlay_publish_denied" %]
+    [% title = "Not allowed to publish overlay" %]
+    You are not authorized to publish this overlay
 [% ELSIF error == "widget_does_not_exist" %]
-   [% title = "Does not exists" %]
-   Widget with id [% id %] does not exist
+    [% title = "Does not exists" %]
+    Widget with id [% id %] does not exist
+[% ELSIF error == "widget_access_denied" %]
+    [% title = "Not allowed to access widget" %]
+    You are not allowed to view widget [% id %].
+    Overlay it belongs to is probably not shared.
+[% ELSIF error == "widget_edit_denied" %]
+    [% title = "Not allowed to edit widget" %]
+    You are not allowed to modify widget [% id %].
+    You are probably not the owner.
 [% END %]

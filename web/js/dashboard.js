@@ -953,6 +953,7 @@ var Dashboard = Base.extend({
         });
 
         this.overlayInfo = $("#overlay-info");
+        this.overlayInfo.find(".workspace,.unsaved,.shared,.pending").hide();
         this.widgetSelect = $("#buttons [name='widgettype']");
         this.overlaySettings = $("#overlay-settings");
         this.overlayList = $("#overlay-open");
@@ -1195,6 +1196,8 @@ var Dashboard = Base.extend({
     _openOverlayList: function(overlays)
     {
         this.overlayList.find("ul").empty();
+        this.overlayList.find(".pending-list").toggle(
+                BB_CONFIG.user.groups.indexOf("dashboard_publisher") != -1);
         this.overlayList.dialog({
             modal: true,
             width: 500,
@@ -1202,7 +1205,7 @@ var Dashboard = Base.extend({
         });
         var list = this.overlayList.find("ul.shared");
         for (var i = 0; i < overlays.length; i++) {
-            if (!overlays[i].shared) continue;
+            if (!overlays[i].shared || overlays[i].pending) continue;
             list.append(this._createOverlayEntry(overlays[i]));
         }
         var list = this.overlayList.find("ul.owner");
@@ -1210,6 +1213,13 @@ var Dashboard = Base.extend({
         for (var i = 0; i < overlays.length; i++) {
             if (overlays[i].owner.id != this.config.user_id) continue;
             list.append(this._createOverlayEntry(overlays[i]));
+        }
+        if (BB_CONFIG.user.groups.indexOf("dashboard_publisher") != -1) {
+            list = this.overlayList.find("ul.pending");
+            for (var i = 0; i < overlays.length; i++) {
+                if (!overlays[i].pending) continue;
+                list.append(this._createOverlayEntry(overlays[i]));
+            }
         }
     },
 

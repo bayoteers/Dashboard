@@ -167,4 +167,14 @@ sub user_is_owner {
     return 0 unless defined $user;
     return $user->id == $self->overlay->owner_id;
 }
+
+sub user_can_access {
+    my $self = shift;
+    return $self->overlay->user_can_read;
+}
+
+sub user_can_edit {
+    my $self = shift;
+    return $self->user_is_owner;
+}
 1;

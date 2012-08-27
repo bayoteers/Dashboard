@@ -275,6 +275,18 @@ sub db_schema_abstract_schema {
     };
 }
 
+sub install_update_db {
+    my $self = shift;
+    my $pub_group = Bugzilla::Group->new({name => "dashboard_publisher"});
+    if (!defined $pub_group) {
+        Bugzilla::Group->create({
+                name => "dashboard_publisher",
+                description => "Users allowed to publish shared overlays",
+                isactive => 0,
+                isbuggroup => 1,
+            });
+    }
+}
 
 sub bb_common_links {
     my ($self, $args) = @_;

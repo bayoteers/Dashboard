@@ -274,11 +274,17 @@ sub user_can_edit {
     return $self->user_is_owner;
 }
 
+sub user_can_access {
+    my $self = shift;
+    return $self->user_is_owner || ($self->shared && !$self->pending)
+        || $self->user_can_publish;
+}
+
 sub user_can_publish {
     my $self = shift;
     my $user = Bugzilla->user;
     return 0 unless defined $user;
-    return $self->shared && $self->pending && $user->in_group('admin');
+    return $self->shared && $self->pending && $user->in_group('dashboard_publisher');
 }
 
 1;
