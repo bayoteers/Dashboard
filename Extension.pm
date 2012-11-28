@@ -122,11 +122,8 @@ sub _get_columns {
 sub page_before_template {
     my ($self, $args) = @_;
 
-    if ($args->{page_id} !~ /^dashboard\.html$/) {
-        return;
-    } elsif (! Bugzilla->user->id) {
-        ThrowUserError('login_required');
-    }
+    return if ($args->{page_id} !~ /^dashboard\.html$/);
+    Bugzilla->login(LOGIN_REQUIRED);
 
     cgi_no_cache;
     my $vars = $args->{vars};
@@ -283,6 +280,8 @@ sub install_update_db {
 
 sub bb_common_links {
     my ($self, $args) = @_;
+
+    return unless Bugzilla->user->id;
 
     $args->{links}->{Dashboard} = [
         {
