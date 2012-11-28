@@ -18,22 +18,17 @@ use strict;
 use constant NAME => 'Dashboard';
 
 use constant REQUIRED_MODULES => [
-                                   {
-                                      package => 'HTML-Scrubber',
-                                      module  => 'HTML::Scrubber',
-                                      version => 0.08,
-                                   },
-                                   {
-                                      package => 'libxml-feed-perl',
-                                      module => 'XML::Feed',
-                                      version => 0.40
-                                   },
-                                   {
-                                     package => 'libjson-pp-perl',
-                                     module => 'JSON::PP',
-                                     version =>  2.72
-                                   }
-                                 ];
+    {
+        package => 'HTML-Scrubber',
+        module  => 'HTML::Scrubber',
+        version => 0.08,
+    },
+    {
+        package => 'XML-Feed',
+        module => 'XML::Feed',
+        version => 0.40,
+    },
+];
 
 use constant OPTIONAL_MODULES => [];
 
