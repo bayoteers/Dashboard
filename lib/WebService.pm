@@ -173,8 +173,10 @@ sub overlay_publish {
 
     my $overlay = $self->_get_overlay($params->{id}, 0, 1);
 
-    if ($overlay->shared && $overlay->pending) {
-        $overlay->set_pending(0);
+    my $pending = $params->{withhold} ? 1 : 0;
+
+    if ($overlay->shared) {
+        $overlay->set_pending($pending);
         $overlay->update();
     }
     return $self->type('boolean', $overlay->pending);

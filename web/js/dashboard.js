@@ -1027,7 +1027,19 @@ var Dashboard = Base.extend({
             return;
         }
         var rpc = this.rpc('overlay_publish', {
-            id: this.overlay.id
+            id: this.overlay.id, withhold: 0,
+        });
+        rpc.done($.proxy(this, "_onPublishOverlayDone"));
+
+    },
+    onClickWithholdoverlay: function()
+    {
+        if (!this.overlay.user_can_publish) {
+            alert("You are not allowed to withhold this overlay!");
+            return;
+        }
+        var rpc = this.rpc('overlay_publish', {
+            id: this.overlay.id, withhold: 1,
         });
         rpc.done($.proxy(this, "_onPublishOverlayDone"));
 
@@ -1036,9 +1048,10 @@ var Dashboard = Base.extend({
     {
         this.overlay.pending = pending;
         this.buttons.publishoverlay.toggle(pending);
+        this.buttons.withholdoverlay.toggle(!pending);
         $(".pending", this.overlayInfo).toggle(this.overlay.shared && pending);
         if (pending) {
-            this.notify("Overlay not published");
+            this.notify("Overlay withheld");
         } else {
             this.notify("Overlay published");
         }
@@ -1310,7 +1323,8 @@ var Dashboard = Base.extend({
         // Set buttons
         this.buttons.saveoverlay.toggle(overlay.user_can_edit);
         this.buttons.deleteoverlay.toggle(overlay.id && overlay.user_can_edit);
-        this.buttons.publishoverlay.toggle(overlay.user_can_publish);
+        this.buttons.publishoverlay.toggle(overlay.user_can_publish && overlay.pending);
+        this.buttons.withholdoverlay.toggle(overlay.user_can_publish && !overlay.pending);
     },
 
     /**
