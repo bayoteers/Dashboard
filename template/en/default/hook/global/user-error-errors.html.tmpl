@@ -9,7 +9,11 @@
   # below, because when Bugzilla translates an error message into plain
   # text, it takes four spaces off the beginning of the lines.
   #%]
-[% IF error == "overlay_does_not_exist" %]
+[% IF error == "dashboard_access_denied" %]
+    [% title = "Access denied" %]
+    You do not have permission to access dashboard features on this
+    [% term.Bugzilla %] installation.
+[% ELSIF error == "overlay_does_not_exist" %]
     [% title = "Does not exists" %]
     Overlay with id [% id %] does not exist
 [% ELSIF error == "overlay_access_denied" %]
@@ -26,10 +30,6 @@
 [% ELSIF error == "widget_does_not_exist" %]
     [% title = "Does not exists" %]
     Widget with id [% id %] does not exist
-[% ELSIF error == "widget_access_denied" %]
-    [% title = "Not allowed to access widget" %]
-    You are not allowed to view widget [% id %].
-    Overlay it belongs to is probably not shared.
 [% ELSIF error == "widget_edit_denied" %]
     [% title = "Not allowed to edit widget" %]
     You are not allowed to modify widget [% id %].

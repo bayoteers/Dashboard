@@ -20,13 +20,13 @@ use base qw(Bugzilla::Extension);
 
 use POSIX qw(strftime);
 
+use Bugzilla::Config qw(SetParam write_params);
 use Bugzilla::Constants;
 use Bugzilla::Error;
 use Bugzilla::Util;
 use Bugzilla::User;
 
-use Bugzilla::Extension::Dashboard::Config;
-use Bugzilla::Extension::Dashboard::WebService;
+use Bugzilla::Extension::Dashboard::Util;
 
 use JSON;
 
@@ -124,6 +124,7 @@ sub page_before_template {
 
     return if ($args->{page_id} !~ /^dashboard\.html$/);
     Bugzilla->login(LOGIN_REQUIRED);
+    user_can_access_dashboard(1);
 
     cgi_no_cache;
     my $vars = $args->{vars};
@@ -281,7 +282,7 @@ sub install_update_db {
 sub bb_common_links {
     my ($self, $args) = @_;
 
-    return unless Bugzilla->user->id;
+    return unless user_can_access_dashboard();
 
     $args->{links}->{Dashboard} = [
         {
@@ -291,20 +292,24 @@ sub bb_common_links {
     ];
 }
 
-
-sub config {
-    my ($self, $args) = @_;
-    my $config = $args->{config};
-    $config->{Dashboard} = "Bugzilla::Extension::Dashboard::Config";
-}
-
-
 sub config_add_panels {
     my ($self, $args) = @_;
     my $modules = $args->{panel_modules};
     $modules->{Dashboard} = "Bugzilla::Extension::Dashboard::Config";
 }
 
+sub object_end_of_update {
+    my ($self, $args) = @_;
+    my ($new_obj, $old_obj, $changes) = @$args{qw(object old_object changes)};
+
+    # Update user group param if group name changes
+    if ($new_obj->isa("Bugzilla::Group") && defined $changes->{name}) {
+        if ($old_obj->name eq Bugzilla->params->{dashboard_user_group}) {
+            SetParam('dashboard_user_group', $new_obj->name);
+            write_params();
+        }
+    }
+}
 
 sub webservice {
     my ($self, $args) = @_;
@@ -315,10 +320,13 @@ sub webservice {
 sub webservice_error_codes {
     my ($self, $args) = @_;
     my $error_map = $args->{error_map};
-    $error_map->{'dashboard_object_access_denied'} = 10001;
+    $error_map->{'dashboard_access_denied'} = 10001;
     $error_map->{'overlay_publish_denied'} = 10002;
     $error_map->{'overlay_does_not_exist'} = 10003;
     $error_map->{'widget_does_not_exist'} = 10004;
+    $error_map->{'overlay_access_denied'} = 10005;
+    $error_map->{'overlay_edit_denied'} = 10006;
+    $error_map->{'widget_edit_denied'} = 10007;
 }
 
 __PACKAGE__->NAME;

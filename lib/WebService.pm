@@ -20,8 +20,8 @@ use Bugzilla::Constants;
 use Bugzilla::Error;
 use Bugzilla::Util;
 
-use Bugzilla::Extension::Dashboard::Config;
 use Bugzilla::Extension::Dashboard::Overlay;
+use Bugzilla::Extension::Dashboard::Util;
 use Bugzilla::Extension::Dashboard::Widget;
 
 use constant WIDGET_FIELDS => {
@@ -77,6 +77,7 @@ sub _get_overlay {
 sub overlay_save {
     my ($self, $params) = @_;
     my $user = Bugzilla->login(LOGIN_REQUIRED);
+    user_can_access_dashboard(1);
 
     # Publishing only via overlay_publish()
     delete $params->{pending};
@@ -106,6 +107,7 @@ sub overlay_save {
 sub overlay_get {
     my ($self, $params) = @_;
     my $user = Bugzilla->login(LOGIN_REQUIRED);
+    user_can_access_dashboard(1);
 
     ThrowCodeError('param_required', {
             function => 'Dashboard.overlay.get',
@@ -119,6 +121,7 @@ sub overlay_get {
 sub overlay_list {
     my $self = shift;
     my $user = Bugzilla->login(LOGIN_REQUIRED);
+    user_can_access_dashboard(1);
 
     my @overlays;
     my @matches;
@@ -152,6 +155,8 @@ sub overlay_list {
 sub overlay_delete {
     my ($self, $params) = @_;
     Bugzilla->login(LOGIN_REQUIRED);
+    user_can_access_dashboard(1);
+
     ThrowCodeError('param_required', {
             function => 'Dashboard.overlay_delete',
             param => 'id'})
@@ -165,6 +170,7 @@ sub overlay_delete {
 sub overlay_publish {
     my ($self, $params) = @_;
     my $user = Bugzilla->login(LOGIN_REQUIRED);
+    user_can_access_dashboard(1);
 
     ThrowCodeError('param_required', {
             function => 'Dashboard.overlay_publish',
@@ -202,6 +208,7 @@ sub _get_widget {
 sub widget_save {
     my ($self, $params) = @_;
     Bugzilla->login(LOGIN_REQUIRED);
+    user_can_access_dashboard(1);
 
     ThrowCodeError('params_required', {
             function => 'Dashboard.widget_save',
@@ -226,6 +233,8 @@ sub widget_save {
 sub widget_get {
     my ($self, $params) = @_;
     Bugzilla->login(LOGIN_REQUIRED);
+    user_can_access_dashboard(1);
+
     ThrowCodeError('param_required', {
             function => 'Dashboard.widget_get',
             param => 'id'})
@@ -237,6 +246,8 @@ sub widget_get {
 sub widget_list {
     my ($self, $params) = @_;
     Bugzilla->login(LOGIN_REQUIRED);
+    user_can_access_dashboard(1);
+
     ThrowCodeError('param_required', {
             function => 'Dashboard.widget_list',
             param => 'overlay_id'})
@@ -250,6 +261,8 @@ sub widget_list {
 sub widget_delete {
     my ($self, $params) = @_;
     Bugzilla->login(LOGIN_REQUIRED);
+    user_can_access_dashboard(1);
+
     ThrowCodeError('param_required', {
             function => 'Dashboard.widget_delete',
             param => 'id'})
@@ -340,7 +353,7 @@ sub get_feed {
     }
 
     sub _ascii {
-        my $s = shift;
+        my $s = shift || '';
         $s =~ s/[^[:ascii:]]//g;
         $s;
     }

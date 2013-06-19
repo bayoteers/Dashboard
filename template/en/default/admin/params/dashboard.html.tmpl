@@ -14,14 +14,7 @@
     title = "Dashboard"
     desc = "Dashboard extension"
 %]
-
-[% param_descs = {
-  dashboard_jquery_path => "URL to JQuery library, empty if Bugzilla already uses JQuery",
-  dashboard_browsers_warn => "Regexp for browser UserAgents to be warned",
-  dashboard_browsers_block => "Regexp for browser UserAgents to be blocked",
-  dashboard_rss_max_items => "How many items rss widget can display at a time.",
-  dashboard_rss_color_new => "Color for RSS item that was just displayed",
-  dashboard_rss_color_unread => "Color for RSS item that is not read yet",
-  dashboard_rss_color_read => "Color for RSS item that has been read",
-}
-%]
+[% param_descs = {} %]
+[% FOREACH param IN panel.param_list %]
+    [% param_descs.${param.name} = param.desc %]
+[% END %]
