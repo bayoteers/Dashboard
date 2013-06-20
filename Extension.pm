@@ -292,6 +292,11 @@ sub bb_common_links {
     ];
 }
 
+sub bb_group_params {
+    my ($self, $args) = @_;
+    push(@{$args->{group_params}}, 'dashboard_user_group');
+}
+
 sub config_add_panels {
     my ($self, $args) = @_;
     my $modules = $args->{panel_modules};
