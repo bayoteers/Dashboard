@@ -123,7 +123,7 @@ sub page_before_template {
     my ($self, $args) = @_;
 
     return if ($args->{page_id} !~ /^dashboard\.html$/);
-    Bugzilla->login(LOGIN_REQUIRED);
+    my $user = Bugzilla->login(LOGIN_REQUIRED);
     user_can_access_dashboard(1);
 
     cgi_no_cache;
@@ -141,9 +141,10 @@ sub page_before_template {
     }
 
     my $config = {
-        user_id => int(Bugzilla->user->id),
-        user_login => Bugzilla->user->login,
-        is_admin => Bugzilla->user->in_group('admin'),
+        user_id => int($user->id),
+        user_login => $user->login,
+        can_publish => $user->in_group(
+                Bugzilla->params->{dashboard_publish_group}),
         rss_max_items => int(Bugzilla->params->{dashboard_rss_max_items}),
         browsers_warn => Bugzilla->params->{"dashboard_browsers_warn"},
         browsers_block => Bugzilla->params->{"dashboard_browsers_block"},
@@ -264,19 +265,6 @@ sub db_schema_abstract_schema {
             }
         ]
     };
-}
-
-sub install_update_db {
-    my $self = shift;
-    my $pub_group = Bugzilla::Group->new({name => "dashboard_publisher"});
-    if (!defined $pub_group) {
-        Bugzilla::Group->create({
-                name => "dashboard_publisher",
-                description => "Users allowed to publish shared overlays",
-                isactive => 0,
-                isbuggroup => 1,
-            });
-    }
 }
 
 sub bb_common_links {

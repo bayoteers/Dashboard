@@ -22,6 +22,8 @@ sub get_param_list {
 
     my @groups = sort @{Bugzilla->dbh->selectcol_arrayref(
             "SELECT name FROM groups")};
+    my ($old_group) = grep {$_ eq 'dashboard_publisher'} @groups;
+
     my @param_list = (
         {
             name => 'dashboard_user_group',
@@ -29,6 +31,13 @@ sub get_param_list {
             type    => 's',
             choices => ['', @groups],
             default => '',
+        },
+        {
+            name => 'dashboard_publish_group',
+            desc => 'User group that is allowed to publish dashboards',
+            type    => 's',
+            choices => \@groups,
+            default => defined $old_group ? $old_group : 'admin',
         },
         {
            name => 'dashboard_max_workspaces',

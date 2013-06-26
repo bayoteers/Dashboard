@@ -271,7 +271,8 @@ sub user_can_publish {
     my $self = shift;
     my $user = Bugzilla->user;
     return 0 unless defined $user;
-    return $self->shared && $user->in_group('dashboard_publisher');
+    return $self->shared && $user->in_group(
+            Bugzilla->params->{dashboard_publish_group});
 }
 
 1;

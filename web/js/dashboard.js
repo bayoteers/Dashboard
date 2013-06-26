@@ -1203,11 +1203,12 @@ var Dashboard = Base.extend({
     {
         this.overlayList.find("ul").empty();
         this.overlayList.find(".pending-list").toggle(
-                BB_CONFIG.user.groups.indexOf("dashboard_publisher") != -1);
+            DASHBOARD_CONFIG.can_publish);
         this.overlayList.dialog({
             modal: true,
             width: 500,
             zIndex: 9999,
+            position: {my: 'center top', at: 'center top'},
         });
         var list = this.overlayList.find("ul.shared");
         for (var i = 0; i < overlays.length; i++) {
@@ -1220,7 +1221,7 @@ var Dashboard = Base.extend({
             if (overlays[i].owner.id != this.config.user_id) continue;
             list.append(this._createOverlayEntry(overlays[i]));
         }
-        if (BB_CONFIG.user.groups.indexOf("dashboard_publisher") != -1) {
+        if (DASHBOARD_CONFIG.can_publish) {
             list = this.overlayList.find("ul.pending");
             for (var i = 0; i < overlays.length; i++) {
                 if (!overlays[i].pending) continue;
