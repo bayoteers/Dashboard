@@ -20,12 +20,14 @@ use Bugzilla::Config::Common;
 sub get_param_list {
     my ($class) = @_;
 
+    my @groups = sort @{Bugzilla->dbh->selectcol_arrayref(
+            "SELECT name FROM groups")};
     my @param_list = (
         {
             name => 'dashboard_user_group',
             desc => 'User group that has access to dashboards',
             type    => 's',
-            choices => ['', sort map {$_->name} Bugzilla::Group->get_all()],
+            choices => ['', @groups],
             default => '',
         },
         {
