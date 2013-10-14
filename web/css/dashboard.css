@@ -204,6 +204,10 @@ div.widget {
     background: #fff;
 }
 
+.url-widget .widget-content {
+    overflow-y: hidden;
+}
+
 .widget_iframe {
     border: 0;
     margin: 0;

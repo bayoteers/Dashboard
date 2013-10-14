@@ -247,6 +247,7 @@ var Widget = Base.extend({
         // The top level container
         this.element = cloneTemplate('#widget-template');
         this.element.attr("id", "widget_" + this.id);
+        this.element.addClass(this.TYPE + '-widget');
         // The header element, containing title and buttons
         this.headerElement = this._child(".widget-header");
         // The resizable container
