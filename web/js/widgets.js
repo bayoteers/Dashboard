@@ -200,16 +200,8 @@ var BugsWidget = Widget.extend(
         this.base();
         this._queryField = $("input[name='query']", this.settingsDialog);
         this._queryButton = $("input[name='editquery']", this.settingsDialog);
-        this._queryButton.colorbox({
-            width: "90%",
-            height: "90%",
-            iframe: true,
-            fastIframe: false,
-            href: "query.cgi",
-            onCloseConfirm: this._confirmQueryClose.bind(this),
-            onCleanup: this._getSearchQuery.bind(this),
-            onComplete: this._onEditBoxReady.bind(this)
-        });
+        this._queryButton.click($.proxy(this, '_openQueryEditor'));
+
         this._columnList = $("ul.buglist-column-select", this.settingsDialog);
         for (var name in BUGLIST_COLUMNS) {
             var item = $("<li/>");
@@ -297,6 +289,24 @@ var BugsWidget = Widget.extend(
         }
         // Call the base implementation for remaining simple values
         return this.base(changes) || changed;
+    },
+
+    /**
+     * Open query editor box when edit query button is clicked
+     */
+    _openQueryEditor: function()
+    {
+        $.colorbox({
+            close: "Apply",
+            width: "90%",
+            height: "90%",
+            iframe: true,
+            fastIframe: false,
+            href: "query.cgi" + this._queryField.val(),
+            onCloseConfirm: $.proxy(this, '_confirmQueryClose'),
+            onCleanup: $.proxy(this, '_getSearchQuery'),
+            onComplete: $.proxy(this, '_onEditBoxReady'),
+        });
     },
 
     /**

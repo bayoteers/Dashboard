@@ -208,7 +208,6 @@ var Widget = Base.extend({
         if (changed) {
             this.stateChangeCb.fire(this);
             this._applyState();
-            if(window.console) console.log("widget state updated");
         }
         return changed;
     },
