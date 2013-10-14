@@ -1368,11 +1368,9 @@ var Dashboard = Base.extend({
 
     _setUnsaved: function(unsaved)
     {
-        if (unsaved && !this._unsavedChanges) {
-
-        } else if(!unsaved && !this._unsavedChanges) {
-
-        }
+        // If user can't edit the overlay, there won't be any changes that
+        // could be saved
+        if (!this.overlay.user_can_edit) unsaved = false;
         $(".unsaved", this.overlayInfo).toggle(unsaved);
         this._unsavedChanges = unsaved;
 
