@@ -32,10 +32,6 @@ Widget.addClass('url', Widget.extend({
      */
     _onIframeLoad: function()
     {
-        if(this.state.maximized || !this.state.data.selector) {
-            return;
-        }
-
         try {
             // Any property access will throw if same origin policy in effect.
             var location = this._iframe[0].contentDocument.location;
@@ -47,11 +43,14 @@ Widget.addClass('url', Widget.extend({
         }
 
         var body = $('body', this._iframe[0].contentDocument);
-        var matched = $(this.state.data.selector, body);
-        body.children().remove();
-        matched.appendTo(body);
-        matched.css('padding', '0px');
-        body.css('margin', '0px');
+        if(this.state.data.selector) {
+            var matched = $(this.state.data.selector, body);
+            body.children().remove();
+            matched.appendTo(body);
+            matched.css('padding', '0px');
+            body.css('margin', '0px');
+        }
+        body.find('a').attr('target', '_blank');
         $('html', this._iframe).css('margin', '0px');
     },
 
