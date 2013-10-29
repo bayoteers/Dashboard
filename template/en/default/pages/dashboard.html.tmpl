@@ -49,8 +49,8 @@
             class="ui-widget ui-corner-all">
             <option value="url">URL</option>
             <option value="rss">RSS</option>
-            <option value="bugs">Bug list</option>
-            <option value="mybugs">My Bugs</option>
+            <option value="bugs">[% terms.Bug %] list</option>
+            <option value="mybugs">My [% terms.Bugs %]</option>
             <option value="text">Text</option>
             [% Hook.process("widget-type") %]
         </select>
@@ -69,13 +69,13 @@
     var DASHBOARD_CONFIG = [% dashboard_config || 'null' %];
     var BUGLIST_COLUMNS = {
     [% FOREACH column = columns %]
-        "[% column %]": "[% (field_descs.${column} || column) %]",
+        "[% column FILTER js %]": "[% (field_descs.${column} || column) FILTER js %]",
     [% END %]
     };
 [% END %]
 
 [% PROCESS global/header.html.tmpl
-    title = "Bugzilla Dashboard"
+    title = terms.Bugzilla _ " Dashboard"
     style_urls = [
         "extensions/Dashboard/web/css/dashboard.css",
         "extensions/Dashboard/web/css/colorbox.css",]
@@ -358,9 +358,9 @@ bottom edge of the widget.</p>
         </div>
     </div>
 
-    <!-- Bugs widget -->
+    <!-- Bugz widget -->
     <fieldset id="widget-settings-template-bugs">
-        <legend>Bug list options</legend>
+        <legend>[% terms.Bug %] list options</legend>
         <li class="buglist-query-entry">
             <label>Query string:</label>
             <input name="query" type="text" class="custom-field" /><br />
