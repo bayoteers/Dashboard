@@ -171,7 +171,7 @@ var Widget = Base.extend({
                 minimized: false,
                 height: 100,
                 refresh: 0,
-                data: {},
+                data: {}
             }, state);
         this.render();
         this._applyState();
@@ -310,7 +310,7 @@ var Widget = Base.extend({
             buttons: {
                 "Apply": $.proxy(this, "_onSettingsApply"),
                 "Cancel": function(){ $(this).dialog("close") }
-            },
+            }
         });
 
         // Make widget resizable
@@ -584,7 +584,7 @@ var Widget = Base.extend({
     _child: function(sel)
     {
         return $(sel, this.element);
-    },
+    }
 
 }, /* class variables: */ {
 
@@ -781,7 +781,7 @@ var Overlay = Base.extend({
         this.element.colResizable({disable:true});
         this.element.colResizable({
             minWidth: Overlay.MIN_WIDTH,
-            onResize: $.proxy(this, "_updateColumnState"),
+            onResize: $.proxy(this, "_updateColumnState")
         });
     },
 
@@ -806,7 +806,7 @@ var Overlay = Base.extend({
             tolerance: "pointer",
             update: $.proxy(this, "_onSortUpdate"),
             start: $.proxy(this, "_onSortStart"),
-            stop: $.proxy(this, "_onSortStop"),
+            stop: $.proxy(this, "_onSortStop")
         });
     },
 
@@ -889,12 +889,12 @@ var Overlay = Base.extend({
     _child: function(sel)
     {
         return $(sel, this.element);
-    },
+    }
 
 }, /* Class variables */ {
     DEFAULT_COLUMNS: [100],
     MAX_COLUMNS: 4,
-    MIN_WIDTH: 100,
+    MIN_WIDTH: 100
 });
 
 
@@ -939,7 +939,7 @@ var Dashboard = Base.extend({
             dashboard.buttons[name] = $elem;
             $elem.button({
                 text: false,
-                icons: {primary: "icon-" + name.toLowerCase(),},
+                icons: {primary: "icon-" + name.toLowerCase()}
             });
             var callback = "onClick" + name[0].toUpperCase() + name.slice(1);
             $elem.click($.proxy(dashboard, callback));
@@ -969,7 +969,7 @@ var Dashboard = Base.extend({
 
         var widget = this._createWidget({
             name: 'Unnamed widget',
-            type: type,
+            type: type
         });
         widget.onClickEdit();
     },
@@ -1027,7 +1027,7 @@ var Dashboard = Base.extend({
             return;
         }
         var rpc = this.rpc('overlay_publish', {
-            id: this.overlay.id, withhold: 0,
+            id: this.overlay.id, withhold: 0
         });
         rpc.done($.proxy(this, "_onPublishOverlayDone"));
 
@@ -1039,7 +1039,7 @@ var Dashboard = Base.extend({
             return;
         }
         var rpc = this.rpc('overlay_publish', {
-            id: this.overlay.id, withhold: 1,
+            id: this.overlay.id, withhold: 1
         });
         rpc.done($.proxy(this, "_onPublishOverlayDone"));
 
@@ -1208,7 +1208,7 @@ var Dashboard = Base.extend({
             modal: true,
             width: 500,
             zIndex: 9999,
-            position: {my: 'center top', at: 'center top'},
+            position: {my: 'center top', at: 'center top'}
         });
         var list = this.overlayList.find("ul.shared");
         for (var i = 0; i < overlays.length; i++) {
@@ -1461,7 +1461,7 @@ var Dashboard = Base.extend({
             states.push(state);
         }
         return states;
-    },
+    }
 });
 
 

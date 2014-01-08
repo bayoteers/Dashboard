@@ -66,8 +66,7 @@ Widget.addClass('url', Widget.extend({
     {
         var url = !url ? this.state.data.url : url;
         this._iframe.attr("src", this.state.data.url);
-    },
-
+    }
 }));
 
 
@@ -137,7 +136,7 @@ Widget.addClass('rss', Widget.extend({
         html = html || '';
         var s = html.replace(/^<.+>/, '');
         return s.replace(/<.+/g, '');
-    },
+    }
 }));
 
 
@@ -148,7 +147,7 @@ Widget.addClass('text', Widget.extend({
     reload: function()
     {
         this.contentElement.find("div.text").html(this.state.data.text);
-    },
+    }
 }));
 
 /**
@@ -304,7 +303,7 @@ var BugsWidget = Widget.extend(
             href: "query.cgi" + this._queryField.val(),
             onCloseConfirm: $.proxy(this, '_confirmQueryClose'),
             onCleanup: $.proxy(this, '_getSearchQuery'),
-            onComplete: $.proxy(this, '_onEditBoxReady'),
+            onComplete: $.proxy(this, '_onEditBoxReady')
         });
     },
 
@@ -460,8 +459,7 @@ var BugsWidget = Widget.extend(
         link.text(value);
         link.attr("href", "show_bug.cgi?id=" + value);
         return link;
-    },
-
+    }
 });
 Widget.addClass('bugs', BugsWidget);
 
@@ -487,13 +485,13 @@ var MyBugsWidget = BugsWidget.extend({
             'value0-0-0': 'UNCONFIRMED',
             'field0-0-1': 'reporter',
             'type0-0-1': 'equals',
-            'value0-0-1': this._dashboard.config.user_login,
+            'value0-0-1': this._dashboard.config.user_login
         });
     },
     render: function()
     {
         this.base();
         this.settingsDialog.find(".buglist-query-entry").hide();
-    },
+    }
 });
 Widget.addClass('mybugs', MyBugsWidget);
