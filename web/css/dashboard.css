@@ -2,6 +2,24 @@
     width: 100%;
 }
 
+#overlay-controls {
+    width: 100%;
+}
+
+#overlay-controls td {
+    width: 33%;
+}
+
+#overlay-controls #buttons {
+    text-align: center;
+}
+
+#overlay-controls #buttons > span {
+    display: inline-block;
+    white-space: nowrap;
+    margin: 0px 0.5em;
+}
+
 #overlay-top{
     height: 20px;
 }

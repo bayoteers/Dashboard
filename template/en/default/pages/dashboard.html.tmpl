@@ -23,48 +23,6 @@
 [% field_descs.reporter_realname    = "Reporter Realname" %]
 [% field_descs.qa_contact_realname  = "QA Contact Realname" %]
 
-
-[% header = BLOCK %]
-    Dashboard:
-    <a href="#" id="overlay-info">
-        <span class="name"></span>
-        <span class="workspace">(workspace)</span>
-        <span class="shared">(shared)</span>
-        <span class="pending">(pending)</span>
-        <span class="unsaved">(unsaved)</span>
-    </a><br/>
-    <span id="buttons">
-        &nbsp;
-        <button name="newoverlay" type="button">New Overlay</button>
-        <button name="openoverlay" type="button">Open Overlay</button>
-        <button name="saveoverlay" type="button">Save Overlay</button>
-        <button name="saveoverlayas" type="button">Save Overlay As...</button>
-        <button name="deleteoverlay" type="button">Delete Overlay</button>
-        <button name="publishoverlay" type="button">Publish Overlay</button>
-        <button name="withholdoverlay" type="button">Withhold Overlay</button>
-        &nbsp;&nbsp;
-        <button name="overlaysettings" type="button">Overlay Settings</button>
-        &nbsp;&nbsp;
-        <select name="widgettype" title="Add widget"
-            class="ui-widget ui-corner-all">
-            <option value="url">URL</option>
-            <option value="rss">RSS</option>
-            <option value="bugs">[% terms.Bug %] list</option>
-            <option value="mybugs">My [% terms.Bugs %]</option>
-            <option value="text">Text</option>
-            [% Hook.process("widget-type") %]
-        </select>
-        <button name="addwidget" type="button">Add widget</button>
-        &nbsp;&nbsp;
-        <button name="addcolumn" type="button">Add column</button>
-        <button name="removecolumn" type="button">Remove column</button>
-        <button name="resetcolumns" type="button">Reset column widths</button>
-    </span>
-
-    &nbsp;
-    <span id="dashboard_notify"></p>
-[% END %]
-
 [% javascript = BLOCK %]
     var DASHBOARD_CONFIG = [% dashboard_config || 'null' %];
     var BUGLIST_COLUMNS = {
@@ -75,7 +33,7 @@
 [% END %]
 
 [% PROCESS global/header.html.tmpl
-    title = terms.Bugzilla _ " Dashboard"
+    title = "Dashboard"
     style_urls = [
         "extensions/Dashboard/web/css/dashboard.css",
         "extensions/Dashboard/web/css/colorbox.css",]
@@ -88,6 +46,50 @@
         "extensions/Dashboard/web/js/dashboard.js",
         "extensions/Dashboard/web/js/widgets.js"]
 %]
+
+<table id="overlay-controls">
+    <tr>
+        <td>
+            <a href="#" id="overlay-info">
+                <span class="name"></span>
+                <span class="workspace">(workspace)</span>
+                <span class="shared">(shared)</span>
+                <span class="pending">(pending)</span>
+                <span class="unsaved">(unsaved)</span>
+            </a>
+        </td>
+        <td id="buttons">
+            <span>
+                <button name="newoverlay" type="button">New Overlay</button>
+                <button name="openoverlay" type="button">Open Overlay</button>
+                <button name="saveoverlay" type="button">Save Overlay</button>
+                <button name="saveoverlayas" type="button">Save Overlay As...</button>
+                <button name="deleteoverlay" type="button">Delete Overlay</button>
+                <button name="publishoverlay" type="button">Publish Overlay</button>
+                <button name="withholdoverlay" type="button">Withhold Overlay</button>
+            </span>
+            <span>
+                <button name="overlaysettings" type="button">Overlay Settings</button>
+                <button name="addcolumn" type="button">Add column</button>
+                <button name="removecolumn" type="button">Remove column</button>
+                <button name="resetcolumns" type="button">Reset column widths</button>
+            </span>
+            <span>
+                <select name="widgettype" title="Add widget"
+                    class="ui-widget ui-corner-all">
+                    <option value="url">URL</option>
+                    <option value="rss">RSS</option>
+                    <option value="bugs">[% terms.Bug %] list</option>
+                    <option value="mybugs">My [% terms.Bugs %]</option>
+                    <option value="text">Text</option>
+                    [% Hook.process("widget-type") %]
+                </select>
+                <button name="addwidget" type="button">Add widget</button>
+            </span>
+        </td>
+        <td><span id="dashboard_notify"></span></td>
+    </tr>
+</table>
 
 <table id="overlay">
 <tr id="overlay-header"></tr>
