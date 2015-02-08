@@ -24,6 +24,20 @@ use Bugzilla::Extension::Dashboard::Overlay;
 use Bugzilla::Extension::Dashboard::Util;
 use Bugzilla::Extension::Dashboard::Widget;
 
+
+use constant PUBLIC_METHODS => qw(
+    overlay_get
+    overlay_delete
+    overlay_list
+    overlay_publish
+    overlay_save
+    widget_get
+    widget_delete
+    widget_list
+    widget_save
+    get_feed
+);
+
 use constant WIDGET_FIELDS => {
     id => 'int',
     name => 'string',
