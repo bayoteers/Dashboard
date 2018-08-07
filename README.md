@@ -68,3 +68,12 @@ http://mozilla.org/MPL/2.0/).
 The Initial Developer of the Original Code is "Nokia Corporation" Portions
 created by the Initial Developer are Copyright (C) 2011 the Initial Developer.
 All Rights Reserved.
+
+
+Included libraries
+------------------
+
+* [jQuery ColorBox v1.3.34](https://github.com/jackmoore/colorbox)
+* [jQuery colResizable v1.6](https://github.com/alvaro-prieto/colResizable)
+* [jQuery CSV v0.8.9](https://github.com/evanplaice/jquery-csv)
+* [jQuery TableSorter v2.0.5b](http://tablesorter.com/docs/)

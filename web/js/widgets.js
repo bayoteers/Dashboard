@@ -400,7 +400,7 @@ var BugsWidget = Widget.extend(
     {
         this.loader(false);
         try {
-            var buglist = $.csv()(data);
+            var buglist = $.csv.toArrays(data);
         } catch(e) {
             this.error("Failed to parse bug list");
             return;

@@ -658,6 +658,7 @@ var Overlay = Base.extend({
         this.widgetsMovedCb = new jQuery.Callbacks();
         this.dashboard = dashboard;
         this.element = $("table#overlay");
+        this._sortableEnabled = false;
         this.setColumns(columns);
     },
 
@@ -799,6 +800,7 @@ var Overlay = Base.extend({
      */
     _enableSortable: function()
     {
+        if (this._sortableEnabled) return;
         this._child("td.overlay-column").sortable({
             connectWith: "td.overlay-column",
             handle: ".widget-header",
@@ -808,6 +810,7 @@ var Overlay = Base.extend({
             start: $.proxy(this, "_onSortStart"),
             stop: $.proxy(this, "_onSortStop")
         });
+        this._sortableEnabled = true;
     },
 
     /**
@@ -815,7 +818,10 @@ var Overlay = Base.extend({
      */
     _disableSortable: function()
     {
-        this._child("td.overlay-column").sortable("destroy");
+        if (this._sortableEnabled) {
+            this._child("td.overlay-column").sortable("destroy");
+            this._sortableEnabled = false;
+        }
     },
 
     /**
